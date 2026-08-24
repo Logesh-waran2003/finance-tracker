@@ -1,0 +1,51 @@
+import { auth } from '@/auth'
+import { redirect } from 'next/navigation'
+import { db } from '@/lib/db'
+import { customers, dues, profiles, branches } from '@/lib/db/schema'
+import { eq, and, sql } from 'drizzle-orm'
+import { AdminCustomerTable } from '@/components/customers/admin-customer-table'
+import type { Session } from 'next-auth'
+
+export default async function AdminCustomersPage() {
+  const session = (await auth()) as Session | null
+  if (!session?.user?.id || (session.user as any).role !== 'ADMIN') redirect('/dashboard')
+
+  const [custList, agents, branchList] = await Promise.all([
+    db.select({
+      id: customers.id,
+      customer_code: customers.customer_code,
+      full_name: customers.full_name,
+      phone: customers.phone,
+      area: customers.area,
+      city: customers.city,
+      assigned_agent_id: customers.assigned_agent_id,
+      agent_name: profiles.full_name,
+      branch_id: customers.branch_id,
+      opening_balance: customers.opening_balance,
+      is_active: customers.is_active,
+      created_at: customers.created_at,
+    }).from(customers).leftJoin(profiles, eq(customers.assigned_agent_id, profiles.id)),
+
+    db.select({ id: profiles.id, full_name: profiles.full_name })
+      .from(profiles)
+      .where(and(eq(profiles.role, 'COLLECTION_AGENT'), eq(profiles.is_active, true))),
+
+    db.select({ id: branches.id, name: branches.name }).from(branches).where(eq(branches.is_active, true)),
+  ])
+
+  const outstanding = await db.select({
+    customer_id: dues.customer_id,
+    total: sql<string>`sum(${dues.outstanding_amount})`,
+  }).from(dues)
+    .where(sql`${dues.status} NOT IN ('PAID', 'CANCELLED')`)
+    .groupBy(dues.customer_id)
+
+  const outMap = new Map(outstanding.map(o => [o.customer_id, o.total ?? '0']))
+
+  const data = custList.map(c => ({
+    ...c,
+    outstanding_total: outMap.get(c.id) ?? '0',
+  }))
+
+  return <AdminCustomerTable initial={data} agents={agents} branches={branchList} />
+}
