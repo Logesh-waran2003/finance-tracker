@@ -14,6 +14,7 @@ import {
   FileBarChart2, Settings, LogOut, User,
 } from 'lucide-react'
 import { NotificationBell } from '@/components/notification-bell'
+import { BottomNav } from '@/components/bottom-nav'
 
 type Role = 'ADMIN' | 'COLLECTION_AGENT' | 'STAFF'
 
@@ -135,7 +136,8 @@ export function AppShell({ children, userName, userRole }: AppShellProps) {
   )
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <>
+    <div className="flex min-h-dvh bg-gray-50">
       {/* Desktop sidebar */}
       <aside className="hidden md:flex md:w-56 md:flex-col md:border-r md:bg-white shrink-0">
         {sidebarContent}
@@ -181,10 +183,12 @@ export function AppShell({ children, userName, userRole }: AppShellProps) {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-4 md:p-6">
+        <main className="flex-1 p-4 pb-20 md:pb-6 md:p-6">
           {children}
         </main>
       </div>
     </div>
+    <BottomNav userRole={userRole} />
+    </>
   )
 }
