@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, uuid, text, boolean, timestamp, date, numeric, integer, unique, index, jsonb } from 'drizzle-orm/pg-core'
+import { pgTable, pgEnum, uuid, text, boolean, timestamp, date, numeric, integer, unique, index, jsonb, check } from 'drizzle-orm/pg-core'
 import { sql, relations } from 'drizzle-orm'
 
 // ============================================================
@@ -120,6 +120,9 @@ export const dues = pgTable('dues', {
 }, (t) => [
   index('idx_dues_customer').on(t.customer_id),
   index('idx_dues_status').on(t.status),
+  check('chk_dues_amount_positive', sql`amount > 0`),
+  check('chk_dues_outstanding_non_negative', sql`outstanding_amount >= 0`),
+  check('chk_dues_outstanding_lte_amount', sql`outstanding_amount <= amount`),
 ])
 
 // ============================================================
@@ -154,6 +157,10 @@ export const collections = pgTable('collections', {
   index('idx_collections_customer').on(t.customer_id),
   index('idx_collections_status').on(t.status),
   index('idx_collections_date').on(t.collected_at),
+  check('chk_collections_amount_positive', sql`amount > 0`),
+  check('chk_collections_gps_lat', sql`gps_lat IS NULL OR (gps_lat >= -90 AND gps_lat <= 90)`),
+  check('chk_collections_gps_lng', sql`gps_lng IS NULL OR (gps_lng >= -180 AND gps_lng <= 180)`),
+  check('chk_collections_gps_accuracy', sql`gps_accuracy IS NULL OR gps_accuracy >= 0`),
 ])
 
 // ============================================================
@@ -209,6 +216,8 @@ export const reconciliations = pgTable('reconciliations', {
   // Enforce one reconciliation per agent per date at the DB level
   unique('uq_reconciliations_agent_date').on(t.agent_id, t.date),
   index('idx_reconciliations_agent_date').on(t.agent_id, t.date),
+  check('chk_reconciliations_cash_collected_non_negative', sql`cash_collected >= 0`),
+  check('chk_reconciliations_cash_submitted_non_negative', sql`cash_submitted >= 0`),
 ])
 
 // ============================================================
@@ -241,7 +250,9 @@ export const expenses = pgTable('expenses', {
   deleted_at: timestamp('deleted_at', { withTimezone: true }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-})
+}, (t) => [
+  check('chk_expenses_amount_positive', sql`amount > 0`),
+])
 
 // ============================================================
 // CASHBOOK ENTRIES (legacy — superseded by ledger_entries)
