@@ -8,6 +8,13 @@
       "when": 1787660300612,
       "tag": "0000_stale_archangel",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787672733930,
+      "tag": "0001_hardening_and_constraints",
+      "breakpoints": true
     }
   ]
 }
