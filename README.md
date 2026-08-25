@@ -145,7 +145,22 @@ bun run db:seed      # Seed demo data
 
 ## Changelog
 
-### 2026-08-25
+### 2026-08-25 (Session 2)
+- Mobile-first UI: all data tables replaced with card views on mobile, tables on sm+ breakpoint
+  - Affected: collections, attendance, expenses, reconciliation, employees, customers (agent + admin views)
+  - Customer detail dues table: mobile cards with amount/outstanding/penalty grid
+  - Bottom navigation bar (role-aware, thumb-reachable, md:hidden, safe-area padding for notched phones)
+  - Viewport meta tag added (was missing — mobile browsers were rendering at 980px)
+  - min-h-screen → min-h-dvh across app-shell and auth layout (browser chrome fix)
+  - Dashboard chart heights reduced for mobile
+- Bug fix: confirming a collection now correctly reduces `outstanding_amount` on the linked due
+  - Due status transitions to PARTIALLY_PAID or PAID on confirm (was stuck at original value forever)
+- New feature: `penalty_rate` column on dues (% per month late fee, editable by admin)
+- New feature: admin can edit `due_date` and `penalty_rate` via pencil icon on customer detail page
+- Migration: `0002_due_penalty_rate.sql` — adds `penalty_rate NUMERIC(5,2)` to dues table
+- WiFi dev access: `allowedDevOrigins` added to next.config.ts, `--hostname 0.0.0.0` flag
+
+### 2026-08-25 (Session 1)
 - Fixed Drizzle migration tracking — bootstrapped tracking table, added generated migration for all schema changes
 - Added DB-level CHECK constraints for financial integrity
 - Atomic idempotency for collections via ON CONFLICT DO NOTHING (eliminates SELECT-before-INSERT race)
