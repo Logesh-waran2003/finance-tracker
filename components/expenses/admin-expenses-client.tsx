@@ -155,7 +155,38 @@ export function AdminExpensesClient({
       </div>
 
       <Card>
-        <CardContent className="p-0 overflow-x-auto">
+        <CardContent className="p-0">
+          <div className="sm:hidden space-y-3 p-3">
+            {filtered.length === 0 && <p className="text-center text-gray-400 py-6 text-sm">No records found</p>}
+            {filtered.map(r => (
+              <Card key={r.id}>
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium text-sm">{r.employee_name ?? '—'}</p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status] ?? 'bg-gray-100 text-gray-600'}`}>{r.status}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">{r.category_name ?? '—'}</span>
+                    <span className="font-medium">{fmtCurrency(r.amount)}</span>
+                  </div>
+                  <p className="text-sm text-gray-700 truncate">{r.description}</p>
+                  <p className="text-xs text-gray-400">{fmtDate(r.expense_date)}</p>
+                  {r.rejection_reason && <p className="text-xs text-red-500">{r.rejection_reason}</p>}
+                  {r.status === 'PENDING' && (
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" variant="ghost" className="flex-1 h-8 text-xs text-green-600 hover:text-green-700 hover:bg-green-50" disabled={actionLoading === r.id} onClick={() => action(r.id, 'approve')}>
+                        {actionLoading === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Approve'}
+                      </Button>
+                      <Button size="sm" variant="ghost" className="flex-1 h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50" disabled={actionLoading === r.id} onClick={() => { setRejecting(r); setRejectReason(''); setActionErr('') }}>
+                        Reject
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
@@ -213,6 +244,7 @@ export function AdminExpensesClient({
               ))}
             </tbody>
           </table>
+          </div>
         </CardContent>
       </Card>
 

@@ -4,6 +4,7 @@ import { customers, dues, collections, profiles } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import type { Session } from 'next-auth'
+import { EditDueDialog } from '@/components/customers/edit-due-dialog'
 
 interface CustomerDetailPageProps {
   params: Promise<{ id: string }>
@@ -98,23 +99,27 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
-                {['Invoice', 'Amount', 'Outstanding', 'Due Date', 'Status'].map(h => (
+                {['Invoice', 'Amount', 'Outstanding', 'Due Date', 'Penalty', 'Status', ''].map(h => (
                   <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y">
-              {duesList.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-400">No dues</td></tr>}
+              {duesList.length === 0 && <tr><td colSpan={7} className="px-4 py-6 text-center text-gray-400">No dues</td></tr>}
               {duesList.map(d => (
                 <tr key={d.id} className="hover:bg-gray-50">
                   <td className="px-4 py-2 text-gray-600">{d.invoice_number ?? '—'}</td>
                   <td className="px-4 py-2 font-medium">₹{parseFloat(d.amount as string).toLocaleString()}</td>
                   <td className="px-4 py-2 text-orange-600 font-medium">₹{parseFloat(d.outstanding_amount as string).toLocaleString()}</td>
                   <td className="px-4 py-2 text-gray-500">{d.due_date ?? '—'}</td>
+                  <td className="px-4 py-2 text-gray-500">{d.penalty_rate && parseFloat(d.penalty_rate as string) > 0 ? `${parseFloat(d.penalty_rate as string)}%` : '—'}</td>
                   <td className="px-4 py-2">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[d.status] ?? 'bg-gray-100 text-gray-600'}`}>
                       {d.status.replace('_', ' ')}
                     </span>
+                  </td>
+                  <td className="px-4 py-2">
+                    {role === 'ADMIN' && <EditDueDialog due={{ id: d.id, invoice_number: d.invoice_number, due_date: d.due_date, penalty_rate: d.penalty_rate as string | null, notes: d.notes }} />}
                   </td>
                 </tr>
               ))}

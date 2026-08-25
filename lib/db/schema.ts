@@ -113,6 +113,7 @@ export const dues = pgTable('dues', {
   due_date: date('due_date'),
   status: dueStatusEnum('status').notNull().default('OPEN'),
   notes: text('notes'),
+  penalty_rate: numeric('penalty_rate', { precision: 5, scale: 2 }).default('0'),
   created_by: uuid('created_by').references(() => profiles.id),
   deleted_at: timestamp('deleted_at', { withTimezone: true }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),

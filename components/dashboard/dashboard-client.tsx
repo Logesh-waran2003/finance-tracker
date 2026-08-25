@@ -178,7 +178,7 @@ export default function DashboardClient({
                 No collections in the last 30 days
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={220}>
+              <ResponsiveContainer width="100%" height={180}>
                 <AreaChart data={collectionTrend}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis
@@ -216,7 +216,7 @@ export default function DashboardClient({
                 No confirmed collections yet
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={220}>
+              <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={modeData} layout="vertical">
                   <XAxis
                     type="number"

@@ -65,6 +65,7 @@ export const createDueSchema = z.object({
   reference: z.string().max(100).optional().nullable(),
   due_date: dateStringSchema.optional().nullable(),
   notes: z.string().max(1000).optional().nullable(),
+  penalty_rate: z.number().min(0).max(100).optional().default(0),
 })
 
 export const updateDueSchema = z.object({
@@ -73,6 +74,7 @@ export const updateDueSchema = z.object({
   reference: z.string().max(100).optional().nullable(),
   due_date: dateStringSchema.optional().nullable(),
   notes: z.string().max(1000).optional().nullable(),
+  penalty_rate: z.number().min(0).max(100).optional(),
   status: z
     .enum(['OPEN', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'CANCELLED'])
     .optional(),

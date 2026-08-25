@@ -14,10 +14,11 @@ interface FormState {
   amount: string
   due_date: string
   notes: string
+  penalty_rate: string
 }
 
 const emptyForm: FormState = {
-  invoice_number: '', reference: '', amount: '', due_date: '', notes: '',
+  invoice_number: '', reference: '', amount: '', due_date: '', notes: '', penalty_rate: '0',
 }
 
 export function AddDueDialog({ customerId }: { customerId: string }) {
@@ -48,6 +49,7 @@ export function AddDueDialog({ customerId }: { customerId: string }) {
         amount: form.amount,
         due_date: form.due_date || null,
         notes: form.notes || null,
+        penalty_rate: parseFloat(form.penalty_rate) || 0,
       }),
     })
 
@@ -78,6 +80,10 @@ export function AddDueDialog({ customerId }: { customerId: string }) {
             <div className="space-y-1">
               <Label>Due Date</Label>
               <Input type="date" value={form.due_date} onChange={e => field('due_date', e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label>Penalty Rate (% / month)</Label>
+              <Input type="number" step="0.01" min="0" max="100" placeholder="0.00" value={form.penalty_rate} onChange={e => field('penalty_rate', e.target.value)} />
             </div>
             <div className="space-y-1">
               <Label>Invoice Number</Label>

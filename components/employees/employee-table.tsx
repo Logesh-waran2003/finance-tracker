@@ -160,7 +160,36 @@ export function EmployeeTable({ initial, branches }: { initial: Employee[]; bran
 
       {/* Table */}
       <Card>
-        <CardContent className="p-0 overflow-x-auto">
+        <CardContent className="p-0">
+          <div className="sm:hidden space-y-3 p-3">
+            {paged.length === 0 && <p className="text-center text-gray-400 py-6 text-sm">No employees found</p>}
+            {paged.map(emp => (
+              <Card key={emp.id}>
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm">{emp.full_name}</p>
+                      <p className="text-xs text-gray-400">{emp.employee_code ?? '—'} {emp.branch_id ? `· ${branchName(emp.branch_id)}` : ''}</p>
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${emp.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : emp.role === 'COLLECTION_AGENT' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {emp.role.replace('_', ' ')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500">{emp.email}</p>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${emp.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>{emp.is_active ? 'Active' : 'Inactive'}</span>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(emp)}><Pencil size={14} /></Button>
+                      <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${emp.is_active ? 'text-red-500 hover:text-red-700' : 'text-green-600 hover:text-green-800'}`} onClick={() => emp.is_active ? setConfirmDeactivate(emp) : toggleActive(emp)}>
+                        {emp.is_active ? <UserX size={14} /> : <UserCheck size={14} />}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
@@ -208,6 +237,7 @@ export function EmployeeTable({ initial, branches }: { initial: Employee[]; bran
               ))}
             </tbody>
           </table>
+          </div>
         </CardContent>
       </Card>
 

@@ -1,7 +1,7 @@
 import { db } from '@/lib/db'
-import { collections } from '@/lib/db/schema'
+import { collections, dues } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq, and, isNull } from 'drizzle-orm'
+import { eq, and, isNull, sql } from 'drizzle-orm'
 import { requireAdmin, isResponse } from '@/lib/auth/authorize'
 import { parseBody, adminCollectionActionSchema } from '@/lib/validation'
 import { writeLedgerEntry } from '@/lib/modules/ledger/service'
@@ -84,6 +84,46 @@ export async function PATCH(
         branch_id: existing.branch_id,
         notes: `Collection ${existing.collection_number ?? id} confirmed`,
       })
+
+      // Update the linked due's outstanding_amount if present
+      if (existing.due_id) {
+        const due = await tx
+          .select()
+          .from(dues)
+          .where(eq(dues.id, existing.due_id))
+          .limit(1)
+          .then(r => r[0])
+
+        if (due) {
+          const outstandingCents = Math.round(parseFloat(due.outstanding_amount as string) * 100)
+          const collectionCents = Math.round(parseFloat(existing.amount as string) * 100)
+          const newOutstandingCents = outstandingCents - collectionCents
+
+          const newOutstanding = newOutstandingCents <= 0 ? '0.00' : (newOutstandingCents / 100).toFixed(2)
+          const newStatus = newOutstandingCents <= 0 ? 'PAID' : 'PARTIALLY_PAID'
+
+          await tx
+            .update(dues)
+            .set({
+              outstanding_amount: newOutstanding,
+              status: newStatus,
+              updated_at: now,
+            })
+            .where(eq(dues.id, existing.due_id))
+
+          await logAudit(tx, {
+            actor_id: actor.id,
+            actor_name: actor.name,
+            actor_email: actor.email,
+            action: 'UPDATE',
+            entity_type: 'due',
+            entity_id: existing.due_id,
+            before_data: { outstanding_amount: due.outstanding_amount, status: due.status },
+            after_data: { outstanding_amount: newOutstanding, status: newStatus },
+            branch_id: actor.branch_id,
+          })
+        }
+      }
     }
 
     return row

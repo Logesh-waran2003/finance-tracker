@@ -69,6 +69,7 @@ export const POST = withErrorHandler(async (request: Request) => {
     due_date: data.due_date ?? null,
     status: 'OPEN',
     notes: data.notes ?? null,
+    penalty_rate: data.penalty_rate != null ? String(data.penalty_rate) : '0',
     created_by: actor.id,
   }).returning()
 

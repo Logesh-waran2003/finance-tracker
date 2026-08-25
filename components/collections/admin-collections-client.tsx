@@ -215,7 +215,43 @@ export function AdminCollectionsClient({
 
       {/* Table */}
       <Card>
-        <CardContent className="p-0 overflow-x-auto">
+        <CardContent className="p-0">
+          <div className="sm:hidden space-y-3 p-3">
+            {rows.length === 0 && <p className="text-center text-gray-400 py-6 text-sm">No collections found</p>}
+            {rows.map(row => (
+              <Card key={row.id}>
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono text-gray-400">{row.collection_number ?? '—'}</span>
+                    <StatusBadge status={row.status} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm">{row.customer_name ?? '—'}</p>
+                      <p className="text-xs text-gray-500">{row.agent_name ?? '—'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-sm">{fmt(parseFloat(row.amount))}</p>
+                      <p className="text-xs text-gray-500">{MODE_LABEL[row.payment_mode] ?? row.payment_mode}</p>
+                    </div>
+                  </div>
+                  {row.collected_at && <p className="text-xs text-gray-400">{format(new Date(row.collected_at), 'dd MMM, hh:mm a')}</p>}
+                  {row.status === 'REJECTED' && row.rejected_reason && <p className="text-xs text-red-400">{row.rejected_reason}</p>}
+                  {row.status === 'PENDING' && (
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" className="flex-1 h-8 text-xs bg-green-600 hover:bg-green-700 text-white" disabled={actioning === row.id} onClick={() => confirm(row.id)}>
+                        {actioning === row.id ? <Loader2 size={11} className="animate-spin" /> : 'Confirm'}
+                      </Button>
+                      <Button size="sm" variant="outline" className="flex-1 h-8 text-xs border-red-200 text-red-600 hover:bg-red-50" disabled={actioning === row.id} onClick={() => { setRejectTarget(row.id); setRejectReason('') }}>
+                        Reject
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
@@ -285,6 +321,7 @@ export function AdminCollectionsClient({
               ))}
             </tbody>
           </table>
+          </div>
         </CardContent>
       </Card>
 

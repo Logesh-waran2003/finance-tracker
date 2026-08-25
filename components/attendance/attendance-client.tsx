@@ -221,34 +221,63 @@ export function AttendanceClient({ today, todayRecord: initial, history: initial
       <div>
         <h2 className="text-base font-medium mb-3">Last 30 Days</h2>
         <Card>
-          <CardContent className="p-0 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  {['Date', 'Check In', 'Check Out', 'Hours', 'Status'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {history.length === 0 && (
+          <CardContent className="p-0">
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b">
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-gray-400 text-sm">No attendance records</td>
+                    {['Date', 'Check In', 'Check Out', 'Hours', 'Status'].map(h => (
+                      <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>
+                    ))}
                   </tr>
-                )}
-                {history.map(row => (
-                  <tr key={row.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-700">
-                      {format(new Date(row.date + 'T00:00:00'), 'dd MMM yyyy')}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{fmtTime(row.check_in_at)}</td>
-                    <td className="px-4 py-3 text-gray-600">{fmtTime(row.check_out_at)}</td>
-                    <td className="px-4 py-3 text-gray-600">{fmtHours(row.total_hours)}</td>
-                    <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y">
+                  {history.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-gray-400 text-sm">No attendance records</td>
+                    </tr>
+                  )}
+                  {history.map(row => (
+                    <tr key={row.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-gray-700">
+                        {format(new Date(row.date + 'T00:00:00'), 'dd MMM yyyy')}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{fmtTime(row.check_in_at)}</td>
+                      <td className="px-4 py-3 text-gray-600">{fmtTime(row.check_out_at)}</td>
+                      <td className="px-4 py-3 text-gray-600">{fmtHours(row.total_hours)}</td>
+                      <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="sm:hidden space-y-3 p-3">
+              {history.length === 0 && <p className="text-center text-gray-400 py-6 text-sm">No attendance records</p>}
+              {history.map(row => (
+                <Card key={row.id}>
+                  <CardContent className="p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium text-sm">{format(new Date(row.date + 'T00:00:00'), 'dd MMM yyyy')}</p>
+                      <StatusBadge status={row.status} />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-sm">
+                      <div>
+                        <p className="text-xs text-gray-500">Check In</p>
+                        <p className="font-medium">{fmtTime(row.check_in_at)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Check Out</p>
+                        <p className="font-medium">{fmtTime(row.check_out_at)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Hours</p>
+                        <p className="font-medium">{fmtHours(row.total_hours)}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </div>

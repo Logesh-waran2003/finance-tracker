@@ -95,40 +95,71 @@ export function ExpensesClient({ initial, categories }: { initial: ExpenseRow[];
       </div>
 
       <Card>
-        <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>{['Date', 'Category', 'Description', 'Amount', 'Mode', 'Status', ''].map(h => (
-                <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
-              ))}</tr>
-            </thead>
-            <tbody className="divide-y">
-              {rows.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">No expenses yet</td></tr>}
-              {rows.map(r => (
-                <tr key={r.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-2 text-gray-600">{r.expense_date}</td>
-                  <td className="px-4 py-2 text-gray-600">{r.category_name ?? '—'}</td>
-                  <td className="px-4 py-2">{r.description}</td>
-                  <td className="px-4 py-2 font-medium">₹{parseFloat(r.amount).toLocaleString()}</td>
-                  <td className="px-4 py-2 text-gray-500">{r.payment_mode}</td>
-                  <td className="px-4 py-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status] ?? 'bg-gray-100'}`}>
-                      {r.status}
-                    </span>
-                    {r.rejection_reason && <p className="text-xs text-red-500 mt-0.5">{r.rejection_reason}</p>}
-                  </td>
-                  <td className="px-4 py-2">
+        <CardContent className="p-0">
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>{['Date', 'Category', 'Description', 'Amount', 'Mode', 'Status', ''].map(h => (
+                  <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+                ))}</tr>
+              </thead>
+              <tbody className="divide-y">
+                {rows.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">No expenses yet</td></tr>}
+                {rows.map(r => (
+                  <tr key={r.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-2 text-gray-600">{r.expense_date}</td>
+                    <td className="px-4 py-2 text-gray-600">{r.category_name ?? '—'}</td>
+                    <td className="px-4 py-2">{r.description}</td>
+                    <td className="px-4 py-2 font-medium">₹{parseFloat(r.amount).toLocaleString()}</td>
+                    <td className="px-4 py-2 text-gray-500">{r.payment_mode}</td>
+                    <td className="px-4 py-2">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status] ?? 'bg-gray-100'}`}>
+                        {r.status}
+                      </span>
+                      {r.rejection_reason && <p className="text-xs text-red-500 mt-0.5">{r.rejection_reason}</p>}
+                    </td>
+                    <td className="px-4 py-2">
+                      {r.status === 'PENDING' && (
+                        <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600"
+                          onClick={() => handleDelete(r.id)}>
+                          <Trash2 size={14} />
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="sm:hidden space-y-3 p-3">
+            {rows.length === 0 && <p className="text-center text-gray-400 py-6 text-sm">No expenses yet</p>}
+            {rows.map(r => (
+              <Card key={r.id}>
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm">{r.category_name ?? '—'}</p>
+                      <p className="text-xs text-gray-500">{r.expense_date}</p>
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status] ?? 'bg-gray-100'}`}>{r.status}</span>
+                  </div>
+                  <p className="text-sm text-gray-700">{r.description}</p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-3 text-sm">
+                      <span className="font-medium">₹{parseFloat(r.amount).toLocaleString()}</span>
+                      <span className="text-gray-500">{r.payment_mode}</span>
+                    </div>
                     {r.status === 'PENDING' && (
-                      <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600"
-                        onClick={() => handleDelete(r.id)}>
+                      <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600 h-7 w-7 p-0" onClick={() => handleDelete(r.id)}>
                         <Trash2 size={14} />
                       </Button>
                     )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                  {r.rejection_reason && <p className="text-xs text-red-500">{r.rejection_reason}</p>}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </CardContent>
       </Card>
 

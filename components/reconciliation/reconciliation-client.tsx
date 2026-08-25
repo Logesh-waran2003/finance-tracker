@@ -121,36 +121,60 @@ export function ReconciliationClient({ initial, todayCash, todaySubmitted }: {
       {/* History */}
       <Card>
         <CardHeader><CardTitle className="text-base">History</CardTitle></CardHeader>
-        <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>{['Date', 'Collected', 'Submitted', 'Difference', 'Status'].map(h => (
-                <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
-              ))}</tr>
-            </thead>
-            <tbody className="divide-y">
-              {rows.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-400">No reconciliations yet</td></tr>}
-              {rows.map(r => {
-                const diff = parseFloat(r.difference ?? '0')
-                return (
-                  <tr key={r.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-2">{r.date}</td>
-                    <td className="px-4 py-2 font-medium">₹{parseFloat(r.cash_collected).toLocaleString()}</td>
-                    <td className="px-4 py-2">₹{parseFloat(r.cash_submitted).toLocaleString()}</td>
-                    <td className={`px-4 py-2 font-medium ${diff === 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-orange-600'}`}>
-                      ₹{Math.abs(diff).toLocaleString()}{diff !== 0 && (diff < 0 ? ' (short)' : ' (excess)')}
-                    </td>
-                    <td className="px-4 py-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status] ?? 'bg-gray-100'}`}>
-                        {r.status}
-                      </span>
-                      {r.rejection_reason && <p className="text-xs text-red-500 mt-0.5">{r.rejection_reason}</p>}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+        <CardContent className="p-0">
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>{['Date', 'Collected', 'Submitted', 'Difference', 'Status'].map(h => (
+                  <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+                ))}</tr>
+              </thead>
+              <tbody className="divide-y">
+                {rows.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-400">No reconciliations yet</td></tr>}
+                {rows.map(r => {
+                  const diff = parseFloat(r.difference ?? '0')
+                  return (
+                    <tr key={r.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-2">{r.date}</td>
+                      <td className="px-4 py-2 font-medium">₹{parseFloat(r.cash_collected).toLocaleString()}</td>
+                      <td className="px-4 py-2">₹{parseFloat(r.cash_submitted).toLocaleString()}</td>
+                      <td className={`px-4 py-2 font-medium ${diff === 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-orange-600'}`}>
+                        ₹{Math.abs(diff).toLocaleString()}{diff !== 0 && (diff < 0 ? ' (short)' : ' (excess)')}
+                      </td>
+                      <td className="px-4 py-2">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status] ?? 'bg-gray-100'}`}>
+                          {r.status}
+                        </span>
+                        {r.rejection_reason && <p className="text-xs text-red-500 mt-0.5">{r.rejection_reason}</p>}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="sm:hidden space-y-3 p-3">
+            {rows.length === 0 && <p className="text-center text-gray-400 py-6 text-sm">No reconciliations yet</p>}
+            {rows.map(r => {
+              const diff = parseFloat(r.difference ?? '0')
+              return (
+                <Card key={r.id}>
+                  <CardContent className="p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium text-sm">{r.date}</p>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status] ?? 'bg-gray-100'}`}>{r.status}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-sm">
+                      <div><p className="text-xs text-gray-500">Collected</p><p className="font-medium">₹{parseFloat(r.cash_collected).toLocaleString()}</p></div>
+                      <div><p className="text-xs text-gray-500">Submitted</p><p className="font-medium">₹{parseFloat(r.cash_submitted).toLocaleString()}</p></div>
+                      <div><p className="text-xs text-gray-500">Difference</p><p className={`font-medium ${diff === 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-orange-600'}`}>₹{Math.abs(diff).toLocaleString()}{diff !== 0 && (diff < 0 ? ' ▼' : ' ▲')}</p></div>
+                    </div>
+                    {r.rejection_reason && <p className="text-xs text-red-500">{r.rejection_reason}</p>}
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
         </CardContent>
       </Card>
     </div>

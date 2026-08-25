@@ -59,6 +59,7 @@ export const PATCH = withErrorHandler(async (
   if (data.reference !== undefined) updates.reference = data.reference
   if (data.due_date !== undefined) updates.due_date = data.due_date
   if (data.notes !== undefined) updates.notes = data.notes
+  if (data.penalty_rate !== undefined) updates.penalty_rate = String(data.penalty_rate)
   if (data.status !== undefined) {
     updates.status = data.status
     if (data.status === 'CANCELLED') updates.outstanding_amount = '0'

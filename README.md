@@ -1,29 +1,46 @@
 # Finance Tracker
 
-Collection & Staff Finance Tracker — built for field collection agencies. Full RBAC, attendance, collections workflow, cash reconciliation, expenses, and admin dashboard.
+Collection & Staff Finance Tracker — built for field collection agencies. Full RBAC, attendance, collections workflow, cash reconciliation, expenses, admin dashboard, and production-grade security.
 
 ## Stack
 
 - **Framework:** Next.js 16 App Router (TypeScript)
 - **UI:** Tailwind CSS + shadcn/ui + Recharts
 - **ORM:** Drizzle ORM
-- **DB:** PostgreSQL (Docker)
+- **DB:** PostgreSQL (Docker, port 5433)
 - **Auth:** NextAuth v5 (credentials + JWT)
 
 ## Features
 
 | Module | Description |
 |---|---|
-| Auth | Role-based login (ADMIN / COLLECTION_AGENT / STAFF) |
+| Auth | Role-based login (ADMIN / COLLECTION_AGENT / STAFF), session invalidation on password change |
 | Attendance | GPS check-in/out, LATE detection, admin correction, CSV export |
 | Customers | CRUD, assigned agent, outstanding balance, activity timeline |
-| Dues | Invoice-linked dues, outstanding tracking, status lifecycle |
-| Collections | Agent collection form, GPS capture, idempotency, admin confirm/reject |
-| Reconciliation | Daily cash handover, difference tracking, admin verification |
-| Expenses | Claim submission, category-based, admin approve/reject |
+| Dues | Invoice-linked dues, outstanding tracking, status lifecycle, state transition guards |
+| Collections | Agent collection form, GPS capture, idempotency (ON CONFLICT DO NOTHING), admin confirm/reject |
+| Reconciliation | Daily cash handover, server-side total calculation, difference tracking, admin verification |
+| Expenses | Claim submission, category-based, admin approve/reject, state guards |
 | Dashboard | KPI cards, Recharts charts, aging report, activity feed |
-| Reports | CSV exports — collections, attendance, expenses, reconciliation, dues |
+| Reports | CSV exports — collections, attendance, expenses, reconciliation, dues (injection-safe) |
 | Notifications | Real-time alerts for pending collections, overdue dues, absent agents |
+| Ledger | Atomic ledger entries on all financial events |
+| Audit | Full audit log (jsonb) on all financial + security actions |
+
+## Security
+
+- Centralized server-side auth via `lib/auth/authorize.ts`
+- IDOR fixed on dues, customers, collections, branches, notifications
+- Session invalidated on password change (`password_version` in JWT)
+- `requireAdmin` on every admin route with branch isolation
+- Rate limiting on auth and change-password routes
+- SELECT FOR UPDATE on due before collection (concurrent over-collection blocked)
+- Amount > outstanding rejected with 400 (no silent clamping)
+- `cash_collected` calculated server-side in reconciliation (client total ignored)
+- Security headers: HSTS, X-Frame-Options, CSP, Permissions-Policy, Referrer-Policy
+- CSV injection prevention
+- Error responses never leak stack traces or DB errors
+- Env validation at startup
 
 ## Local Setup
 
@@ -49,23 +66,26 @@ docker compose up -d
 
 ```bash
 cp .env.example .env.local
-# Edit .env.local — set NEXTAUTH_SECRET and DATABASE_URL
+# Edit .env.local — set NEXTAUTH_SECRET, NEXTAUTH_URL, DATABASE_URL
 ```
 
-### 4. Push schema and seed
+### 4. Run migrations and seed
 
 ```bash
-bun run db:push
+bun run db:migrate   # apply Drizzle migrations (tracking table bootstrapped)
 bun run db:seed
 ```
 
 ### 5. Start dev server
 
 ```bash
-bun run dev
+bun run dev          # localhost only
+# or for WiFi access:
+bun run dev -- --hostname 0.0.0.0
 ```
 
-App runs at **http://localhost:3000** (or 3001 if 3000 is taken).
+App runs at **http://localhost:3001**.
+For WiFi access: **http://192.168.0.109:3001**
 
 ## Demo Credentials
 
@@ -103,8 +123,12 @@ components/
   reports/        CSV report downloads
   dashboard/      KPI dashboard
 lib/
-  db/             Drizzle schema + client
-  auth.ts         Auth helpers (requireAuth, isAdmin, etc.)
+  auth/           authorize.ts — centralized server-side auth
+  db/             Drizzle schema + client + migrations
+  modules/        Service layer (collections, expenses, reconciliation, attendance, ledger, audit)
+  validation/     Zod schemas
+  rate-limit.ts   Rate limiting
+  utils/          csv.ts, error.ts
 ```
 
 ## Scripts
@@ -113,9 +137,26 @@ lib/
 bun run dev          # Start dev server
 bun run build        # Production build
 bun run type-check   # TypeScript check
-bun run db:push      # Push schema to DB
+bun run lint         # ESLint
+bun run db:push      # Push schema to DB (dev only)
+bun run db:migrate   # Apply Drizzle migrations (production)
 bun run db:seed      # Seed demo data
 ```
+
+## Changelog
+
+### 2026-08-25
+- Fixed Drizzle migration tracking — bootstrapped tracking table, added generated migration for all schema changes
+- Added DB-level CHECK constraints for financial integrity
+- Atomic idempotency for collections via ON CONFLICT DO NOTHING (eliminates SELECT-before-INSERT race)
+- Decimal-safe money comparison in collection service (no parseFloat)
+- Allow null `due_id` in createCollectionSchema (freeform collections)
+- Fixed Drizzle relations for profiles -> branch (was crashing dashboard)
+- Security hardening: centralized auth, IDOR fixes, rate limiting, session invalidation on password change
+- Service layer extracted: collections, expenses, reconciliation, attendance, ledger, audit
+- Ledger entries + audit logs on all financial/security events
+- DB migrations: password_version, deleted_at, UNIQUE(agent_id, date) on reconciliations
+- Security headers, CSV injection prevention, env validation at startup
 
 ## License
 

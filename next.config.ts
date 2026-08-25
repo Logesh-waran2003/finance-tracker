@@ -26,6 +26,7 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ['192.168.0.109'],
   async headers() {
     return [
       {
