@@ -31,7 +31,7 @@ export const expenseStatusSchema = z.enum(['PENDING', 'APPROVED', 'REJECTED'])
 
 export const createCollectionSchema = z.object({
   customer_id: uuidSchema,
-  due_id: uuidSchema.optional(),
+  due_id: uuidSchema.optional().nullable(),
   amount: positiveAmountSchema,
   payment_mode: paymentModeSchema,
   payment_reference: z.string().max(255).trim().optional(),
