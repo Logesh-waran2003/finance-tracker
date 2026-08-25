@@ -1,25 +1,29 @@
-import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { dues, customers, profiles } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq, and, notInArray, desc } from 'drizzle-orm'
-import type { Session } from 'next-auth'
-
-function csv(rows: string[][]): string {
-  return rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
-}
+import { eq, and, notInArray, desc, isNull } from 'drizzle-orm'
+import { requireAdmin, isResponse } from '@/lib/auth/authorize'
+import { buildCsv } from '@/lib/utils/csv'
 
 export async function GET(request: Request) {
-  const session = (await auth()) as Session | null
-  if (!session?.user?.id || (session.user as any).role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const url = new URL(request.url)
   const agent_id = url.searchParams.get('agent_id')
 
-  const conditions: any[] = [notInArray(dues.status, ['PAID', 'CANCELLED'])]
-  if (agent_id) conditions.push(eq(customers.assigned_agent_id, agent_id))
+  const conditions: ReturnType<typeof eq>[] = [
+    notInArray(dues.status, ['PAID', 'CANCELLED']) as any,
+    isNull(dues.deleted_at) as any,
+  ]
+
+  if (agent_id) conditions.push(eq(customers.assigned_agent_id, agent_id) as any)
+
+  // Branch isolation — dues are scoped via customer's branch_id
+  if (actor.branch_id) {
+    conditions.push(eq(customers.branch_id, actor.branch_id) as any)
+  }
 
   const rows = await db.select({
     customer_name: customers.full_name,
@@ -34,7 +38,7 @@ export async function GET(request: Request) {
   }).from(dues)
     .leftJoin(customers, eq(dues.customer_id, customers.id))
     .leftJoin(profiles, eq(customers.assigned_agent_id, profiles.id))
-    .where(and(...conditions))
+    .where(and(...(conditions as [ReturnType<typeof eq>, ...ReturnType<typeof eq>[]])))
     .orderBy(desc(dues.due_date))
 
   const headers = ['Customer', 'Code', 'Agent', 'Invoice', 'Amount', 'Outstanding', 'Due Date', 'Status', 'Notes']
@@ -50,11 +54,11 @@ export async function GET(request: Request) {
     r.notes ?? '',
   ])
 
-  const body = csv([headers, ...data])
+  const body = buildCsv(headers, data)
   return new NextResponse(body, {
     headers: {
-      'Content-Type': 'text/csv',
-      'Content-Disposition': `attachment; filename="outstanding-dues.csv"`,
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': 'attachment; filename="outstanding-dues.csv"',
     },
   })
 }

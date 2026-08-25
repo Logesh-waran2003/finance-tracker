@@ -1,19 +1,13 @@
-import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { collections, customers, profiles } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq, and, desc, gte, lte } from 'drizzle-orm'
-import type { Session } from 'next-auth'
-
-function getAdmin(s: Session | null) {
-  if (!s?.user?.id) return null
-  if ((s.user as any).role !== 'ADMIN') return null
-  return s.user
-}
+import { eq, and, desc, gte, lte, isNull } from 'drizzle-orm'
+import { requireAdmin, isResponse } from '@/lib/auth/authorize'
 
 export async function GET(request: Request) {
-  const session = (await auth()) as Session | null
-  if (!getAdmin(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const url = new URL(request.url)
   const statusFilter = url.searchParams.get('status')
@@ -21,13 +15,20 @@ export async function GET(request: Request) {
   const start = url.searchParams.get('start')
   const end = url.searchParams.get('end')
 
-  const conditions: ReturnType<typeof eq>[] = []
-  if (statusFilter) conditions.push(eq(collections.status, statusFilter as any))
-  if (agentId) conditions.push(eq(collections.agent_id, agentId))
+  const conditions: ReturnType<typeof eq>[] = [
+    // Soft-delete: never return cancelled-and-deleted rows
+    isNull(collections.deleted_at) as any,
+  ]
+
+  // Branch isolation — admin only sees their own branch; null branch_id = unrestricted
+  if (actor.branch_id) {
+    conditions.push(eq(collections.branch_id, actor.branch_id) as any)
+  }
+
+  if (statusFilter) conditions.push(eq(collections.status, statusFilter as any) as any)
+  if (agentId) conditions.push(eq(collections.agent_id, agentId) as any)
   if (start) conditions.push(gte(collections.collected_at, new Date(start + 'T00:00:00.000Z')) as any)
   if (end) conditions.push(lte(collections.collected_at, new Date(end + 'T23:59:59.999Z')) as any)
-
-  const agentProfile = db.select().from(profiles).as('agent_profile')
 
   const rows = await db
     .select({
@@ -51,7 +52,7 @@ export async function GET(request: Request) {
     .from(collections)
     .leftJoin(customers, eq(collections.customer_id, customers.id))
     .leftJoin(profiles, eq(collections.agent_id, profiles.id))
-    .where(conditions.length ? and(...(conditions as [ReturnType<typeof eq>, ...ReturnType<typeof eq>[]])) : undefined)
+    .where(and(...(conditions as [ReturnType<typeof eq>, ...ReturnType<typeof eq>[]])))
     .orderBy(desc(collections.collected_at))
     .limit(100)
 

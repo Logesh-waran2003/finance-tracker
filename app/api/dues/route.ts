@@ -1,22 +1,31 @@
-import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { dues } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq, and, sql } from 'drizzle-orm'
-import type { Session } from 'next-auth'
+import { requireRole, requireCustomerAccess, isResponse } from '@/lib/auth/authorize'
+import { uuidSchema } from '@/lib/validation'
 
 export async function GET(request: Request) {
-  const session = (await auth()) as Session | null
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const role = (session.user as any).role
-  if (role !== 'COLLECTION_AGENT' && role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const userOrRes = await requireRole(['COLLECTION_AGENT', 'ADMIN'])
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const url = new URL(request.url)
   const customer_id = url.searchParams.get('customer_id')
-  if (!customer_id) return NextResponse.json({ error: 'customer_id is required' }, { status: 400 })
+
+  if (!customer_id) {
+    return NextResponse.json({ error: 'customer_id is required' }, { status: 400 })
+  }
+
+  // Validate UUID format
+  const idParse = uuidSchema.safeParse(customer_id)
+  if (!idParse.success) {
+    return NextResponse.json({ error: 'customer_id must be a valid UUID' }, { status: 400 })
+  }
+
+  // IDOR fix: verify agent is assigned to this customer (ADMIN bypasses)
+  const accessErr = await requireCustomerAccess(actor, customer_id)
+  if (accessErr) return accessErr
 
   const rows = await db
     .select()

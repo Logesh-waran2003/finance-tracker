@@ -1,13 +1,10 @@
-import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { attendance, profiles } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq, and, gte, lte, desc } from 'drizzle-orm'
-import type { Session } from 'next-auth'
-
-function csv(rows: string[][]): string {
-  return rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
-}
+import { requireAdmin, isResponse } from '@/lib/auth/authorize'
+import { reportDateRangeSchema } from '@/lib/validation'
+import { buildCsv } from '@/lib/utils/csv'
 
 function fmtDT(d: Date | null) {
   if (!d) return ''
@@ -15,20 +12,32 @@ function fmtDT(d: Date | null) {
 }
 
 export async function GET(request: Request) {
-  const session = (await auth()) as Session | null
-  if (!session?.user?.id || (session.user as any).role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const url = new URL(request.url)
-  const from = url.searchParams.get('from')
-  const to = url.searchParams.get('to')
+  const from = url.searchParams.get('from') ?? undefined
+  const to = url.searchParams.get('to') ?? undefined
   const agent_id = url.searchParams.get('agent_id')
 
-  const conditions: any[] = []
-  if (from) conditions.push(gte(attendance.date, from))
-  if (to) conditions.push(lte(attendance.date, to))
-  if (agent_id) conditions.push(eq(attendance.employee_id, agent_id))
+  // Date range validation — max 1 year
+  const rangeCheck = reportDateRangeSchema.safeParse({ from, to })
+  if (!rangeCheck.success) {
+    const msg = rangeCheck.error.issues[0]?.message ?? 'Invalid date range'
+    return NextResponse.json({ error: msg }, { status: 400 })
+  }
+
+  const conditions: ReturnType<typeof eq>[] = []
+
+  // Branch isolation
+  if (actor.branch_id) {
+    conditions.push(eq(attendance.branch_id, actor.branch_id) as any)
+  }
+
+  if (from) conditions.push(gte(attendance.date, from) as any)
+  if (to) conditions.push(lte(attendance.date, to) as any)
+  if (agent_id) conditions.push(eq(attendance.employee_id, agent_id) as any)
 
   const rows = await db.select({
     full_name: profiles.full_name,
@@ -44,7 +53,7 @@ export async function GET(request: Request) {
     corrected_at: attendance.corrected_at,
   }).from(attendance)
     .leftJoin(profiles, eq(attendance.employee_id, profiles.id))
-    .where(conditions.length ? and(...conditions) : undefined)
+    .where(conditions.length ? and(...(conditions as [ReturnType<typeof eq>, ...ReturnType<typeof eq>[]])) : undefined)
     .orderBy(desc(attendance.date))
 
   const headers = ['Employee', 'Code', 'Date', 'Status', 'Check-in', 'Check-out', 'Total Hours', 'GPS', 'Corrected At', 'Notes']
@@ -61,11 +70,11 @@ export async function GET(request: Request) {
     r.notes ?? '',
   ])
 
-  const body = csv([headers, ...data])
+  const body = buildCsv(headers, data)
   return new NextResponse(body, {
     headers: {
-      'Content-Type': 'text/csv',
-      'Content-Disposition': `attachment; filename="attendance-report.csv"`,
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': 'attachment; filename="attendance-report.csv"',
     },
   })
 }

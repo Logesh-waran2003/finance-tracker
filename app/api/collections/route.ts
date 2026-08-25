@@ -1,106 +1,67 @@
-import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import { collections, customers, auditLogs } from '@/lib/db/schema'
+import { collections, customers } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq, and, desc, gte, lte } from 'drizzle-orm'
-import type { Session } from 'next-auth'
-
-function getAgent(s: Session | null) {
-  if (!s?.user?.id) return null
-  const role = (s.user as any).role
-  if (role !== 'COLLECTION_AGENT' && role !== 'ADMIN') return null
-  return s.user
-}
+import { requireRole, requireCustomerAccess, isResponse } from '@/lib/auth/authorize'
+import { parseBody, createCollectionSchema } from '@/lib/validation'
+import { createCollection } from '@/lib/modules/collections/service'
+import { ServiceError } from '@/lib/modules/errors'
 
 export async function POST(request: Request) {
-  const session = (await auth()) as Session | null
-  const actor = getAgent(session)
-  if (!actor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const userOrRes = await requireRole(['COLLECTION_AGENT', 'ADMIN'])
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
-  const body = await request.json()
-  const { customer_id, due_id, amount, payment_mode, payment_reference, notes,
-          gps_lat, gps_lng, gps_accuracy, idempotency_key } = body
+  const parsed = await parseBody(request, createCollectionSchema)
+  if (!parsed.ok) return parsed.response
 
-  if (!customer_id) return NextResponse.json({ error: 'customer_id is required' }, { status: 400 })
-  if (!amount || parseFloat(amount) <= 0) return NextResponse.json({ error: 'amount must be > 0' }, { status: 400 })
-  if (!payment_mode) return NextResponse.json({ error: 'payment_mode is required' }, { status: 400 })
+  const {
+    customer_id, due_id, amount, payment_mode, payment_reference,
+    notes, gps_lat, gps_lng, gps_accuracy, idempotency_key,
+  } = parsed.data
 
-  // Idempotency check
-  if (idempotency_key) {
-    const existing = await db
-      .select()
-      .from(collections)
-      .where(eq(collections.idempotency_key, idempotency_key))
-      .limit(1)
-      .then(r => r[0])
-    if (existing) return NextResponse.json(existing, { status: 409 })
-  }
+  // Verify customer access server-side (agent must be assigned)
+  const accessErr = await requireCustomerAccess(actor, customer_id)
+  if (accessErr) return accessErr
 
-  // Non-admin must be assigned to this customer
-  const role = (actor as any).role
-  if (role !== 'ADMIN') {
-    const customer = await db
-      .select({ assigned_agent_id: customers.assigned_agent_id })
-      .from(customers)
-      .where(eq(customers.id, customer_id))
-      .limit(1)
-      .then(r => r[0])
-    if (!customer) return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
-    if (customer.assigned_agent_id !== actor.id) {
-      return NextResponse.json({ error: 'Customer not assigned to you' }, { status: 403 })
-    }
-  }
-
-  const branchId = (session!.user as any).branch_id ?? null
-
-  const [collection] = await db
-    .insert(collections)
-    .values({
-      customer_id,
-      due_id: due_id ?? null,
-      agent_id: actor.id as string,
-      branch_id: branchId,
-      amount: String(amount),
-      payment_mode,
-      payment_reference: payment_reference ?? null,
-      notes: notes ?? null,
-      gps_lat: gps_lat != null ? String(gps_lat) : null,
-      gps_lng: gps_lng != null ? String(gps_lng) : null,
-      gps_accuracy: gps_accuracy != null ? String(gps_accuracy) : null,
-      status: 'PENDING',
-      idempotency_key: idempotency_key ?? null,
-      collected_at: new Date(),
+  try {
+    const result = await createCollection(db, {
+      agentId: actor.id,
+      branchId: actor.branch_id,
+      actorName: actor.name,
+      actorEmail: actor.email,
+      customerId: customer_id,
+      dueId: due_id,
+      amount,
+      paymentMode: payment_mode,
+      paymentReference: payment_reference,
+      notes,
+      gpsLat: gps_lat,
+      gpsLng: gps_lng,
+      gpsAccuracy: gps_accuracy,
+      idempotencyKey: idempotency_key,
     })
-    .returning()
-
-  await db.insert(auditLogs).values({
-    actor_id: actor.id as string,
-    actor_name: actor.name ?? '',
-    action: 'CREATE',
-    entity_type: 'collection',
-    entity_id: collection.id,
-    after_data: JSON.stringify({
-      collection_number: collection.collection_number,
-      amount: collection.amount,
-      payment_mode: collection.payment_mode,
-      status: collection.status,
-    }),
-  })
-
-  return NextResponse.json(collection, { status: 201 })
+    const status = result.created ? 201 : 200
+    return NextResponse.json(result.collection, { status })
+  } catch (err) {
+    if (err instanceof ServiceError) {
+      return NextResponse.json({ error: err.message }, { status: err.status })
+    }
+    throw err
+  }
 }
 
 export async function GET(request: Request) {
-  const session = (await auth()) as Session | null
-  const actor = getAgent(session)
-  if (!actor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const userOrRes = await requireRole(['COLLECTION_AGENT', 'ADMIN'])
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const url = new URL(request.url)
   const statusFilter = url.searchParams.get('status')
   const dateFilter = url.searchParams.get('date')
 
   const conditions: ReturnType<typeof eq>[] = [
-    eq(collections.agent_id, actor.id as string),
+    eq(collections.agent_id, actor.id),
   ]
   if (statusFilter) conditions.push(eq(collections.status, statusFilter as any))
   if (dateFilter) {

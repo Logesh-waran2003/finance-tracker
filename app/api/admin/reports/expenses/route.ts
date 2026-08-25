@@ -1,31 +1,42 @@
-import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { expenses, expenseCategories, profiles } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq, and, gte, lte, desc } from 'drizzle-orm'
-import type { Session } from 'next-auth'
-
-function csv(rows: string[][]): string {
-  return rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
-}
+import { eq, and, gte, lte, desc, isNull } from 'drizzle-orm'
+import { requireAdmin, isResponse } from '@/lib/auth/authorize'
+import { reportDateRangeSchema } from '@/lib/validation'
+import { buildCsv } from '@/lib/utils/csv'
 
 export async function GET(request: Request) {
-  const session = (await auth()) as Session | null
-  if (!session?.user?.id || (session.user as any).role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const url = new URL(request.url)
-  const from = url.searchParams.get('from')
-  const to = url.searchParams.get('to')
+  const from = url.searchParams.get('from') ?? undefined
+  const to = url.searchParams.get('to') ?? undefined
   const agent_id = url.searchParams.get('agent_id')
   const status = url.searchParams.get('status')
 
-  const conditions: any[] = []
-  if (from) conditions.push(gte(expenses.expense_date, from))
-  if (to) conditions.push(lte(expenses.expense_date, to))
-  if (agent_id) conditions.push(eq(expenses.employee_id, agent_id))
-  if (status) conditions.push(eq(expenses.status, status as any))
+  // Date range validation — max 1 year
+  const rangeCheck = reportDateRangeSchema.safeParse({ from, to })
+  if (!rangeCheck.success) {
+    const msg = rangeCheck.error.issues[0]?.message ?? 'Invalid date range'
+    return NextResponse.json({ error: msg }, { status: 400 })
+  }
+
+  const conditions: ReturnType<typeof eq>[] = [
+    isNull(expenses.deleted_at) as any,
+  ]
+
+  // Branch isolation
+  if (actor.branch_id) {
+    conditions.push(eq(expenses.branch_id, actor.branch_id) as any)
+  }
+
+  if (from) conditions.push(gte(expenses.expense_date, from) as any)
+  if (to) conditions.push(lte(expenses.expense_date, to) as any)
+  if (agent_id) conditions.push(eq(expenses.employee_id, agent_id) as any)
+  if (status) conditions.push(eq(expenses.status, status as any) as any)
 
   const rows = await db.select({
     employee_name: profiles.full_name,
@@ -40,7 +51,7 @@ export async function GET(request: Request) {
   }).from(expenses)
     .leftJoin(profiles, eq(expenses.employee_id, profiles.id))
     .leftJoin(expenseCategories, eq(expenses.category_id, expenseCategories.id))
-    .where(conditions.length ? and(...conditions) : undefined)
+    .where(and(...(conditions as [ReturnType<typeof eq>, ...ReturnType<typeof eq>[]])))
     .orderBy(desc(expenses.expense_date))
 
   const headers = ['Employee', 'Category', 'Description', 'Amount', 'Payment Mode', 'Date', 'Status', 'Rejection Reason', 'Approved At']
@@ -56,11 +67,11 @@ export async function GET(request: Request) {
     r.approved_at ? r.approved_at.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : '',
   ])
 
-  const body = csv([headers, ...data])
+  const body = buildCsv(headers, data)
   return new NextResponse(body, {
     headers: {
-      'Content-Type': 'text/csv',
-      'Content-Disposition': `attachment; filename="expenses-report.csv"`,
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': 'attachment; filename="expenses-report.csv"',
     },
   })
 }

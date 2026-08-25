@@ -1,61 +1,87 @@
-import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import { dues, auditLogs } from '@/lib/db/schema'
+import { dues, customers, auditLogs } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq, sql } from 'drizzle-orm'
-import type { Session } from 'next-auth'
+import { eq, and, isNull } from 'drizzle-orm'
+import { withErrorHandler, requireAdmin, isResponse } from '@/lib/auth/authorize'
+import { parseBody, createDueSchema, uuidSchema } from '@/lib/validation'
 
-function getAdmin(s: Session | null) {
-  if (!s?.user?.id) return null
-  if ((s.user as any).role !== 'ADMIN') return null
-  return s.user
-}
-
-export async function GET(request: Request) {
-  const session = (await auth()) as Session | null
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export const GET = withErrorHandler(async (request: Request) => {
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const url = new URL(request.url)
   const customer_id = url.searchParams.get('customer_id')
   if (!customer_id) return NextResponse.json({ error: 'customer_id required' }, { status: 400 })
 
-  const list = await db.select().from(dues).where(eq(dues.customer_id, customer_id)).orderBy(dues.created_at)
-  return NextResponse.json(list)
-}
+  const parsed = uuidSchema.safeParse(customer_id)
+  if (!parsed.success) return NextResponse.json({ error: 'customer_id must be a valid UUID' }, { status: 400 })
 
-export async function POST(request: Request) {
-  const session = (await auth()) as Session | null
-  const actor = getAdmin(session)
-  if (!actor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-
-  const body = await request.json()
-  if (!body.customer_id || !body.amount) {
-    return NextResponse.json({ error: 'customer_id and amount required' }, { status: 400 })
+  // IDOR: verify the customer belongs to this admin's branch before listing dues
+  if (actor.branch_id) {
+    const customer = await db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(and(eq(customers.id, customer_id), eq(customers.branch_id, actor.branch_id)))
+      .limit(1)
+      .then(r => r[0])
+    if (!customer) return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
   }
-  if (parseFloat(body.amount) <= 0) {
+
+  const list = await db
+    .select()
+    .from(dues)
+    .where(and(eq(dues.customer_id, customer_id), isNull(dues.deleted_at)))
+    .orderBy(dues.created_at)
+  return NextResponse.json(list)
+})
+
+export const POST = withErrorHandler(async (request: Request) => {
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
+
+  const _parsed = await parseBody(request, createDueSchema)
+  if (!_parsed.ok) return _parsed.response
+  const data = _parsed.data
+
+  if (parseFloat(String(data.amount)) <= 0) {
     return NextResponse.json({ error: 'amount must be greater than 0' }, { status: 400 })
   }
 
+  // IDOR: verify customer belongs to admin's branch
+  if (actor.branch_id) {
+    const customer = await db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(and(eq(customers.id, data.customer_id), eq(customers.branch_id, actor.branch_id)))
+      .limit(1)
+      .then(r => r[0])
+    if (!customer) return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
+  }
+
   const [due] = await db.insert(dues).values({
-    customer_id: body.customer_id,
-    invoice_number: body.invoice_number ?? null,
-    reference: body.reference ?? null,
-    amount: String(body.amount),
-    outstanding_amount: String(body.amount), // starts equal to amount
-    due_date: body.due_date ?? null,
+    customer_id: data.customer_id,
+    invoice_number: data.invoice_number ?? null,
+    reference: data.reference ?? null,
+    amount: String(data.amount),
+    outstanding_amount: String(data.amount),
+    due_date: data.due_date ?? null,
     status: 'OPEN',
-    notes: body.notes ?? null,
-    created_by: actor.id as string,
+    notes: data.notes ?? null,
+    created_by: actor.id,
   }).returning()
 
   await db.insert(auditLogs).values({
-    actor_id: actor.id as string,
-    actor_name: actor.name ?? '',
+    actor_id: actor.id,
+    actor_name: actor.name,
+    actor_email: actor.email,
     action: 'CREATE',
     entity_type: 'due',
     entity_id: due.id,
-    after_data: JSON.stringify({ amount: due.amount, customer_id: due.customer_id }),
+    after_data: { amount: due.amount, customer_id: due.customer_id },
+    branch_id: actor.branch_id,
   })
 
   return NextResponse.json(due, { status: 201 })
-}
+})

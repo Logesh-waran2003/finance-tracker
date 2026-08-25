@@ -1,18 +1,18 @@
-import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import { collections, dues, attendance, reconciliations, profiles } from '@/lib/db/schema'
+import { collections, dues, customers, attendance, reconciliations, profiles, expenses } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq, and, sql, notInArray } from 'drizzle-orm'
-import { expenses } from '@/lib/db/schema'
-import type { Session } from 'next-auth'
+import { eq, and, sql, notInArray, isNull } from 'drizzle-orm'
+import { requireAdmin, isResponse } from '@/lib/auth/authorize'
 
 export async function GET() {
-  const session = (await auth()) as Session | null
-  if (!session?.user?.id || (session.user as any).role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())
+
+  // Build an optional branch filter for each query
+  const branchFilter = actor.branch_id ? actor.branch_id : null
 
   const [
     pendingCollections,
@@ -25,29 +25,53 @@ export async function GET() {
     db.select({
       count: sql<number>`count(*)::int`,
       total: sql<string>`coalesce(sum(${collections.amount}), '0')`,
-    }).from(collections).where(eq(collections.status, 'PENDING')).then(r => r[0]),
+    }).from(collections).where(
+      branchFilter
+        ? and(eq(collections.status, 'PENDING'), eq(collections.branch_id, branchFilter))
+        : eq(collections.status, 'PENDING')
+    ).then(r => r[0]),
 
     db.select({ count: sql<number>`count(*)::int` })
       .from(dues)
+      .leftJoin(customers, eq(dues.customer_id, customers.id))
       .where(and(
         notInArray(dues.status, ['PAID', 'CANCELLED']),
+        isNull(dues.deleted_at),
         sql`${dues.due_date} < ${today}`,
+        // Branch isolation — filter via the customer's branch_id
+        ...(branchFilter ? [eq(customers.branch_id, branchFilter)] : []),
       )).then(r => r[0]?.count ?? 0),
 
     db.select({ id: profiles.id, full_name: profiles.full_name })
       .from(profiles)
-      .where(and(eq(profiles.role, 'COLLECTION_AGENT'), eq(profiles.is_active, true))),
+      .where(
+        branchFilter
+          ? and(eq(profiles.role, 'COLLECTION_AGENT'), eq(profiles.is_active, true), eq(profiles.branch_id, branchFilter))
+          : and(eq(profiles.role, 'COLLECTION_AGENT'), eq(profiles.is_active, true))
+      ),
 
     db.select({ eid: attendance.employee_id })
-      .from(attendance).where(eq(attendance.date, today)),
+      .from(attendance).where(
+        branchFilter
+          ? and(eq(attendance.date, today), eq(attendance.branch_id, branchFilter))
+          : eq(attendance.date, today)
+      ),
 
     db.select({ count: sql<number>`count(*)::int` })
       .from(reconciliations)
-      .where(eq(reconciliations.status, 'SUBMITTED')).then(r => r[0]?.count ?? 0),
+      .where(
+        branchFilter
+          ? and(eq(reconciliations.status, 'SUBMITTED'), eq(reconciliations.branch_id, branchFilter))
+          : eq(reconciliations.status, 'SUBMITTED')
+      ).then(r => r[0]?.count ?? 0),
 
     db.select({ count: sql<number>`count(*)::int` })
       .from(expenses)
-      .where(eq(expenses.status, 'PENDING'))
+      .where(
+        branchFilter
+          ? and(eq(expenses.status, 'PENDING'), eq(expenses.branch_id, branchFilter))
+          : eq(expenses.status, 'PENDING')
+      )
       .then(r => r[0]?.count ?? 0),
   ])
 

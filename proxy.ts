@@ -6,7 +6,18 @@ export async function proxy(request: NextRequest) {
   const session = await auth()
   const pathname = request.nextUrl.pathname
 
-  const publicPaths = ['/login', '/api/auth']
+  // NextAuth's own handlers are always public
+  if (pathname.startsWith('/api/auth')) return NextResponse.next()
+
+  // All other /api/* routes return 401 when unauthenticated
+  if (pathname.startsWith('/api/')) {
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    return NextResponse.next()
+  }
+
+  const publicPaths = ['/login', '/forgot-password', '/reset-password']
   const isPublic = publicPaths.some(p => pathname.startsWith(p))
 
   if (!session && !isPublic) {

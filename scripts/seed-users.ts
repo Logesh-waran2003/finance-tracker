@@ -2,6 +2,11 @@ import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
 import { branches, profiles, customers, dues, expenseCategories, settings } from '@/lib/db/schema'
 
+// WARNING: Change these credentials before production deployment
+if (process.env.NODE_ENV === 'production') {
+  throw new Error('Do not run seed script in production')
+}
+
 async function seed() {
   console.log('Seeding settings...')
   await db.insert(settings).values({

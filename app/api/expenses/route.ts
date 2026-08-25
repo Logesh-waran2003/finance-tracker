@@ -1,32 +1,37 @@
-import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import { expenses, expenseCategories, auditLogs } from '@/lib/db/schema'
+import { expenses, expenseCategories } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq, and, desc } from 'drizzle-orm'
-import type { Session } from 'next-auth'
+import { requireRole, isResponse } from '@/lib/auth/authorize'
+import { parseBody, createExpenseSchema } from '@/lib/validation'
+import { createExpense } from '@/lib/modules/expenses/service'
+import { ServiceError } from '@/lib/modules/errors'
 
 export async function GET(request: Request) {
-  const session = (await auth()) as Session | null
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const userOrRes = await requireRole(['COLLECTION_AGENT', 'ADMIN', 'STAFF'])
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const url = new URL(request.url)
   const status = url.searchParams.get('status')
 
-  const conditions: any[] = [eq(expenses.employee_id, session.user.id)]
+  const conditions: any[] = [eq(expenses.employee_id, actor.id)]
   if (status) conditions.push(eq(expenses.status, status as any))
 
-  const rows = await db.select({
-    id: expenses.id,
-    category_id: expenses.category_id,
-    category_name: expenseCategories.name,
-    amount: expenses.amount,
-    payment_mode: expenses.payment_mode,
-    description: expenses.description,
-    expense_date: expenses.expense_date,
-    status: expenses.status,
-    rejection_reason: expenses.rejection_reason,
-    created_at: expenses.created_at,
-  }).from(expenses)
+  const rows = await db
+    .select({
+      id: expenses.id,
+      category_id: expenses.category_id,
+      category_name: expenseCategories.name,
+      amount: expenses.amount,
+      payment_mode: expenses.payment_mode,
+      description: expenses.description,
+      expense_date: expenses.expense_date,
+      status: expenses.status,
+      rejection_reason: expenses.rejection_reason,
+      created_at: expenses.created_at,
+    })
+    .from(expenses)
     .leftJoin(expenseCategories, eq(expenses.category_id, expenseCategories.id))
     .where(and(...conditions))
     .orderBy(desc(expenses.expense_date))
@@ -36,43 +41,32 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = (await auth()) as Session | null
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const userOrRes = await requireRole(['COLLECTION_AGENT', 'ADMIN', 'STAFF'])
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
-  const body = await request.json()
-  const { category_id, amount, payment_mode, description, expense_date } = body
+  const parsed = await parseBody(request, createExpenseSchema)
+  if (!parsed.ok) return parsed.response
 
-  if (!category_id || !amount || !description || !expense_date) {
-    return NextResponse.json({ error: 'category_id, amount, description, and expense_date are required' }, { status: 400 })
+  const { category_id, amount, payment_mode, description, expense_date } = parsed.data
+
+  try {
+    const expense = await createExpense(db, {
+      userId: actor.id,
+      branchId: actor.branch_id,
+      actorName: actor.name,
+      actorEmail: actor.email,
+      categoryId: category_id,
+      amount,
+      paymentMode: payment_mode,
+      description,
+      expenseDate: expense_date,
+    })
+    return NextResponse.json(expense, { status: 201 })
+  } catch (err) {
+    if (err instanceof ServiceError) {
+      return NextResponse.json({ error: err.message }, { status: err.status })
+    }
+    throw err
   }
-  if (parseFloat(amount) <= 0) {
-    return NextResponse.json({ error: 'amount must be greater than 0' }, { status: 400 })
-  }
-
-  const profile = await db.select({ branch_id: (await import('@/lib/db/schema')).profiles.branch_id })
-    .from((await import('@/lib/db/schema')).profiles)
-    .where(eq((await import('@/lib/db/schema')).profiles.id, session.user.id))
-    .limit(1).then(r => r[0])
-
-  const [expense] = await db.insert(expenses).values({
-    category_id,
-    employee_id: session.user.id,
-    branch_id: profile?.branch_id ?? null,
-    amount: String(amount),
-    payment_mode: payment_mode ?? 'CASH',
-    description,
-    expense_date,
-    status: 'PENDING',
-  }).returning()
-
-  await db.insert(auditLogs).values({
-    actor_id: session.user.id,
-    actor_name: session.user.name ?? '',
-    action: 'CREATE',
-    entity_type: 'expense',
-    entity_id: expense.id,
-    after_data: JSON.stringify({ amount, description, expense_date }),
-  })
-
-  return NextResponse.json(expense, { status: 201 })
 }

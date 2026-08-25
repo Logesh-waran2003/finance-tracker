@@ -1,19 +1,13 @@
-import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { attendance, profiles } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq, and, gte, lte, desc } from 'drizzle-orm'
-import type { Session } from 'next-auth'
-
-function requireAdmin(session: Session | null) {
-  if (!session?.user?.id) return null
-  if ((session.user as any).role !== 'ADMIN') return null
-  return session.user
-}
+import { requireAdmin, isResponse } from '@/lib/auth/authorize'
 
 export async function GET(request: Request) {
-  const session = (await auth()) as Session | null
-  if (!requireAdmin(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const url = new URL(request.url)
   const employeeId = url.searchParams.get('employee_id')
@@ -22,10 +16,16 @@ export async function GET(request: Request) {
   const status = url.searchParams.get('status')
 
   const conditions: ReturnType<typeof eq>[] = []
-  if (employeeId) conditions.push(eq(attendance.employee_id, employeeId))
-  if (start) conditions.push(gte(attendance.date, start))
-  if (end) conditions.push(lte(attendance.date, end))
-  if (status) conditions.push(eq(attendance.status, status as any))
+
+  // Branch isolation
+  if (actor.branch_id) {
+    conditions.push(eq(attendance.branch_id, actor.branch_id) as any)
+  }
+
+  if (employeeId) conditions.push(eq(attendance.employee_id, employeeId) as any)
+  if (start) conditions.push(gte(attendance.date, start) as any)
+  if (end) conditions.push(lte(attendance.date, end) as any)
+  if (status) conditions.push(eq(attendance.status, status as any) as any)
 
   const rows = await db
     .select({

@@ -1,32 +1,30 @@
-import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { settings } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq } from 'drizzle-orm'
-import type { Session } from 'next-auth'
-
-function getAdmin(session: Session | null) {
-  if (!session?.user?.id) return null
-  if ((session.user as any).role !== 'ADMIN') return null
-  return session.user
-}
+import { requireAdmin, isResponse } from '@/lib/auth/authorize'
+import { parseBody, updateSettingsSchema } from '@/lib/validation'
 
 export async function GET() {
-  const session = (await auth()) as Session | null
-  if (!getAdmin(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+
   const data = await db.select().from(settings).limit(1).then(r => r[0] ?? null)
   return NextResponse.json(data)
 }
 
 export async function PATCH(request: Request) {
-  const session = (await auth()) as Session | null
-  if (!getAdmin(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
 
-  const body = await request.json()
-  const allowed = ['company_name', 'currency', 'currency_symbol', 'timezone', 'financial_year_start']
+  const parsed = await parseBody(request, updateSettingsSchema)
+  if (!parsed.ok) return parsed.response
+  const data = parsed.data
+
   const updates: Record<string, unknown> = { updated_at: new Date() }
-  for (const key of allowed) {
-    if (body[key] !== undefined) updates[key] = body[key]
+  const fields = ['company_name', 'currency', 'currency_symbol', 'timezone', 'financial_year_start'] as const
+  for (const key of fields) {
+    if (data[key] !== undefined) updates[key] = data[key]
   }
 
   const existing = await db.select().from(settings).limit(1).then(r => r[0])

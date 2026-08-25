@@ -1,68 +1,95 @@
-import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { customers, dues, collections, auditLogs } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq } from 'drizzle-orm'
-import type { Session } from 'next-auth'
-
-function getAdminOrAgent(s: Session | null) {
-  if (!s?.user?.id) return null
-  return s.user
-}
-
-function isAdmin(s: Session | null) {
-  return (s?.user as any)?.role === 'ADMIN'
-}
+import { eq, and, isNull } from 'drizzle-orm'
+import { requireAdmin, isResponse } from '@/lib/auth/authorize'
+import { parseBody, updateCustomerSchema } from '@/lib/validation'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = (await auth()) as Session | null
-  if (!getAdminOrAgent(session)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const { id } = await params
 
-  const customer = await db.select().from(customers).where(eq(customers.id, id)).limit(1).then(r => r[0])
+  // IDOR: ensure customer belongs to admin's branch
+  const customer = await db
+    .select()
+    .from(customers)
+    .where(
+      actor.branch_id
+        ? and(eq(customers.id, id), eq(customers.branch_id, actor.branch_id))
+        : eq(customers.id, id)
+    )
+    .limit(1)
+    .then(r => r[0])
+
   if (!customer) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  // RBAC: agent can only see their assigned customers
-  if (!isAdmin(session) && customer.assigned_agent_id !== session?.user?.id) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
   const [duesList, collectionsList] = await Promise.all([
-    db.select().from(dues).where(eq(dues.customer_id, id)).orderBy(dues.created_at),
-    db.select().from(collections).where(eq(collections.customer_id, id)).orderBy(collections.collected_at),
+    db.select().from(dues)
+      .where(and(eq(dues.customer_id, id), isNull(dues.deleted_at)))
+      .orderBy(dues.created_at),
+    db.select().from(collections)
+      .where(and(eq(collections.customer_id, id), isNull(collections.deleted_at)))
+      .orderBy(collections.collected_at),
   ])
 
   return NextResponse.json({ customer, dues: duesList, collections: collectionsList })
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = (await auth()) as Session | null
-  if (!isAdmin(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const { id } = await params
-  const body = await request.json()
 
-  const before = await db.select().from(customers).where(eq(customers.id, id)).limit(1).then(r => r[0])
+  // IDOR: fetch with branch guard before updating
+  const before = await db
+    .select()
+    .from(customers)
+    .where(
+      actor.branch_id
+        ? and(eq(customers.id, id), eq(customers.branch_id, actor.branch_id))
+        : eq(customers.id, id)
+    )
+    .limit(1)
+    .then(r => r[0])
+
   if (!before) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const allowed = ['full_name', 'phone', 'email', 'address', 'area', 'city', 'state', 'pincode',
-    'gps_lat', 'gps_lng', 'assigned_agent_id', 'branch_id', 'opening_balance', 'is_active', 'notes', 'customer_code']
+  const parsed = await parseBody(request, updateCustomerSchema)
+  if (!parsed.ok) return parsed.response
+  const data = parsed.data
+
   const updates: Record<string, unknown> = { updated_at: new Date() }
-  for (const key of allowed) {
-    if (body[key] !== undefined) updates[key] = body[key] === '' ? null : body[key]
+  const fields = [
+    'full_name', 'customer_code', 'phone', 'email', 'address', 'area', 'city', 'state',
+    'pincode', 'assigned_agent_id', 'opening_balance', 'is_active', 'notes',
+  ] as const
+  for (const key of fields) {
+    if (data[key] !== undefined) updates[key] = data[key] === '' ? null : data[key]
+  }
+  if (data.gps_lat !== undefined) updates.gps_lat = data.gps_lat != null ? String(data.gps_lat) : null
+  if (data.gps_lng !== undefined) updates.gps_lng = data.gps_lng != null ? String(data.gps_lng) : null
+  // Admins cannot move a customer to a different branch
+  if (data.branch_id !== undefined && !actor.branch_id) {
+    updates.branch_id = data.branch_id
   }
 
   const [updated] = await db.update(customers).set(updates).where(eq(customers.id, id)).returning()
 
   await db.insert(auditLogs).values({
-    actor_id: (session?.user?.id ?? '') as string,
-    actor_name: ((session?.user as any)?.name ?? '') as string,
-    action: body.is_active === false ? 'DEACTIVATE' : 'UPDATE',
+    actor_id: actor.id,
+    actor_name: actor.name,
+    actor_email: actor.email,
+    action: data.is_active === false ? 'DEACTIVATE' : 'UPDATE',
     entity_type: 'customer',
     entity_id: id,
-    before_data: JSON.stringify({ full_name: before.full_name, is_active: before.is_active }),
-    after_data: JSON.stringify({ full_name: updated.full_name, is_active: updated.is_active }),
+    before_data: { full_name: before.full_name, is_active: before.is_active },
+    after_data: { full_name: updated.full_name, is_active: updated.is_active },
+    branch_id: actor.branch_id,
   })
 
   return NextResponse.json(updated)

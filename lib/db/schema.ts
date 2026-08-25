@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, uuid, text, boolean, timestamp, date, numeric, integer, unique, index } from 'drizzle-orm/pg-core'
+import { pgTable, pgEnum, uuid, text, boolean, timestamp, date, numeric, integer, unique, index, jsonb } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 // ============================================================
@@ -12,6 +12,8 @@ export const reconciliationStatusEnum = pgEnum('reconciliation_status', ['PENDIN
 export const expenseStatusEnum = pgEnum('expense_status', ['PENDING', 'APPROVED', 'REJECTED'])
 export const paymentModeEnum = pgEnum('payment_mode', ['CASH', 'UPI', 'BANK_TRANSFER', 'CHEQUE', 'OTHER'])
 export const notificationTypeEnum = pgEnum('notification_type', ['PENDING_CUSTOMER', 'MISSED_ATTENDANCE', 'CASH_HANDOVER', 'RECONCILIATION_DIFF', 'TARGET_ALERT', 'GENERAL'])
+export const ledgerEntryTypeEnum = pgEnum('ledger_entry_type', ['CREDIT', 'DEBIT', 'RECONCILIATION', 'REVERSAL'])
+export const ledgerEntityTypeEnum = pgEnum('ledger_entity_type', ['collection', 'expense', 'reconciliation'])
 
 // ============================================================
 // SETTINGS
@@ -63,6 +65,8 @@ export const profiles = pgTable('profiles', {
   avatar_url: text('avatar_url'),
   is_active: boolean('is_active').default(true),
   last_login_at: timestamp('last_login_at', { withTimezone: true }),
+  // Incremented on password change to invalidate old JWT tokens
+  password_version: integer('password_version').notNull().default(0),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 })
@@ -110,6 +114,7 @@ export const dues = pgTable('dues', {
   status: dueStatusEnum('status').notNull().default('OPEN'),
   notes: text('notes'),
   created_by: uuid('created_by').references(() => profiles.id),
+  deleted_at: timestamp('deleted_at', { withTimezone: true }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (t) => [
@@ -141,6 +146,7 @@ export const collections = pgTable('collections', {
   rejected_reason: text('rejected_reason'),
   collected_at: timestamp('collected_at', { withTimezone: true }).notNull().defaultNow(),
   idempotency_key: text('idempotency_key').unique(),
+  deleted_at: timestamp('deleted_at', { withTimezone: true }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (t) => [
@@ -196,9 +202,12 @@ export const reconciliations = pgTable('reconciliations', {
   verified_by: uuid('verified_by').references(() => profiles.id),
   verified_at: timestamp('verified_at', { withTimezone: true }),
   rejection_reason: text('rejection_reason'),
+  deleted_at: timestamp('deleted_at', { withTimezone: true }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (t) => [
+  // Enforce one reconciliation per agent per date at the DB level
+  unique('uq_reconciliations_agent_date').on(t.agent_id, t.date),
   index('idx_reconciliations_agent_date').on(t.agent_id, t.date),
 ])
 
@@ -229,12 +238,13 @@ export const expenses = pgTable('expenses', {
   approved_by: uuid('approved_by').references(() => profiles.id),
   approved_at: timestamp('approved_at', { withTimezone: true }),
   rejection_reason: text('rejection_reason'),
+  deleted_at: timestamp('deleted_at', { withTimezone: true }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 })
 
 // ============================================================
-// CASHBOOK ENTRIES
+// CASHBOOK ENTRIES (legacy — superseded by ledger_entries)
 // ============================================================
 export const cashbookEntries = pgTable('cashbook_entries', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -249,6 +259,25 @@ export const cashbookEntries = pgTable('cashbook_entries', {
   created_by: uuid('created_by').references(() => profiles.id),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
 })
+
+// ============================================================
+// LEDGER ENTRIES (canonical financial record — append-only)
+// ============================================================
+export const ledgerEntries = pgTable('ledger_entries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  entity_type: ledgerEntityTypeEnum('entity_type').notNull(),
+  entity_id: uuid('entity_id').notNull(),
+  entry_type: ledgerEntryTypeEnum('entry_type').notNull(),
+  amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
+  actor_id: uuid('actor_id').notNull().references(() => profiles.id),
+  branch_id: uuid('branch_id').references(() => branches.id),
+  notes: text('notes'),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('idx_ledger_entity').on(t.entity_type, t.entity_id),
+  index('idx_ledger_actor').on(t.actor_id),
+  index('idx_ledger_created').on(t.created_at),
+])
 
 // ============================================================
 // NOTIFICATIONS
@@ -274,13 +303,15 @@ export const auditLogs = pgTable('audit_logs', {
   id: uuid('id').primaryKey().defaultRandom(),
   actor_id: uuid('actor_id').references(() => profiles.id),
   actor_name: text('actor_name'),
+  actor_email: text('actor_email'),
   action: text('action').notNull(),
   entity_type: text('entity_type').notNull(),
-  entity_id: uuid('entity_id'),
-  before_data: text('before_data'), // JSON string
-  after_data: text('after_data'),   // JSON string
+  entity_id: text('entity_id'),
+  before_data: jsonb('before_data'),
+  after_data: jsonb('after_data'),
   ip_address: text('ip_address'),
   user_agent: text('user_agent'),
+  branch_id: uuid('branch_id').references(() => branches.id),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
 }, (t) => [
   index('idx_audit_logs_entity').on(t.entity_type, t.entity_id),

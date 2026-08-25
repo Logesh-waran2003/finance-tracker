@@ -1,29 +1,28 @@
-import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import { attendance } from '@/lib/db/schema'
+import { attendance, profiles } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq, and } from 'drizzle-orm'
-import type { Session } from 'next-auth'
-
-function requireAdmin(session: Session | null) {
-  if (!session?.user?.id) return null
-  if ((session.user as any).role !== 'ADMIN') return null
-  return session.user
-}
+import { requireAdmin, isResponse } from '@/lib/auth/authorize'
+import { parseBody, adminMarkAttendanceSchema } from '@/lib/validation'
 
 export async function POST(request: Request) {
-  const session = (await auth()) as Session | null
-  const actor = requireAdmin(session)
-  if (!actor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
-  const body = await request.json()
-  const { employee_id, date, status, notes } = body
+  const parsed = await parseBody(request, adminMarkAttendanceSchema)
+  if (!parsed.ok) return parsed.response
+  const { employee_id, date, status, notes } = parsed.data
 
-  if (!employee_id || !date || !status) {
-    return NextResponse.json({ error: 'employee_id, date, and status are required' }, { status: 400 })
-  }
-  if (status !== 'LEAVE' && status !== 'WEEK_OFF') {
-    return NextResponse.json({ error: 'status must be LEAVE or WEEK_OFF' }, { status: 400 })
+  // Branch isolation: verify the target employee belongs to admin's branch
+  if (actor.branch_id) {
+    const employee = await db
+      .select({ id: profiles.id })
+      .from(profiles)
+      .where(and(eq(profiles.id, employee_id), eq(profiles.branch_id, actor.branch_id)))
+      .limit(1)
+      .then(r => r[0])
+    if (!employee) return NextResponse.json({ error: 'Employee not found' }, { status: 404 })
   }
 
   const existing = await db
@@ -44,7 +43,7 @@ export async function POST(request: Request) {
         check_in_at: null,
         check_out_at: null,
         total_hours: null,
-        corrected_by: actor.id as string,
+        corrected_by: actor.id,
         corrected_at: now,
         updated_at: now,
       })
@@ -57,6 +56,7 @@ export async function POST(request: Request) {
     .insert(attendance)
     .values({
       employee_id,
+      branch_id: actor.branch_id,
       date,
       status,
       notes: notes ?? null,

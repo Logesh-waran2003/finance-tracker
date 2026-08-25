@@ -1,18 +1,13 @@
-import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import { expenses, expenseCategories, profiles, auditLogs } from '@/lib/db/schema'
+import { expenses, expenseCategories, profiles } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq, and, desc, gte, lte } from 'drizzle-orm'
-import type { Session } from 'next-auth'
-
-function getAdmin(s: Session | null) {
-  if (!s?.user?.id || (s.user as any).role !== 'ADMIN') return null
-  return s.user
-}
+import { eq, and, desc, gte, lte, isNull } from 'drizzle-orm'
+import { requireAdmin, isResponse } from '@/lib/auth/authorize'
 
 export async function GET(request: Request) {
-  const session = (await auth()) as Session | null
-  if (!getAdmin(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const url = new URL(request.url)
   const status = url.searchParams.get('status')
@@ -20,11 +15,19 @@ export async function GET(request: Request) {
   const start = url.searchParams.get('start')
   const end = url.searchParams.get('end')
 
-  const conditions: any[] = []
-  if (status) conditions.push(eq(expenses.status, status as any))
-  if (employee_id) conditions.push(eq(expenses.employee_id, employee_id))
-  if (start) conditions.push(gte(expenses.expense_date, start))
-  if (end) conditions.push(lte(expenses.expense_date, end))
+  const conditions: ReturnType<typeof eq>[] = [
+    isNull(expenses.deleted_at) as any,
+  ]
+
+  // Branch isolation
+  if (actor.branch_id) {
+    conditions.push(eq(expenses.branch_id, actor.branch_id) as any)
+  }
+
+  if (status) conditions.push(eq(expenses.status, status as any) as any)
+  if (employee_id) conditions.push(eq(expenses.employee_id, employee_id) as any)
+  if (start) conditions.push(gte(expenses.expense_date, start) as any)
+  if (end) conditions.push(lte(expenses.expense_date, end) as any)
 
   const rows = await db.select({
     id: expenses.id,
@@ -42,7 +45,7 @@ export async function GET(request: Request) {
   }).from(expenses)
     .leftJoin(profiles, eq(expenses.employee_id, profiles.id))
     .leftJoin(expenseCategories, eq(expenses.category_id, expenseCategories.id))
-    .where(conditions.length ? and(...conditions) : undefined)
+    .where(and(...(conditions as [ReturnType<typeof eq>, ...ReturnType<typeof eq>[]])))
     .orderBy(desc(expenses.expense_date))
     .limit(200)
 

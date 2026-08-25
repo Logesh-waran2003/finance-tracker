@@ -1,6 +1,8 @@
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import * as schema from './schema'
+// Validate required env vars at startup
+import '@/lib/env'
 
 const connectionString = process.env.DATABASE_URL!
 

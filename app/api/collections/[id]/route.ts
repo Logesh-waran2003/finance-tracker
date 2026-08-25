@@ -1,18 +1,25 @@
-import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { collections, auditLogs } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq } from 'drizzle-orm'
-import type { Session } from 'next-auth'
+import { requireRole, isResponse, withErrorHandler } from '@/lib/auth/authorize'
+import { uuidSchema } from '@/lib/validation'
 
-export async function PATCH(
+export const PATCH = withErrorHandler(async (
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
-  const session = (await auth()) as Session | null
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+) => {
+  const userOrRes = await requireRole(['COLLECTION_AGENT', 'ADMIN'])
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const { id } = await params
+
+  // Validate UUID format before hitting the DB
+  const idParse = uuidSchema.safeParse(id)
+  if (!idParse.success) {
+    return NextResponse.json({ error: 'Invalid collection ID' }, { status: 400 })
+  }
 
   const existing = await db
     .select()
@@ -23,9 +30,8 @@ export async function PATCH(
 
   if (!existing) return NextResponse.json({ error: 'Collection not found' }, { status: 404 })
 
-  const role = (session.user as any).role
-  // Agents can only cancel their own collections; admins covered by admin route
-  if (existing.agent_id !== session.user.id) {
+  // Agents can only cancel their own PENDING collections
+  if (actor.role !== 'ADMIN' && existing.agent_id !== actor.id) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
   if (existing.status !== 'PENDING') {
@@ -40,14 +46,16 @@ export async function PATCH(
     .returning()
 
   await db.insert(auditLogs).values({
-    actor_id: session.user.id,
-    actor_name: session.user.name ?? '',
+    actor_id: actor.id,
+    actor_name: actor.name,
+    actor_email: actor.email,
     action: 'CANCEL',
     entity_type: 'collection',
     entity_id: id,
-    before_data: JSON.stringify({ status: 'PENDING' }),
-    after_data: JSON.stringify({ status: 'CANCELLED' }),
+    before_data: { status: 'PENDING' },
+    after_data: { status: 'CANCELLED' },
+    branch_id: actor.branch_id,
   })
 
   return NextResponse.json(updated)
-}
+})

@@ -1,19 +1,14 @@
-import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { customers, dues, profiles, auditLogs } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq, and, sql } from 'drizzle-orm'
-import type { Session } from 'next-auth'
-
-function getAdmin(s: Session | null) {
-  if (!s?.user?.id) return null
-  if ((s.user as any).role !== 'ADMIN') return null
-  return s.user
-}
+import { eq, and, sql, isNull } from 'drizzle-orm'
+import { requireAdmin, isResponse } from '@/lib/auth/authorize'
+import { parseBody, createCustomerSchema } from '@/lib/validation'
 
 export async function GET(request: Request) {
-  const session = (await auth()) as Session | null
-  if (!getAdmin(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const url = new URL(request.url)
   const search = url.searchParams.get('search') ?? ''
@@ -36,6 +31,8 @@ export async function GET(request: Request) {
     created_at: customers.created_at,
   }).from(customers)
     .leftJoin(profiles, eq(customers.assigned_agent_id, profiles.id))
+    // Branch isolation — admin only sees customers for their branch
+    .where(actor.branch_id ? eq(customers.branch_id, actor.branch_id) : undefined)
 
   let filtered = rows
   if (search) filtered = filtered.filter(r =>
@@ -44,17 +41,19 @@ export async function GET(request: Request) {
     (r.phone ?? '').includes(search)
   )
   if (agent_id) filtered = filtered.filter(r => r.assigned_agent_id === agent_id)
-  if (branch_id) filtered = filtered.filter(r => r.branch_id === branch_id)
+  // Admins cannot use branch_id param to escape their own branch
+  if (branch_id && !actor.branch_id) filtered = filtered.filter(r => r.branch_id === branch_id)
   if (is_active === 'true') filtered = filtered.filter(r => r.is_active === true)
   if (is_active === 'false') filtered = filtered.filter(r => r.is_active === false)
 
-  // Calculate outstanding per customer
+  // Calculate outstanding per customer (soft-delete aware)
   const outstanding = await db.select({
     customer_id: dues.customer_id,
     total: sql<string>`sum(${dues.outstanding_amount})`,
   }).from(dues)
     .where(and(
-      sql`${dues.status} NOT IN ('PAID', 'CANCELLED')`
+      sql`${dues.status} NOT IN ('PAID', 'CANCELLED')`,
+      isNull(dues.deleted_at)
     ))
     .groupBy(dues.customer_id)
 
@@ -69,42 +68,46 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = (await auth()) as Session | null
-  const actor = getAdmin(session)
-  if (!actor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
-  const body = await request.json()
-  if (!body.full_name) return NextResponse.json({ error: 'full_name is required' }, { status: 400 })
+  const parsed = await parseBody(request, createCustomerSchema)
+  if (!parsed.ok) return parsed.response
+  const data = parsed.data
 
-  const customer_code = body.customer_code || `CUST-${Date.now().toString().slice(-6)}`
+  const customer_code = data.customer_code || `CUST-${Date.now().toString().slice(-6)}`
 
   const [customer] = await db.insert(customers).values({
     customer_code,
-    full_name: body.full_name,
-    phone: body.phone ?? null,
-    email: body.email ?? null,
-    address: body.address ?? null,
-    area: body.area ?? null,
-    city: body.city ?? null,
-    state: body.state ?? null,
-    pincode: body.pincode ?? null,
-    gps_lat: body.gps_lat ?? null,
-    gps_lng: body.gps_lng ?? null,
-    assigned_agent_id: body.assigned_agent_id || null,
-    branch_id: body.branch_id || null,
-    opening_balance: body.opening_balance ? String(body.opening_balance) : '0',
+    full_name: data.full_name,
+    phone: data.phone ?? null,
+    email: data.email ?? null,
+    address: data.address ?? null,
+    area: data.area ?? null,
+    city: data.city ?? null,
+    state: data.state ?? null,
+    pincode: data.pincode ?? null,
+    gps_lat: data.gps_lat != null ? String(data.gps_lat) : null,
+    gps_lng: data.gps_lng != null ? String(data.gps_lng) : null,
+    assigned_agent_id: data.assigned_agent_id ?? null,
+    // Always assign to admin's branch; override only if admin has no branch (super-admin)
+    branch_id: actor.branch_id ?? (data.branch_id ?? null),
+    opening_balance: data.opening_balance != null ? String(data.opening_balance) : '0',
     is_active: true,
-    notes: body.notes ?? null,
-    created_by: actor.id as string,
+    notes: data.notes ?? null,
+    created_by: actor.id,
   }).returning()
 
   await db.insert(auditLogs).values({
-    actor_id: actor.id as string,
-    actor_name: actor.name ?? '',
+    actor_id: actor.id,
+    actor_name: actor.name,
+    actor_email: actor.email,
     action: 'CREATE',
     entity_type: 'customer',
     entity_id: customer.id,
-    after_data: JSON.stringify({ customer_code: customer.customer_code, full_name: customer.full_name }),
+    after_data: { customer_code: customer.customer_code, full_name: customer.full_name },
+    branch_id: actor.branch_id,
   })
 
   return NextResponse.json(customer, { status: 201 })

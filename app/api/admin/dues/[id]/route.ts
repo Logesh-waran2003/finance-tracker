@@ -1,60 +1,118 @@
-import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import { dues, auditLogs } from '@/lib/db/schema'
+import { dues, customers, auditLogs } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq } from 'drizzle-orm'
-import type { Session } from 'next-auth'
+import { eq, and, isNull } from 'drizzle-orm'
+import { withErrorHandler, requireAdmin, isResponse } from '@/lib/auth/authorize'
+import { parseBody, updateDueSchema } from '@/lib/validation'
 
-function getAdmin(s: Session | null) {
-  if (!s?.user?.id) return null
-  if ((s.user as any).role !== 'ADMIN') return null
-  return s.user
+// Valid forward-only state transitions for dues
+const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+  OPEN: ['PARTIALLY_PAID', 'PAID', 'OVERDUE', 'CANCELLED'],
+  PARTIALLY_PAID: ['PAID', 'OVERDUE', 'CANCELLED'],
+  OVERDUE: ['PARTIALLY_PAID', 'PAID', 'CANCELLED'],
+  PAID: [],       // terminal — only a reversal flow can change this
+  CANCELLED: [],  // terminal
 }
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = (await auth()) as Session | null
-  const actor = getAdmin(session)
-  if (!actor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+export const PATCH = withErrorHandler(async (
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) => {
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const { id } = await params
-  const body = await request.json()
+  const _parsed = await parseBody(request, updateDueSchema)
+  if (!_parsed.ok) return _parsed.response
+  const data = _parsed.data
 
-  const before = await db.select().from(dues).where(eq(dues.id, id)).limit(1).then(r => r[0])
+  // IDOR: join through customer to enforce branch isolation
+  const before = await db
+    .select({ due: dues, customer_branch: customers.branch_id })
+    .from(dues)
+    .leftJoin(customers, eq(dues.customer_id, customers.id))
+    .where(and(eq(dues.id, id), isNull(dues.deleted_at)))
+    .limit(1)
+    .then(r => r[0])
+
   if (!before) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const allowed = ['amount', 'due_date', 'notes', 'status', 'invoice_number', 'reference']
-  const updates: Record<string, unknown> = { updated_at: new Date() }
-  for (const key of allowed) {
-    if (body[key] !== undefined) updates[key] = body[key]
+  if (actor.branch_id && before.customer_branch !== actor.branch_id) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  // If cancelling, zero out outstanding
-  if (body.status === 'CANCELLED') {
-    updates.outstanding_amount = '0'
+  // State transition guard
+  if (data.status !== undefined && data.status !== before.due.status) {
+    const allowed = ALLOWED_TRANSITIONS[before.due.status] ?? []
+    if (!allowed.includes(data.status)) {
+      return NextResponse.json(
+        { error: `Invalid transition: ${before.due.status} → ${data.status}` },
+        { status: 400 }
+      )
+    }
+  }
+
+  const updates: Record<string, unknown> = { updated_at: new Date() }
+  if (data.amount !== undefined) updates.amount = String(data.amount)
+  if (data.invoice_number !== undefined) updates.invoice_number = data.invoice_number
+  if (data.reference !== undefined) updates.reference = data.reference
+  if (data.due_date !== undefined) updates.due_date = data.due_date
+  if (data.notes !== undefined) updates.notes = data.notes
+  if (data.status !== undefined) {
+    updates.status = data.status
+    if (data.status === 'CANCELLED') updates.outstanding_amount = '0'
   }
 
   const [updated] = await db.update(dues).set(updates).where(eq(dues.id, id)).returning()
 
   await db.insert(auditLogs).values({
-    actor_id: actor.id as string,
-    actor_name: actor.name ?? '',
+    actor_id: actor.id,
+    actor_name: actor.name,
+    actor_email: actor.email,
     action: 'UPDATE',
     entity_type: 'due',
     entity_id: id,
-    before_data: JSON.stringify({ status: before.status, outstanding_amount: before.outstanding_amount }),
-    after_data: JSON.stringify({ status: updated.status, outstanding_amount: updated.outstanding_amount }),
+    before_data: { status: before.due.status, outstanding_amount: before.due.outstanding_amount },
+    after_data: { status: updated.status, outstanding_amount: updated.outstanding_amount },
+    branch_id: actor.branch_id,
   })
 
   return NextResponse.json(updated)
-}
+})
 
-export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = (await auth()) as Session | null
-  const actor = getAdmin(session)
-  if (!actor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+export const DELETE = withErrorHandler(async (
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) => {
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const { id } = await params
-  // Soft delete: set status = CANCELLED
+
+  // IDOR: join through customer to enforce branch isolation
+  const before = await db
+    .select({ due: dues, customer_branch: customers.branch_id })
+    .from(dues)
+    .leftJoin(customers, eq(dues.customer_id, customers.id))
+    .where(and(eq(dues.id, id), isNull(dues.deleted_at)))
+    .limit(1)
+    .then(r => r[0])
+
+  if (!before) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  if (actor.branch_id && before.customer_branch !== actor.branch_id) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  if (before.due.status === 'CANCELLED') {
+    return NextResponse.json({ error: 'Due is already cancelled' }, { status: 400 })
+  }
+  if (before.due.status === 'PAID') {
+    return NextResponse.json({ error: 'Cannot cancel a fully paid due' }, { status: 400 })
+  }
+
   const [updated] = await db.update(dues).set({
     status: 'CANCELLED',
     outstanding_amount: '0',
@@ -64,12 +122,16 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   await db.insert(auditLogs).values({
-    actor_id: actor.id as string,
-    actor_name: actor.name ?? '',
+    actor_id: actor.id,
+    actor_name: actor.name,
+    actor_email: actor.email,
     action: 'CANCEL',
     entity_type: 'due',
     entity_id: id,
+    before_data: { status: before.due.status },
+    after_data: { status: 'CANCELLED' },
+    branch_id: actor.branch_id,
   })
 
   return NextResponse.json({ success: true })
-}
+})

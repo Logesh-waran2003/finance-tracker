@@ -1,18 +1,22 @@
-import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import { reconciliations, collections, auditLogs, profiles } from '@/lib/db/schema'
+import { reconciliations, collections, profiles } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq, and, desc, sql, sum } from 'drizzle-orm'
-import type { Session } from 'next-auth'
+import { requireRole, isResponse } from '@/lib/auth/authorize'
+import { parseBody, createReconciliationSchema } from '@/lib/validation'
+import { createReconciliation } from '@/lib/modules/reconciliation/service'
+import { ServiceError } from '@/lib/modules/errors'
 
-export async function GET() {
-  const session = (await auth()) as Session | null
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export async function GET(_request: Request) {
+  const userOrRes = await requireRole(['COLLECTION_AGENT', 'ADMIN', 'STAFF'])
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
-  const agentId = session.user.id as string
+  // Server-side: always use session user's id, never trust client
+  const agentId = actor.id
   const today = new Date().toISOString().split('T')[0]
 
-  // Today's confirmed CASH collections
+  // Calculate actual confirmed CASH collections server-side
   const [cashPosition] = await db
     .select({ total: sum(collections.amount) })
     .from(collections)
@@ -25,13 +29,11 @@ export async function GET() {
       ),
     )
 
-  // Already submitted today
   const [submitted] = await db
     .select({ total: sum(reconciliations.cash_submitted) })
     .from(reconciliations)
     .where(and(eq(reconciliations.agent_id, agentId), eq(reconciliations.date, today)))
 
-  // History (last 30)
   const history = await db
     .select({
       id: reconciliations.id,
@@ -67,51 +69,30 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = (await auth()) as Session | null
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const userOrRes = await requireRole(['COLLECTION_AGENT', 'ADMIN', 'STAFF'])
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
-  const agentId = session.user.id as string
-  const body = await request.json()
+  const parsed = await parseBody(request, createReconciliationSchema)
+  if (!parsed.ok) return parsed.response
 
-  const cashCollected = parseFloat(body.cash_collected ?? '0')
-  const cashSubmitted = parseFloat(body.cash_submitted ?? '0')
-  const date: string = body.date ?? new Date().toISOString().split('T')[0]
+  const { date, cash_submitted, notes } = parsed.data
 
-  if (cashSubmitted <= 0) {
-    return NextResponse.json({ error: 'cash_submitted must be greater than 0' }, { status: 400 })
-  }
-  if (cashCollected < 0) {
-    return NextResponse.json({ error: 'cash_collected cannot be negative' }, { status: 400 })
-  }
-
-  // Fetch agent's branch_id
-  const [agent] = await db
-    .select({ branch_id: profiles.branch_id })
-    .from(profiles)
-    .where(eq(profiles.id, agentId))
-    .limit(1)
-
-  const [record] = await db
-    .insert(reconciliations)
-    .values({
-      agent_id: agentId,
-      branch_id: agent?.branch_id ?? null,
+  try {
+    const record = await createReconciliation(db, {
+      agentId: actor.id,
+      branchId: actor.branch_id,
+      actorName: actor.name,
+      actorEmail: actor.email,
       date,
-      cash_collected: String(cashCollected),
-      cash_submitted: String(cashSubmitted),
-      status: 'PENDING',
-      notes: body.notes ?? null,
+      cashSubmitted: cash_submitted,
+      notes,
     })
-    .returning()
-
-  await db.insert(auditLogs).values({
-    actor_id: agentId,
-    actor_name: (session.user as any).name ?? '',
-    action: 'CREATE',
-    entity_type: 'reconciliation',
-    entity_id: record.id,
-    after_data: JSON.stringify({ date, cash_collected: cashCollected, cash_submitted: cashSubmitted }),
-  })
-
-  return NextResponse.json(record, { status: 201 })
+    return NextResponse.json(record, { status: 201 })
+  } catch (err) {
+    if (err instanceof ServiceError) {
+      return NextResponse.json({ error: err.message }, { status: err.status })
+    }
+    throw err
+  }
 }

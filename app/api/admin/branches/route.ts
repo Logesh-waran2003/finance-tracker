@@ -1,40 +1,40 @@
-import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { branches } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { asc } from 'drizzle-orm'
-import type { Session } from 'next-auth'
-
-function getAdmin(session: Session | null) {
-  if (!session?.user?.id) return null
-  if ((session.user as any).role !== 'ADMIN') return null
-  return session.user
-}
+import { asc, eq } from 'drizzle-orm'
+import { requireAdmin, isResponse } from '@/lib/auth/authorize'
+import { parseBody, createBranchSchema } from '@/lib/validation'
 
 export async function GET() {
-  const session = (await auth()) as Session | null
-  if (!getAdmin(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  const data = await db.select().from(branches).orderBy(asc(branches.name))
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
+
+  // Branch isolation — scoped admins only see their own branch; super-admins see all
+  const data = await db
+    .select()
+    .from(branches)
+    .where(actor.branch_id ? eq(branches.id, actor.branch_id) : undefined)
+    .orderBy(asc(branches.name))
   return NextResponse.json(data)
 }
 
 export async function POST(request: Request) {
-  const session = (await auth()) as Session | null
-  if (!getAdmin(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
 
-  const body = await request.json()
-  if (!body.name || !body.code) {
-    return NextResponse.json({ error: 'name and code are required' }, { status: 400 })
-  }
+  const parsed = await parseBody(request, createBranchSchema)
+  if (!parsed.ok) return parsed.response
+  const data = parsed.data
 
   const [branch] = await db.insert(branches).values({
-    name: body.name,
-    code: body.code.toUpperCase(),
-    address: body.address ?? null,
-    city: body.city ?? null,
-    state: body.state ?? null,
-    phone: body.phone ?? null,
-    email: body.email ?? null,
+    name: data.name,
+    code: data.code.toUpperCase(),
+    address: data.address ?? null,
+    city: data.city ?? null,
+    state: data.state ?? null,
+    phone: data.phone ?? null,
+    email: data.email ?? null,
     is_active: true,
   }).returning()
 

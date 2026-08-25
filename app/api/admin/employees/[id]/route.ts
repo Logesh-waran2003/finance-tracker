@@ -1,26 +1,27 @@
-import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { profiles, auditLogs } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
-import type { Session } from 'next-auth'
-
-function getAdmin(session: Session | null) {
-  if (!session?.user?.id) return null
-  if ((session.user as any).role !== 'ADMIN') return null
-  return session.user
-}
+import { requireAdmin, isResponse } from '@/lib/auth/authorize'
+import { parseBody, updateEmployeeSchema } from '@/lib/validation'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = (await auth()) as Session | null
-  if (!getAdmin(session)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const { id } = await params
+
+  // IDOR: branch guard
   const employee = await db
     .select()
     .from(profiles)
-    .where(eq(profiles.id, id))
+    .where(
+      actor.branch_id
+        ? and(eq(profiles.id, id), eq(profiles.branch_id, actor.branch_id))
+        : eq(profiles.id, id)
+    )
     .limit(1)
     .then(r => r[0])
 
@@ -31,52 +32,64 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = (await auth()) as Session | null
-  const actor = getAdmin(session)
-  if (!actor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const { id } = await params
+
+  // IDOR: branch guard before reading body
   const before = await db
     .select()
     .from(profiles)
-    .where(eq(profiles.id, id))
+    .where(
+      actor.branch_id
+        ? and(eq(profiles.id, id), eq(profiles.branch_id, actor.branch_id))
+        : eq(profiles.id, id)
+    )
     .limit(1)
     .then(r => r[0])
 
   if (!before) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const body = await request.json()
-  const allowed = [
-    'full_name', 'email', 'role', 'employee_code', 'branch_id',
+  const parsed = await parseBody(request, updateEmployeeSchema)
+  if (!parsed.ok) return parsed.response
+  const data = parsed.data
+
+  const updates: Record<string, unknown> = { updated_at: new Date() }
+  const fields = [
+    'full_name', 'email', 'role', 'employee_code',
     'department', 'designation', 'joining_date', 'phone', 'is_active',
   ] as const
-  const updates: Record<string, unknown> = {}
-  for (const key of allowed) {
-    if (body[key] !== undefined) updates[key] = body[key]
+  for (const key of fields) {
+    if (data[key] !== undefined) updates[key] = data[key]
+  }
+  // Super-admin (no branch_id) may reassign branch; branch-scoped admin cannot
+  if (data.branch_id !== undefined && !actor.branch_id) {
+    updates.branch_id = data.branch_id
   }
 
-  if (body.password !== undefined && body.password !== '') {
-    if (String(body.password).length < 8) {
-      return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 })
-    }
-    updates.password_hash = await bcrypt.hash(String(body.password), 12)
+  if (data.password != null && data.password !== '') {
+    updates.password_hash = await bcrypt.hash(data.password, 12)
+    // Invalidate outstanding JWTs by bumping the version counter
+    updates.password_version = before.password_version + 1
   }
 
-  if (Object.keys(updates).length === 0) {
+  if (Object.keys(updates).length === 1) {
+    // Only updated_at was set — nothing meaningful was provided
     return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
   }
 
-  updates.updated_at = new Date()
-
-  let after
+  let after: typeof profiles.$inferSelect
   try {
     ;[after] = await db
       .update(profiles)
       .set(updates)
       .where(eq(profiles.id, id))
       .returning()
-  } catch (e: any) {
-    if (e?.message?.includes('unique') || e?.code === '23505') {
+  } catch (e: unknown) {
+    const err = e as { message?: string; code?: string }
+    if (err?.message?.includes('unique') || err?.code === '23505') {
       return NextResponse.json({ error: 'Email or employee code already exists' }, { status: 409 })
     }
     throw e
@@ -86,28 +99,36 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const { password_hash: _ah, ...safeAfter } = after
 
   await db.insert(auditLogs).values({
-    actor_id: actor.id as string,
-    actor_name: actor.name ?? '',
+    actor_id: actor.id,
+    actor_name: actor.name,
+    actor_email: actor.email,
     action: 'UPDATE',
     entity_type: 'employee',
     entity_id: id,
-    before_data: JSON.stringify(safeBefore),
-    after_data: JSON.stringify(safeAfter),
+    before_data: safeBefore,
+    after_data: safeAfter,
+    branch_id: actor.branch_id,
   })
 
   return NextResponse.json(safeAfter)
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = (await auth()) as Session | null
-  const actor = getAdmin(session)
-  if (!actor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const { id } = await params
+
+  // IDOR: branch guard
   const before = await db
     .select()
     .from(profiles)
-    .where(eq(profiles.id, id))
+    .where(
+      actor.branch_id
+        ? and(eq(profiles.id, id), eq(profiles.branch_id, actor.branch_id))
+        : eq(profiles.id, id)
+    )
     .limit(1)
     .then(r => r[0])
 
@@ -123,13 +144,15 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const { password_hash: _ah, ...safeAfter } = after
 
   await db.insert(auditLogs).values({
-    actor_id: actor.id as string,
-    actor_name: actor.name ?? '',
+    actor_id: actor.id,
+    actor_name: actor.name,
+    actor_email: actor.email,
     action: 'DEACTIVATE',
     entity_type: 'employee',
     entity_id: id,
-    before_data: JSON.stringify(safeBefore),
-    after_data: JSON.stringify(safeAfter),
+    before_data: safeBefore,
+    after_data: safeAfter,
+    branch_id: actor.branch_id,
   })
 
   return NextResponse.json({ ok: true })
