@@ -71,10 +71,17 @@ export async function createCollection(
       if (due.status === 'PAID' || due.status === 'CANCELLED') {
         throw new ServiceError(`Cannot collect on a ${due.status} due`, 400)
       }
-      const outstanding = parseFloat(due.outstanding_amount ?? '0')
-      if (params.amount > outstanding) {
+      // Decimal-safe money comparison — convert to integer cents, no float arithmetic
+      const toCents = (val: string | number): number => {
+        const str = typeof val === 'number' ? val.toFixed(2) : (val ?? '0')
+        const [whole, frac = '00'] = str.split('.')
+        return parseInt(whole, 10) * 100 + parseInt(frac.padEnd(2, '0').slice(0, 2), 10)
+      }
+      const outstandingCents = toCents(due.outstanding_amount ?? '0')
+      const amountCents = toCents(params.amount)
+      if (amountCents > outstandingCents) {
         throw new ServiceError(
-          `Amount (${params.amount}) exceeds outstanding balance (${outstanding})`,
+          `Amount (${params.amount}) exceeds outstanding balance (${due.outstanding_amount})`,
           400,
         )
       }

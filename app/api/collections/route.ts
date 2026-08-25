@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       actorName: actor.name,
       actorEmail: actor.email,
       customerId: customer_id,
-      dueId: due_id,
+      dueId: due_id ?? undefined,
       amount,
       paymentMode: payment_mode,
       paymentReference: payment_reference,
