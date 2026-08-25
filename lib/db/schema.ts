@@ -1,5 +1,5 @@
 import { pgTable, pgEnum, uuid, text, boolean, timestamp, date, numeric, integer, unique, index, jsonb } from 'drizzle-orm/pg-core'
-import { sql } from 'drizzle-orm'
+import { sql, relations } from 'drizzle-orm'
 
 // ============================================================
 // ENUMS
@@ -333,3 +333,17 @@ export const agentTargets = pgTable('agent_targets', {
 }, (t) => [
   unique().on(t.agent_id, t.date),
 ])
+
+// ============================================================
+// RELATIONS
+// ============================================================
+export const profilesRelations = relations(profiles, ({ one }) => ({
+  branch: one(branches, {
+    fields: [profiles.branch_id],
+    references: [branches.id],
+  }),
+}))
+
+export const branchesRelations = relations(branches, ({ many }) => ({
+  profiles: many(profiles),
+}))
