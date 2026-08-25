@@ -47,17 +47,6 @@ export async function createCollection(
   params: CreateCollectionParams,
 ): Promise<CollectionResult> {
   return (db as any).transaction(async (tx: AnyDB) => {
-    // Idempotency check — early exit before any writes
-    if (params.idempotencyKey) {
-      const existing = await (tx as any)
-        .select()
-        .from(collections)
-        .where(eq(collections.idempotency_key, params.idempotencyKey))
-        .limit(1)
-        .then((r: any[]) => r[0])
-      if (existing) return { collection: existing, created: false }
-    }
-
     // Due validation — locked for update to prevent concurrent over-collection
     if (params.dueId) {
       const [due] = await (tx as any).execute(
@@ -87,7 +76,9 @@ export async function createCollection(
       }
     }
 
-    const [collection] = await (tx as any)
+    // Atomic idempotency via ON CONFLICT DO NOTHING — DB unique constraint on
+    // idempotency_key serializes concurrent requests. No SELECT-then-INSERT race.
+    const insertResult = await (tx as any)
       .insert(collections)
       .values({
         customer_id: params.customerId,
@@ -105,7 +96,21 @@ export async function createCollection(
         idempotency_key: params.idempotencyKey ?? null,
         collected_at: new Date(),
       })
+      .onConflictDoNothing({ target: collections.idempotency_key })
       .returning()
+
+    // If nothing was returned, the row already existed — fetch and return it
+    if (!insertResult || insertResult.length === 0) {
+      const existing = await (tx as any)
+        .select()
+        .from(collections)
+        .where(eq(collections.idempotency_key, params.idempotencyKey!))
+        .limit(1)
+        .then((r: any[]) => r[0])
+      return { collection: existing, created: false }
+    }
+
+    const collection = insertResult[0]
 
     await logAudit(tx, {
       actor_id: params.agentId,
