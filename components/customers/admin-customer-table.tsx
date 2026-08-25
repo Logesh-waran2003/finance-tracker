@@ -150,44 +150,76 @@ export function AdminCustomerTable({ initial, agents, branches }: {
       </div>
 
       <Card>
-        <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                {['Code', 'Name', 'Phone', 'Area', 'Agent', 'Outstanding', 'Status', 'Actions'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {paged.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400 text-sm">No customers found</td></tr>}
-              {paged.map(c => (
-                <tr key={c.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-gray-500 text-xs">{c.customer_code}</td>
-                  <td className="px-4 py-3 font-medium">{c.full_name}</td>
-                  <td className="px-4 py-3 text-gray-600">{c.phone ?? '—'}</td>
-                  <td className="px-4 py-3 text-gray-600">{c.area ?? c.city ?? '—'}</td>
-                  <td className="px-4 py-3 text-gray-600">{c.agent_name ?? '—'}</td>
-                  <td className="px-4 py-3 font-medium text-orange-600">₹{parseFloat(c.outstanding_total).toLocaleString()}</td>
-                  <td className="px-4 py-3">
+        <CardContent className="p-0">
+          <div className="sm:hidden space-y-3 p-3">
+            {paged.length === 0 && <p className="text-center text-gray-400 py-6 text-sm">No customers found</p>}
+            {paged.map(c => (
+              <Card key={c.id}>
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm">{c.full_name}</p>
+                      <p className="text-xs text-gray-400">{c.customer_code}</p>
+                    </div>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
                       {c.is_active ? 'Active' : 'Inactive'}
                     </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => openEdit(c)}><Pencil size={14} /></Button>
-                      <Button variant="ghost" size="sm"
-                        className={c.is_active ? 'text-red-500 hover:text-red-700' : 'text-green-600 hover:text-green-800'}
-                        onClick={() => toggleActive(c)}>
-                        {c.is_active ? <UserX size={14} /> : <UserCheck size={14} />}
-                      </Button>
-                    </div>
-                  </td>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1 text-xs text-gray-600">
+                    <span>{c.phone ?? '—'}</span>
+                    <span>{c.area ?? c.city ?? '—'}</span>
+                    <span className="text-gray-500">Agent: {c.agent_name ?? '—'}</span>
+                    <span className="font-medium text-orange-600">₹{parseFloat(c.outstanding_total).toLocaleString()}</span>
+                  </div>
+                  <div className="flex gap-1 justify-end">
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(c)}><Pencil size={14} /></Button>
+                    <Button variant="ghost" size="sm" className={`h-7 w-7 p-0 ${c.is_active ? 'text-red-500 hover:text-red-700' : 'text-green-600 hover:text-green-800'}`} onClick={() => toggleActive(c)}>
+                      {c.is_active ? <UserX size={14} /> : <UserCheck size={14} />}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  {['Code', 'Name', 'Phone', 'Area', 'Agent', 'Outstanding', 'Status', 'Actions'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y">
+                {paged.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400 text-sm">No customers found</td></tr>}
+                {paged.map(c => (
+                  <tr key={c.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-gray-500 text-xs">{c.customer_code}</td>
+                    <td className="px-4 py-3 font-medium">{c.full_name}</td>
+                    <td className="px-4 py-3 text-gray-600">{c.phone ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-600">{c.area ?? c.city ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-600">{c.agent_name ?? '—'}</td>
+                    <td className="px-4 py-3 font-medium text-orange-600">₹{parseFloat(c.outstanding_total).toLocaleString()}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                        {c.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(c)}><Pencil size={14} /></Button>
+                        <Button variant="ghost" size="sm"
+                          className={c.is_active ? 'text-red-500 hover:text-red-700' : 'text-green-600 hover:text-green-800'}
+                          onClick={() => toggleActive(c)}>
+                          {c.is_active ? <UserX size={14} /> : <UserCheck size={14} />}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
 

@@ -174,41 +174,70 @@ export function AdminAttendanceClient({ initial, employees }: {
       </div>
 
       <Card>
-        <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                {['Employee', 'Date', 'Check-in', 'Check-out', 'Hours', 'Status', 'GPS', 'Actions'].map(h => (
-                  <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {filtered.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400 text-sm">No records found</td></tr>}
-              {filtered.map(r => (
-                <tr key={r.id} className={`hover:bg-gray-50 ${r.corrected_by ? 'bg-yellow-50/40' : ''}`}>
-                  <td className="px-4 py-2">
-                    <p className="font-medium">{r.full_name ?? '—'}</p>
-                    {r.employee_code && <p className="text-xs text-gray-400">{r.employee_code}</p>}
-                  </td>
-                  <td className="px-4 py-2 text-gray-600">{fmtDate(r.date)}</td>
-                  <td className="px-4 py-2">{fmtTime(r.check_in_at)}</td>
-                  <td className="px-4 py-2">{fmtTime(r.check_out_at)}</td>
-                  <td className="px-4 py-2">{r.total_hours ? `${r.total_hours}h` : '—'}</td>
-                  <td className="px-4 py-2">
+        <CardContent className="p-0">
+          <div className="sm:hidden space-y-3 p-3">
+            {filtered.length === 0 && <p className="text-center text-gray-400 py-6 text-sm">No records found</p>}
+            {filtered.map(r => (
+              <Card key={r.id} className={r.corrected_by ? 'border-yellow-200' : ''}>
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm">{r.full_name ?? '—'}</p>
+                      {r.employee_code && <p className="text-xs text-gray-400">{r.employee_code}</p>}
+                    </div>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {r.status.replace('_', ' ')}
+                      {r.status.replace('_', ' ')}{r.corrected_by ? ' ✎' : ''}
                     </span>
-                    {r.corrected_by && <span className="ml-1 text-xs text-yellow-600">✎</span>}
-                  </td>
-                  <td className="px-4 py-2 text-xs text-gray-500">{r.check_in_gps_lat ? '📍' : '—'}</td>
-                  <td className="px-4 py-2">
-                    <Button variant="ghost" size="sm" onClick={() => openCorrect(r)}><Pencil size={14} /></Button>
-                  </td>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <div><p className="text-xs text-gray-500">Date</p><p className="font-medium text-xs">{fmtDate(r.date)}</p></div>
+                    <div><p className="text-xs text-gray-500">Check-in</p><p className="font-medium text-xs">{fmtTime(r.check_in_at)}</p></div>
+                    <div><p className="text-xs text-gray-500">Check-out</p><p className="font-medium text-xs">{fmtTime(r.check_out_at)}</p></div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">{r.total_hours ? `${r.total_hours}h` : '—'} {r.check_in_gps_lat ? '📍' : ''}</span>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openCorrect(r)}><Pencil size={14} /></Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  {['Employee', 'Date', 'Check-in', 'Check-out', 'Hours', 'Status', 'GPS', 'Actions'].map(h => (
+                    <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y">
+                {filtered.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400 text-sm">No records found</td></tr>}
+                {filtered.map(r => (
+                  <tr key={r.id} className={`hover:bg-gray-50 ${r.corrected_by ? 'bg-yellow-50/40' : ''}`}>
+                    <td className="px-4 py-2">
+                      <p className="font-medium">{r.full_name ?? '—'}</p>
+                      {r.employee_code && <p className="text-xs text-gray-400">{r.employee_code}</p>}
+                    </td>
+                    <td className="px-4 py-2 text-gray-600">{fmtDate(r.date)}</td>
+                    <td className="px-4 py-2">{fmtTime(r.check_in_at)}</td>
+                    <td className="px-4 py-2">{fmtTime(r.check_out_at)}</td>
+                    <td className="px-4 py-2">{r.total_hours ? `${r.total_hours}h` : '—'}</td>
+                    <td className="px-4 py-2">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {r.status.replace('_', ' ')}
+                      </span>
+                      {r.corrected_by && <span className="ml-1 text-xs text-yellow-600">✎</span>}
+                    </td>
+                    <td className="px-4 py-2 text-xs text-gray-500">{r.check_in_gps_lat ? '📍' : '—'}</td>
+                    <td className="px-4 py-2">
+                      <Button variant="ghost" size="sm" onClick={() => openCorrect(r)}><Pencil size={14} /></Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
 

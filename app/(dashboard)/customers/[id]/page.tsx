@@ -95,7 +95,33 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
       {/* Dues table */}
       <div>
         <h2 className="text-base font-semibold mb-2">Dues</h2>
-        <div className="bg-white rounded-xl border overflow-x-auto">
+
+        {/* Mobile cards */}
+        <div className="sm:hidden space-y-3">
+          {duesList.length === 0 && <p className="text-sm text-gray-400">No dues</p>}
+          {duesList.map(d => (
+            <div key={d.id} className="bg-white rounded-xl border p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm">{d.invoice_number ?? '—'}</p>
+                  <p className="text-xs text-gray-400">{d.due_date ?? 'No due date'}</p>
+                </div>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[d.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                  {d.status.replace('_', ' ')}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div><p className="text-xs text-gray-500">Amount</p><p className="font-medium">₹{parseFloat(d.amount as string).toLocaleString()}</p></div>
+                <div><p className="text-xs text-gray-500">Outstanding</p><p className="font-medium text-orange-600">₹{parseFloat(d.outstanding_amount as string).toLocaleString()}</p></div>
+                <div><p className="text-xs text-gray-500">Penalty</p><p className="font-medium">{d.penalty_rate && parseFloat(d.penalty_rate as string) > 0 ? `${parseFloat(d.penalty_rate as string)}%` : '—'}</p></div>
+              </div>
+              {role === 'ADMIN' && <EditDueDialog due={{ id: d.id, invoice_number: d.invoice_number, due_date: d.due_date, penalty_rate: d.penalty_rate as string | null, notes: d.notes }} />}
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden sm:block bg-white rounded-xl border overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>

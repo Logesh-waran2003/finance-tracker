@@ -142,35 +142,66 @@ export function CollectionForm({ customers, initial }: { customers: Customer[]; 
       </div>
 
       <Card>
-        <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>{['#', 'Customer', 'Amount', 'Mode', 'Status', 'Time', 'Actions'].map(h => (
-                <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
-              ))}</tr>
-            </thead>
-            <tbody className="divide-y">
-              {rows.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">No collections yet</td></tr>}
-              {rows.map(r => (
-                <tr key={r.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-2 text-xs text-gray-400">{r.collection_number ?? '—'}</td>
-                  <td className="px-4 py-2 font-medium">{r.customer_name ?? '—'}</td>
-                  <td className="px-4 py-2 font-medium">₹{parseFloat(r.amount).toLocaleString()}</td>
-                  <td className="px-4 py-2 text-gray-600">{r.payment_mode}</td>
-                  <td className="px-4 py-2">
+        <CardContent className="p-0">
+          <div className="sm:hidden space-y-3 p-3">
+            {rows.length === 0 && <p className="text-center text-gray-400 py-6 text-sm">No collections yet</p>}
+            {rows.map(r => (
+              <Card key={r.id}>
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm">{r.customer_name ?? '—'}</p>
+                      <p className="text-xs font-mono text-gray-400">{r.collection_number ?? '—'}</p>
+                    </div>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status] ?? 'bg-gray-100'}`}>{r.status}</span>
-                    {r.rejected_reason && <p className="text-xs text-red-500 mt-0.5">{r.rejected_reason}</p>}
-                  </td>
-                  <td className="px-4 py-2 text-xs text-gray-500">{fmtDateTime(r.collected_at)}</td>
-                  <td className="px-4 py-2">
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">₹{parseFloat(r.amount).toLocaleString()}</span>
+                    <span className="text-gray-500">{r.payment_mode}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-gray-400">{fmtDateTime(r.collected_at)}</p>
                     {r.status === 'PENDING' && (
-                      <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 text-xs" onClick={() => cancelCollection(r.id)}>Cancel</Button>
+                      <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600 h-7 px-2 text-xs" onClick={() => cancelCollection(r.id)}>
+                        <XCircle size={13} className="mr-1" />Cancel
+                      </Button>
                     )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                  {r.rejected_reason && <p className="text-xs text-red-500">{r.rejected_reason}</p>}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>{['#', 'Customer', 'Amount', 'Mode', 'Status', 'Time', 'Actions'].map(h => (
+                  <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+                ))}</tr>
+              </thead>
+              <tbody className="divide-y">
+                {rows.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">No collections yet</td></tr>}
+                {rows.map(r => (
+                  <tr key={r.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-2 text-xs text-gray-400">{r.collection_number ?? '—'}</td>
+                    <td className="px-4 py-2 font-medium">{r.customer_name ?? '—'}</td>
+                    <td className="px-4 py-2 font-medium">₹{parseFloat(r.amount).toLocaleString()}</td>
+                    <td className="px-4 py-2 text-gray-600">{r.payment_mode}</td>
+                    <td className="px-4 py-2">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status] ?? 'bg-gray-100'}`}>{r.status}</span>
+                      {r.rejected_reason && <p className="text-xs text-red-500 mt-0.5">{r.rejected_reason}</p>}
+                    </td>
+                    <td className="px-4 py-2 text-xs text-gray-500">{fmtDateTime(r.collected_at)}</td>
+                    <td className="px-4 py-2">
+                      {r.status === 'PENDING' && (
+                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 text-xs" onClick={() => cancelCollection(r.id)}>Cancel</Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
 
