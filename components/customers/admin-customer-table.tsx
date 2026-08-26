@@ -95,6 +95,7 @@ export function AdminCustomerTable({ initial, agents, branches }: {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...form,
+        email: form.email || null,
         assigned_agent_id: form.assigned_agent_id || null,
         branch_id: form.branch_id || null,
         opening_balance: parseFloat(form.opening_balance) || 0,
