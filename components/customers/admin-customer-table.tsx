@@ -244,7 +244,7 @@ export function AdminCustomerTable({ initial, agents, branches }: {
             <div className="space-y-1"><Label>Area</Label><Input value={form.area} onChange={e => setForm(f => ({ ...f, area: e.target.value }))} /></div>
             <div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} /></div>
             <div className="space-y-1"><Label>Address</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></div>
-            <div className="space-y-1"><Label>Opening Balance</Label><Input type="number" min="0" step="0.01" value={form.opening_balance} onChange={e => setForm(f => ({ ...f, opening_balance: e.target.value }))} /></div>
+            <div className="space-y-1"><Label>Outstanding Balance</Label><Input type="number" min="0" step="0.01" value={form.opening_balance} onChange={e => setForm(f => ({ ...f, opening_balance: e.target.value }))} /></div>
             <div className="space-y-1"><Label>Assigned Agent</Label>
               <Select value={form.assigned_agent_id || '_none'} onValueChange={(v: string | null) => setForm(f => ({ ...f, assigned_agent_id: !v || v === '_none' ? '' : v }))}>
                 <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>

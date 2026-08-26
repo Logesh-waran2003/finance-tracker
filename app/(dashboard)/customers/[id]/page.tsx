@@ -87,7 +87,7 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
         <div><span className="text-gray-500">Area / City</span><p className="font-medium mt-0.5">{[customer.area, customer.city].filter(Boolean).join(', ') || '—'}</p></div>
         <div><span className="text-gray-500">Address</span><p className="font-medium mt-0.5">{customer.address ?? '—'}</p></div>
         <div><span className="text-gray-500">Assigned Agent</span><p className="font-medium mt-0.5">{agent?.full_name ?? '—'}</p></div>
-        <div><span className="text-gray-500">Opening Balance</span><p className="font-medium mt-0.5">₹{parseFloat(customer.opening_balance as string).toLocaleString()}</p></div>
+        <div><span className="text-gray-500">Outstanding Balance</span><p className="font-medium mt-0.5">₹{parseFloat(customer.opening_balance as string).toLocaleString()}</p></div>
         {customer.gps_lat && customer.gps_lng && (
           <div><span className="text-gray-500">GPS</span><p className="font-medium mt-0.5 text-xs">{customer.gps_lat}, {customer.gps_lng}</p></div>
         )}
