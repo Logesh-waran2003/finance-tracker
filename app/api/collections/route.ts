@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { collections, customers } from '@/lib/db/schema'
+import { collections, customers, notifications, profiles } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq, and, desc, gte, lte } from 'drizzle-orm'
 import { requireRole, requireCustomerAccess, isResponse } from '@/lib/auth/authorize'
@@ -42,6 +42,39 @@ export async function POST(request: Request) {
       idempotencyKey: idempotency_key,
     })
     const status = result.created ? 201 : 200
+
+    // Fire-and-forget: notify all active admins in the same branch
+    if (result.created) {
+      const customerName = await db
+        .select({ full_name: customers.full_name })
+        .from(customers)
+        .where(eq(customers.id, customer_id))
+        .limit(1)
+        .then(r => r[0]?.full_name ?? 'Unknown customer')
+
+      const adminConditions = actor.branch_id
+        ? and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true), eq(profiles.branch_id, actor.branch_id))
+        : and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true))
+
+      db.select({ id: profiles.id })
+        .from(profiles)
+        .where(adminConditions)
+        .then(admins => {
+          if (admins.length === 0) return
+          return db.insert(notifications).values(
+            admins.map(a => ({
+              recipient_id: a.id,
+              type: 'GENERAL' as const,
+              title: 'New Collection Pending',
+              body: `${actor.name} collected ₹${amount.toLocaleString('en-IN')} from ${customerName} — pending your confirmation`,
+              reference_id: result.collection.id,
+              reference_type: 'collection',
+            }))
+          )
+        })
+        .catch(() => { /* notification failure must not break the collection */ })
+    }
+
     return NextResponse.json(result.collection, { status })
   } catch (err) {
     if (err instanceof ServiceError) {
