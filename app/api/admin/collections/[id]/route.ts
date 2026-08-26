@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { collections, dues } from '@/lib/db/schema'
+import { collections, dues, customers } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq, and, isNull, sql } from 'drizzle-orm'
 import { requireAdmin, isResponse } from '@/lib/auth/authorize'
@@ -122,6 +122,26 @@ export async function PATCH(
             after_data: { outstanding_amount: newOutstanding, status: newStatus },
             branch_id: actor.branch_id,
           })
+        }
+      } else {
+        // Freeform collection (no due linked) — reduce customer opening_balance
+        const customer = await tx
+          .select({ opening_balance: customers.opening_balance })
+          .from(customers)
+          .where(eq(customers.id, existing.customer_id))
+          .limit(1)
+          .then(r => r[0])
+
+        if (customer) {
+          const balanceCents = Math.round(parseFloat(customer.opening_balance as string) * 100)
+          const collectionCents = Math.round(parseFloat(existing.amount as string) * 100)
+          const newBalanceCents = Math.max(0, balanceCents - collectionCents)
+          const newBalance = (newBalanceCents / 100).toFixed(2)
+
+          await tx
+            .update(customers)
+            .set({ opening_balance: newBalance, updated_at: now })
+            .where(eq(customers.id, existing.customer_id))
         }
       }
     }
