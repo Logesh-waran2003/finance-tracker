@@ -37,7 +37,6 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
   const totalOutstanding = duesList
     .filter(d => d.status !== 'PAID' && d.status !== 'CANCELLED')
     .reduce((sum, d) => sum + parseFloat(d.outstanding_amount as string), 0)
-    + parseFloat(customer.opening_balance as string ?? '0')
 
   const STATUS_BADGE: Record<string, string> = {
     OPEN: 'bg-blue-100 text-blue-700',

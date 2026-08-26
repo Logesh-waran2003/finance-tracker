@@ -69,13 +69,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     'pincode', 'assigned_agent_id', 'opening_balance', 'is_active', 'notes',
   ] as const
   for (const key of fields) {
-    if (data[key] !== undefined) {
-      if (key === 'opening_balance') {
-        updates[key] = data[key] != null ? String(data[key]) : '0'
-      } else {
-        updates[key] = data[key] === '' ? null : data[key]
-      }
-    }
+    if (data[key] !== undefined) updates[key] = data[key] === '' ? null : data[key]
   }
   if (data.gps_lat !== undefined) updates.gps_lat = data.gps_lat != null ? String(data.gps_lat) : null
   if (data.gps_lng !== undefined) updates.gps_lng = data.gps_lng != null ? String(data.gps_lng) : null

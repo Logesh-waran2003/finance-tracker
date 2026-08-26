@@ -61,9 +61,7 @@ export async function GET(request: Request) {
 
   const result = filtered.map(r => ({
     ...r,
-    outstanding_total: String(
-      parseFloat(outstandingMap.get(r.id) ?? '0') + parseFloat(r.opening_balance as string ?? '0')
-    ),
+    outstanding_total: outstandingMap.get(r.id) ?? '0',
   }))
 
   return NextResponse.json(result)

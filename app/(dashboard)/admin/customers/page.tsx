@@ -44,9 +44,7 @@ export default async function AdminCustomersPage() {
 
   const data = custList.map(c => ({
     ...c,
-    outstanding_total: String(
-      parseFloat(outMap.get(c.id) ?? '0') + parseFloat(c.opening_balance as string ?? '0')
-    ),
+    outstanding_total: outMap.get(c.id) ?? '0',
   }))
 
   return <AdminCustomerTable initial={data} agents={agents} branches={branchList} />
