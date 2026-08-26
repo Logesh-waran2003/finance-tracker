@@ -105,7 +105,14 @@ export function AdminCustomerTable({ initial, agents, branches }: {
     if (!res.ok) { setErr(data.error ?? 'Failed to save'); setSaving(false); return }
 
     if (editing) {
-      setCustomers(prev => prev.map(c => c.id === editing.id ? { ...c, ...data } : c))
+      setCustomers(prev => prev.map(c => c.id === editing.id ? {
+        ...c,
+        ...data,
+        outstanding_total: String(
+          parseFloat(c.outstanding_total) - parseFloat(c.opening_balance) + parseFloat(data.opening_balance ?? '0')
+        ),
+        opening_balance: data.opening_balance ?? c.opening_balance,
+      } : c))
     } else {
       setCustomers(prev => [{ ...data, outstanding_total: '0', agent_name: agents.find(a => a.id === data.assigned_agent_id)?.full_name ?? null }, ...prev])
     }
