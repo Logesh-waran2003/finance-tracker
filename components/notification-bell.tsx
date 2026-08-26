@@ -6,10 +6,12 @@ import { Bell, AlertCircle, Info, AlertTriangle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface Notification {
+  id?: string
   type: string
   title: string
   message: string
   href: string
+  dbNotification?: boolean
 }
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -121,7 +123,16 @@ export function NotificationBell() {
                     </div>
                     <button
                       className="shrink-0 opacity-40 hover:opacity-70 transition-opacity"
-                      onClick={() => setDismissed(prev => new Set([...prev, i]))}
+                      onClick={async () => {
+                        setDismissed(prev => new Set([...prev, i]))
+                        if (n.dbNotification && n.id) {
+                          await fetch('/api/admin/notifications', {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: n.id }),
+                          }).catch(() => {})
+                        }
+                      }}
                     >
                       <X size={12} />
                     </button>

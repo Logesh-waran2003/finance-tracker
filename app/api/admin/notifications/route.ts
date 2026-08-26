@@ -1,7 +1,7 @@
 import { db } from '@/lib/db'
-import { collections, dues, customers, attendance, reconciliations, profiles, expenses } from '@/lib/db/schema'
+import { collections, dues, customers, attendance, reconciliations, profiles, expenses, notifications } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq, and, sql, notInArray, isNull } from 'drizzle-orm'
+import { eq, and, sql, notInArray, isNull, desc } from 'drizzle-orm'
 import { requireAdmin, isResponse } from '@/lib/auth/authorize'
 
 export async function GET() {
@@ -15,6 +15,7 @@ export async function GET() {
   const branchFilter = actor.branch_id ? actor.branch_id : null
 
   const [
+    dbNotifications,
     pendingCollections,
     overdueCount,
     allAgents,
@@ -22,6 +23,11 @@ export async function GET() {
     pendingReconciliation,
     pendingExpenseCount,
   ] = await Promise.all([
+    db.select()
+      .from(notifications)
+      .where(and(eq(notifications.recipient_id, actor.id), eq(notifications.is_read, false)))
+      .orderBy(desc(notifications.created_at))
+      .limit(20),
     db.select({
       count: sql<number>`count(*)::int`,
       total: sql<string>`coalesce(sum(${collections.amount}), '0')`,
@@ -78,10 +84,20 @@ export async function GET() {
   const presentIds = new Set(presentToday.map(r => r.eid))
   const absentToday = allAgents.filter(a => !presentIds.has(a.id))
 
-  const notifications: { type: string; title: string; message: string; href: string }[] = []
+  // Map individual DB notifications (prepended before aggregate alerts)
+  const individual = dbNotifications.map(row => ({
+    id: row.id,
+    type: 'info' as const,
+    title: row.title,
+    message: row.body,
+    href: '/admin/collections',
+    dbNotification: true as const,
+  }))
+
+  const alerts: { id?: string; type: string; title: string; message: string; href: string; dbNotification?: boolean }[] = []
 
   if ((pendingCollections?.count ?? 0) > 0) {
-    notifications.push({
+    alerts.push({
       type: 'warning',
       title: 'Pending Collections',
       message: `${pendingCollections?.count} collection${(pendingCollections?.count ?? 0) !== 1 ? 's' : ''} pending confirmation — ₹${parseFloat(pendingCollections?.total ?? '0').toLocaleString('en-IN')} total`,
@@ -90,7 +106,7 @@ export async function GET() {
   }
 
   if (overdueCount > 0) {
-    notifications.push({
+    alerts.push({
       type: 'error',
       title: 'Overdue Dues',
       message: `${overdueCount} due${overdueCount !== 1 ? 's are' : ' is'} past their due date`,
@@ -99,7 +115,7 @@ export async function GET() {
   }
 
   if (absentToday.length > 0) {
-    notifications.push({
+    alerts.push({
       type: 'info',
       title: 'Agents Not Checked In',
       message: `${absentToday.length} agent${absentToday.length !== 1 ? 's have' : ' has'} not checked in today: ${absentToday.map(a => a.full_name).slice(0, 3).join(', ')}${absentToday.length > 3 ? ` +${absentToday.length - 3} more` : ''}`,
@@ -108,7 +124,7 @@ export async function GET() {
   }
 
   if (pendingReconciliation > 0) {
-    notifications.push({
+    alerts.push({
       type: 'warning',
       title: 'Cash Reconciliation',
       message: `${pendingReconciliation} submission${pendingReconciliation !== 1 ? 's' : ''} waiting for verification`,
@@ -117,7 +133,7 @@ export async function GET() {
   }
 
   if (pendingExpenseCount > 0) {
-    notifications.push({
+    alerts.push({
       type: 'info',
       title: 'Expense Claims',
       message: `${pendingExpenseCount} expense claim${pendingExpenseCount !== 1 ? 's' : ''} pending approval`,
@@ -125,5 +141,21 @@ export async function GET() {
     })
   }
 
-  return NextResponse.json({ notifications, count: notifications.length })
+  const combined = [...individual, ...alerts]
+  return NextResponse.json({ notifications: combined, count: combined.length })
+}
+
+export async function PATCH(request: Request) {
+  const userOrRes = await requireAdmin()
+  if (isResponse(userOrRes)) return userOrRes
+
+  const { id } = await request.json()
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+
+  await db
+    .update(notifications)
+    .set({ is_read: true })
+    .where(eq(notifications.id, id))
+
+  return NextResponse.json({ ok: true })
 }

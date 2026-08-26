@@ -90,6 +90,23 @@ Daily cash reconciliation — agent submits cash collected vs cash submitted. Ad
 
 Date-range reports for collections, dues, expenses, attendance, and reconciliation.
 
+### Dashboard
+
+Admin dashboard with period-based analytics — toggle between Daily, Monthly, and Yearly views.
+
+- **KPI cards**: Total Outstanding, Collected, Collection %, Pending Reviews, Active Agents, Attendance Today
+- **Collection trend chart**: Last 7 days (daily), last 30 days (monthly), or this year grouped by month (yearly)
+- **Payment mode breakdown**: Bar chart by payment method for the selected period
+- **Outstanding aging**: Buckets by overdue age — current, 1–30 days, 31–60 days, 60+ days
+- **Recent activity**: Last 10 audit log entries
+
+### Notifications
+
+Admin bell shows two types of alerts:
+
+1. **Individual alerts** (from `notifications` table): per-collection notifications when an agent submits a collection — "John collected ₹500 from CustomerX — pending your confirmation". Dismissing marks it read in DB.
+2. **Aggregate alerts** (live-computed): pending collections count, overdue dues, absent agents, pending reconciliations, pending expense claims. Polled every 2 minutes.
+
 ## Setup
 
 ### Prerequisites
@@ -103,7 +120,7 @@ Date-range reports for collections, dues, expenses, attendance, and reconciliati
 Copy `.env.example` to `.env` and fill in:
 
 ```env
-DATABASE_URL=postgresql://user:password@localhost:5432/finance_tracker
+DATABASE_URL=postgresql://user:***@localhost:5432/finance_tracker
 NEXTAUTH_SECRET=your-secret-min-32-chars
 NEXTAUTH_URL=http://localhost:3001
 NEXT_PUBLIC_SITE_URL=http://localhost:3001
@@ -125,8 +142,10 @@ bun run dev              # start dev server on port 3001
 For WiFi hosting:
 
 ```bash
-bun run dev -- -H 0.0.0.0 -p 3001
+bun run dev -- --hostname 0.0.0.0 --port 3001
 ```
+
+Set `NEXTAUTH_URL` and `NEXT_PUBLIC_SITE_URL` to your WiFi IP when hosting on LAN.
 
 ### Database migrations
 
@@ -140,7 +159,7 @@ psql $DATABASE_URL -f lib/db/migrations/0003_daily_loan_collection.sql
 
 ```bash
 bun run build
-bun run start -- -H 0.0.0.0 -p 3001
+bun run start -- --hostname 0.0.0.0 --port 3001
 ```
 
 ## Cron Job
@@ -181,9 +200,14 @@ app/
     loans/             # agent loan collection page
     collections/       # agent freeform collections
     customers/         # agent customer list and detail
+    dashboard/         # admin dashboard (period-based analytics)
     ...
   api/
-    admin/             # admin API routes
+    admin/
+      dashboard/       # GET /api/admin/dashboard?period=daily|monthly|yearly
+      notifications/   # GET (aggregated + DB notifications), PATCH (mark read)
+      collections/     # collection confirm/reject
+      ...
     agent/             # agent-scoped API routes
     cron/              # scheduled job endpoints
 
@@ -191,6 +215,8 @@ components/
   loans/               # loan module UI components
   customers/           # customer management components
   collections/         # collection form and admin table
+  dashboard/           # dashboard-client (self-fetching, period toggle)
+  notification-bell/   # admin notification bell
   ui/                  # shadcn/ui base components
 
 lib/
@@ -214,3 +240,5 @@ lib/
 - Opening balance on customers is a one-time setup field — outstanding is always calculated dynamically at query time
 - Loan balances (principal_collected, principal_outstanding) are maintained on the loans table and recalculated after every payment/reversal/waiver via `updateLoanBalances()`
 - Concurrency: loan and schedule rows are SELECT FOR UPDATE locked before payment to prevent double-collection
+- Notifications table is written on every agent collection (fire-and-forget); admin bell reads both live-computed aggregates and unread DB rows, combining them in one response
+- Dashboard data fetched client-side per period selection — no SSR data fetching for the admin dashboard view

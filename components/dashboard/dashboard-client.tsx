@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect, useCallback } from 'react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar,
@@ -49,13 +50,14 @@ interface AgingData {
   overdue60plus: number
 }
 
-export interface DashboardClientProps {
+interface DashboardClientProps {
   kpi: KPIData
   attendance: AttendanceData
   collectionTrend: CollectionTrendPoint[]
   paymentModes: PaymentModePoint[]
   recentActivity: ActivityItem[]
   aging: AgingData
+  period: 'daily' | 'monthly' | 'yearly'
 }
 
 function fmt(n: number) {
@@ -82,13 +84,54 @@ const MODE_LABELS: Record<string, string> = {
   OTHER: 'Other',
 }
 
-export default function DashboardClient({
-  kpi, attendance, collectionTrend, paymentModes, recentActivity, aging,
-}: DashboardClientProps) {
+export default function DashboardClient() {
+  const [period, setPeriod] = useState<'daily' | 'monthly' | 'yearly'>('monthly')
+  const [data, setData] = useState<DashboardClientProps | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const fetchData = useCallback(async (p: 'daily' | 'monthly' | 'yearly') => {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/admin/dashboard?period=${p}`)
+      if (!res.ok) throw new Error('Failed to fetch dashboard data')
+      const json = await res.json()
+      setData(json)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchData(period)
+  }, [period, fetchData])
+
+  if (!data) return (
+    <div className="space-y-6">
+      <div className="h-8 w-64 bg-gray-100 rounded animate-pulse" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-24 bg-gray-100 rounded-lg animate-pulse" />
+        ))}
+      </div>
+    </div>
+  )
+
+  const { kpi, attendance, collectionTrend, paymentModes, recentActivity, aging } = data
+
   const collectionPct = kpi.collection_percent
   const pctColor =
     collectionPct >= 80 ? 'text-green-600' :
     collectionPct >= 50 ? 'text-yellow-600' : 'text-red-600'
+
+  const periodLabel =
+    period === 'daily' ? 'Today' :
+    period === 'monthly' ? 'Month' :
+    'Year'
+
+  const trendTitle =
+    period === 'daily' ? 'Collections — Last 7 Days' :
+    period === 'monthly' ? 'Collections — Last 30 Days' :
+    'Collections — This Year'
 
   const kpiCards = [
     {
@@ -99,7 +142,7 @@ export default function DashboardClient({
       iconClass: 'text-red-500',
     },
     {
-      label: 'Collected (Month)',
+      label: `Collected (${periodLabel})`,
       value: fmt(kpi.total_collected),
       sub: `of ${fmt(kpi.total_expected)} expected`,
       icon: TrendingUp,
@@ -108,7 +151,7 @@ export default function DashboardClient({
     {
       label: 'Collection %',
       value: `${collectionPct.toFixed(1)}%`,
-      sub: 'Current month',
+      sub: `Current ${period}`,
       icon: TrendingUp,
       iconClass: pctColor,
     },
@@ -136,7 +179,7 @@ export default function DashboardClient({
   ]
 
   const agingRows = [
-    { label: 'Current (not overdue)', value: aging.current, barClass: 'bg-blue-400' },
+    { label: 'Current (not overdue)', value: aging.current,      barClass: 'bg-blue-400' },
     { label: 'Overdue 1–30 days',     value: aging.overdue1_30,  barClass: 'bg-yellow-400' },
     { label: 'Overdue 31–60 days',    value: aging.overdue31_60, barClass: 'bg-orange-400' },
     { label: 'Overdue 60+ days',      value: aging.overdue60plus, barClass: 'bg-red-500' },
@@ -150,6 +193,22 @@ export default function DashboardClient({
 
   return (
     <div className="space-y-6">
+      {/* Period toggle */}
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
+        {(['daily', 'monthly', 'yearly'] as const).map(p => (
+          <button
+            key={p}
+            onClick={() => setPeriod(p)}
+            disabled={loading}
+            className={`px-3 py-1 text-sm rounded-md font-medium transition-colors capitalize ${
+              period === p ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {p.charAt(0).toUpperCase() + p.slice(1)}
+          </button>
+        ))}
+      </div>
+
       {/* Row 1 — KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
         {kpiCards.map((card) => (
@@ -170,12 +229,12 @@ export default function DashboardClient({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Collections — Last 30 Days</CardTitle>
+            <CardTitle className="text-sm font-medium">{trendTitle}</CardTitle>
           </CardHeader>
           <CardContent>
             {collectionTrend.length === 0 ? (
               <div className="h-[220px] flex items-center justify-center text-sm text-muted-foreground">
-                No collections in the last 30 days
+                No collections in this period
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={180}>
@@ -184,7 +243,11 @@ export default function DashboardClient({
                   <XAxis
                     dataKey="date"
                     tick={{ fontSize: 11 }}
-                    tickFormatter={(v: string) => v.slice(5)}
+                    tickFormatter={(v: string) =>
+                      period === 'yearly'
+                        ? new Date(v).toLocaleString('en-IN', { month: 'short' })
+                        : v.slice(5)
+                    }
                   />
                   <YAxis
                     tick={{ fontSize: 11 }}

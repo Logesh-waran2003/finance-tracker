@@ -1,14 +1,12 @@
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import {
-  collections, dues, profiles, attendance, auditLogs,
-} from '@/lib/db/schema'
-import { sql, eq, and, inArray, notInArray, desc } from 'drizzle-orm'
+import { collections, profiles, attendance } from '@/lib/db/schema'
+import { sql, eq, and } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import DashboardClient, { DashboardClientProps } from '@/components/dashboard/dashboard-client'
+import DashboardClient from '@/components/dashboard/dashboard-client'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -16,20 +14,6 @@ function todayIST() {
   // IST = UTC+5:30
   const istNow = new Date(Date.now() + 330 * 60_000)
   return istNow.toISOString().slice(0, 10)
-}
-
-function monthStartIST() {
-  const istNow = new Date(Date.now() + 330 * 60_000)
-  return `${istNow.getFullYear()}-${String(istNow.getMonth() + 1).padStart(2, '0')}-01`
-}
-
-function thirtyDaysAgoIST() {
-  const d = new Date(Date.now() + 330 * 60_000 - 30 * 24 * 3600_000)
-  return d.toISOString().slice(0, 10)
-}
-
-function n(v: string | null | undefined): number {
-  return parseFloat(v ?? '0') || 0
 }
 
 // ── main page ─────────────────────────────────────────────────────────────────
@@ -124,157 +108,8 @@ export default async function DashboardPage() {
     )
   }
 
-  // ── admin: parallel data fetch ─────────────────────────────────────────────
+  // ── admin view ────────────────────────────────────────────────────────────
   const today = todayIST()
-  const monthStart = monthStartIST()
-  const thirtyAgo = thirtyDaysAgoIST()
-
-  const [
-    expectedRow, collectedRow, outstandingRow,
-    pendingRow, cashRow, agentsRow,
-    presentRow, totalEmpRow,
-    trendRows, modeRows,
-    activityRows,
-    agingCurrentRow, aging1_30Row, aging31_60Row, aging60Row,
-  ] = await Promise.all([
-    // 1 expected this month
-    db.select({ t: sql<string>`coalesce(sum(${dues.amount}), '0')` })
-      .from(dues)
-      .where(and(
-        notInArray(dues.status, ['CANCELLED']),
-        sql`${dues.created_at} >= ${monthStart}::date`,
-      )),
-    // 2 collected this month
-    db.select({ t: sql<string>`coalesce(sum(${collections.amount}), '0')` })
-      .from(collections)
-      .where(and(
-        eq(collections.status, 'CONFIRMED'),
-        sql`${collections.collected_at} >= ${monthStart}::date`,
-      )),
-    // 3 total outstanding (all open dues)
-    db.select({ t: sql<string>`coalesce(sum(${dues.outstanding_amount}), '0')` })
-      .from(dues)
-      .where(notInArray(dues.status, ['PAID', 'CANCELLED'])),
-    // 4 pending collections count
-    db.select({ c: sql<string>`count(*)` })
-      .from(collections)
-      .where(eq(collections.status, 'PENDING')),
-    // 5 confirmed cash (approximate handover)
-    db.select({ t: sql<string>`coalesce(sum(${collections.amount}), '0')` })
-      .from(collections)
-      .where(and(eq(collections.status, 'CONFIRMED'), eq(collections.payment_mode, 'CASH'))),
-    // 6 active agents
-    db.select({ c: sql<string>`count(*)` })
-      .from(profiles)
-      .where(and(eq(profiles.role, 'COLLECTION_AGENT'), eq(profiles.is_active, true))),
-    // 7 present today
-    db.select({ c: sql<string>`count(*)` })
-      .from(attendance)
-      .where(and(
-        eq(attendance.date, today),
-        inArray(attendance.status, ['PRESENT', 'LATE', 'HALF_DAY']),
-      )),
-    // 8 total active employees
-    db.select({ c: sql<string>`count(*)` })
-      .from(profiles)
-      .where(eq(profiles.is_active, true)),
-    // 9 collection trend last 30 days
-    db.select({
-      date: sql<string>`(${collections.collected_at} at time zone 'Asia/Kolkata')::date::text`,
-      amount: sql<string>`coalesce(sum(${collections.amount}), '0')`,
-    })
-      .from(collections)
-      .where(and(
-        eq(collections.status, 'CONFIRMED'),
-        sql`${collections.collected_at} >= ${thirtyAgo}::date`,
-      ))
-      .groupBy(sql`(${collections.collected_at} at time zone 'Asia/Kolkata')::date`)
-      .orderBy(sql`(${collections.collected_at} at time zone 'Asia/Kolkata')::date`),
-    // 10 payment mode breakdown
-    db.select({
-      mode: collections.payment_mode,
-      amount: sql<string>`coalesce(sum(${collections.amount}), '0')`,
-    })
-      .from(collections)
-      .where(eq(collections.status, 'CONFIRMED'))
-      .groupBy(collections.payment_mode)
-      .orderBy(sql`sum(${collections.amount}) desc`),
-    // 11 recent activity
-    db.select({
-      id: auditLogs.id,
-      action: auditLogs.action,
-      entity_type: auditLogs.entity_type,
-      actor_name: auditLogs.actor_name,
-      created_at: auditLogs.created_at,
-    })
-      .from(auditLogs)
-      .orderBy(desc(auditLogs.created_at))
-      .limit(10),
-    // 12-15 aging buckets
-    db.select({ t: sql<string>`coalesce(sum(${dues.outstanding_amount}), '0')` })
-      .from(dues)
-      .where(and(notInArray(dues.status, ['PAID', 'CANCELLED']), sql`${dues.due_date} >= current_date`)),
-    db.select({ t: sql<string>`coalesce(sum(${dues.outstanding_amount}), '0')` })
-      .from(dues)
-      .where(and(
-        notInArray(dues.status, ['PAID', 'CANCELLED']),
-        sql`${dues.due_date} < current_date`,
-        sql`${dues.due_date} >= current_date - interval '30 days'`,
-      )),
-    db.select({ t: sql<string>`coalesce(sum(${dues.outstanding_amount}), '0')` })
-      .from(dues)
-      .where(and(
-        notInArray(dues.status, ['PAID', 'CANCELLED']),
-        sql`${dues.due_date} < current_date - interval '30 days'`,
-        sql`${dues.due_date} >= current_date - interval '60 days'`,
-      )),
-    db.select({ t: sql<string>`coalesce(sum(${dues.outstanding_amount}), '0')` })
-      .from(dues)
-      .where(and(
-        notInArray(dues.status, ['PAID', 'CANCELLED']),
-        sql`${dues.due_date} < current_date - interval '60 days'`,
-      )),
-  ])
-
-  const expected = n(expectedRow[0]?.t)
-  const collected = n(collectedRow[0]?.t)
-
-  const props: DashboardClientProps = {
-    kpi: {
-      total_expected: expected,
-      total_collected: collected,
-      total_outstanding: n(outstandingRow[0]?.t),
-      collection_percent: expected > 0 ? (collected / expected) * 100 : 0,
-      pending_collections_count: parseInt(pendingRow[0]?.c ?? '0', 10),
-      pending_cash_handover: n(cashRow[0]?.t),
-      active_agents: parseInt(agentsRow[0]?.c ?? '0', 10),
-    },
-    attendance: {
-      present_count: parseInt(presentRow[0]?.c ?? '0', 10),
-      total_employees: parseInt(totalEmpRow[0]?.c ?? '0', 10),
-    },
-    collectionTrend: trendRows.map((r) => ({
-      date: r.date,
-      amount: n(r.amount),
-    })),
-    paymentModes: modeRows.map((r) => ({
-      mode: r.mode,
-      amount: n(r.amount),
-    })),
-    recentActivity: activityRows.map((r) => ({
-      id: r.id,
-      action: r.action,
-      entity_type: r.entity_type,
-      actor_name: r.actor_name,
-      created_at: r.created_at?.toISOString() ?? '',
-    })),
-    aging: {
-      current: n(agingCurrentRow[0]?.t),
-      overdue1_30: n(aging1_30Row[0]?.t),
-      overdue31_60: n(aging31_60Row[0]?.t),
-      overdue60plus: n(aging60Row[0]?.t),
-    },
-  }
 
   return (
     <div className="space-y-2">
@@ -282,7 +117,7 @@ export default async function DashboardPage() {
         <h1 className="text-xl font-semibold">Dashboard</h1>
         <p className="text-sm text-muted-foreground">Overview for {today}</p>
       </div>
-      <DashboardClient {...props} />
+      <DashboardClient />
     </div>
   )
 }
