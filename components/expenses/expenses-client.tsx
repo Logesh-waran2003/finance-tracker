@@ -55,8 +55,8 @@ export function ExpensesClient({ initial, categories }: { initial: ExpenseRow[];
   }
 
   async function handleSubmit() {
-    if (!form.category_id || !form.amount || !form.description || !form.expense_date) {
-      toast.error('All fields are required'); return
+    if (!form.category_id || !form.amount || !form.expense_date) {
+      toast.error('Category, amount, and date are required'); return
     }
     if (parseFloat(form.amount) <= 0) { toast.error('Amount must be greater than 0'); return }
 

@@ -97,7 +97,7 @@ export const createExpenseSchema = z.object({
   category_id: uuidSchema,
   amount: positiveAmountSchema,
   payment_mode: paymentModeSchema.optional(),
-  description: z.string().min(1).max(500).trim(),
+  description: z.string().max(500).trim().optional().default(''),
   expense_date: dateStringSchema,
 })
 
