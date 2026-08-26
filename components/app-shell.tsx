@@ -136,7 +136,6 @@ export function AppShell({ children, userName, userRole }: AppShellProps) {
   )
 
   return (
-    <>
     <div className="flex min-h-dvh bg-gray-50">
       {/* Desktop sidebar */}
       <aside className="hidden md:flex md:w-56 md:flex-col md:border-r md:bg-white shrink-0">
@@ -187,8 +186,7 @@ export function AppShell({ children, userName, userRole }: AppShellProps) {
           {children}
         </main>
       </div>
+      <BottomNav userRole={userRole} />
     </div>
-    <BottomNav userRole={userRole} />
-    </>
   )
 }
