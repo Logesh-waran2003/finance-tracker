@@ -43,6 +43,8 @@ export async function GET() {
 
   return NextResponse.json(rows.map(r => ({
     ...r,
-    outstanding_total: outstandingMap.get(r.id) ?? '0',
+    outstanding_total: String(
+      parseFloat(outstandingMap.get(r.id) ?? '0') + parseFloat(r.opening_balance as string ?? '0')
+    ),
   })))
 }
