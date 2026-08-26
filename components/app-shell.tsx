@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 import {
   Menu, LayoutDashboard, Clock, Receipt, CreditCard, Users,
   ArrowLeftRight, ShieldCheck, Building2, CalendarCheck,
-  FileBarChart2, Settings, LogOut, User,
+  FileBarChart2, Settings, LogOut, User, Banknote,
 } from 'lucide-react'
 import { NotificationBell } from '@/components/notification-bell'
 import { BottomNav } from '@/components/bottom-nav'
@@ -33,11 +33,13 @@ const commonNav: NavItem[] = [
 const agentNav: NavItem[] = [
   { label: 'My Collections', href: '/collections', icon: CreditCard },
   { label: 'My Customers', href: '/customers', icon: Users },
+  { label: 'Loans', href: '/loans', icon: Banknote },
   { label: 'Cash Reconciliation', href: '/reconciliation', icon: ArrowLeftRight },
 ]
 
 const adminNav: NavItem[] = [
   { label: 'Collections', href: '/admin/collections', icon: CreditCard },
+  { label: 'Loans', href: '/admin/loans', icon: Banknote },
   { label: 'Customers', href: '/admin/customers', icon: Users },
   { label: 'Employees', href: '/admin/employees', icon: ShieldCheck },
   { label: 'Attendance', href: '/admin/attendance', icon: CalendarCheck },

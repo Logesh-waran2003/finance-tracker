@@ -66,10 +66,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const updates: Record<string, unknown> = { updated_at: new Date() }
   const fields = [
     'full_name', 'customer_code', 'phone', 'email', 'address', 'area', 'city', 'state',
-    'pincode', 'assigned_agent_id', 'opening_balance', 'is_active', 'notes',
+    'pincode', 'assigned_agent_id', 'is_active', 'notes',
   ] as const
   for (const key of fields) {
     if (data[key] !== undefined) updates[key] = data[key] === '' ? null : data[key]
+  }
+  // opening_balance must be set explicitly with a reason (validated by schema refine)
+  if (data.opening_balance !== undefined) {
+    updates.opening_balance = String(data.opening_balance)
+  }
+  // balance_deduction: subtract from current opening_balance
+  if (data.balance_deduction !== undefined) {
+    const currentCents = Math.round(parseFloat(before.opening_balance as string ?? '0') * 100)
+    const deductCents = Math.round(data.balance_deduction * 100)
+    const newCents = Math.max(0, currentCents - deductCents)
+    updates.opening_balance = (newCents / 100).toFixed(2)
   }
   if (data.gps_lat !== undefined) updates.gps_lat = data.gps_lat != null ? String(data.gps_lat) : null
   if (data.gps_lng !== undefined) updates.gps_lng = data.gps_lng != null ? String(data.gps_lng) : null
@@ -87,8 +98,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     action: data.is_active === false ? 'DEACTIVATE' : 'UPDATE',
     entity_type: 'customer',
     entity_id: id,
-    before_data: { full_name: before.full_name, is_active: before.is_active },
-    after_data: { full_name: updated.full_name, is_active: updated.is_active },
+    before_data: {
+      full_name: before.full_name,
+      is_active: before.is_active,
+      ...(data.opening_balance !== undefined ? { opening_balance: before.opening_balance } : {}),
+    },
+    after_data: {
+      full_name: updated.full_name,
+      is_active: updated.is_active,
+      ...(data.opening_balance !== undefined ? { opening_balance: updated.opening_balance, balance_reason: data._balance_reason } : {}),
+    },
     branch_id: actor.branch_id,
   })
 

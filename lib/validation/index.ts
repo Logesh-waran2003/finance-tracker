@@ -241,7 +241,48 @@ export const updateCustomerSchema = z.object({
   assigned_agent_id: uuidSchema.optional().nullable(),
   branch_id: uuidSchema.optional().nullable(),
   opening_balance: nonNegativeAmountSchema.optional(),
+  balance_deduction: positiveAmountSchema.optional(),
+  _balance_reason: z.string().min(1).max(500).optional(),
   is_active: z.boolean().optional(),
+  notes: z.string().max(1000).optional().nullable(),
+}).refine(
+  d => (d.opening_balance === undefined && d.balance_deduction === undefined) || (d._balance_reason && d._balance_reason.length > 0),
+  { message: 'Reason is required when adjusting balance', path: ['_balance_reason'] }
+)
+
+// ── Loans ─────────────────────────────────────────────────────────────────────
+
+export const createLoanSchema = z.object({
+  customer_id: uuidSchema,
+  loan_amount: positiveAmountSchema,
+  interest_percentage: z.number().min(0).max(100),
+  daily_installment: positiveAmountSchema,
+  penalty_amount: nonNegativeAmountSchema,
+  disbursement_date: dateStringSchema,
+  assigned_agent_id: uuidSchema,
+  notes: z.string().max(1000).optional(),
+})
+
+export const collectInstallmentSchema = z.object({
+  payment_mode: paymentModeSchema,
+  payment_reference: z.string().max(255).optional(),
+  transaction_reference: z.string().max(255).optional(),
+})
+
+export const reverseLoanPaymentSchema = z.object({
+  loan_payment_id: uuidSchema,
+  reason: z.string().min(1).max(500),
+})
+
+export const waivePenaltySchema = z.object({
+  penalty_id: uuidSchema,
+  waived_amount: positiveAmountSchema,
+  reason: z.string().min(1).max(500),
+})
+
+export const patchLoanSchema = z.object({
+  assigned_agent_id: uuidSchema.optional(),
+  status: z.enum(['CANCELLED']).optional(),
   notes: z.string().max(1000).optional().nullable(),
 })
 

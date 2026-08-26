@@ -22,6 +22,9 @@ interface Customer {
   opening_balance: string
   is_active: boolean | null
   outstanding_total: string
+  total_loan_amount: string
+  total_loan_interest: string
+  active_loan_count: number
 }
 
 interface Agent { id: string; full_name: string }
@@ -56,6 +59,12 @@ export function AdminCustomerTable({ initial, agents, branches }: {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
+  const [balanceDialog, setBalanceDialog] = useState(false)
+  const [balanceCustomer, setBalanceCustomer] = useState<Customer | null>(null)
+  const [balanceAmount, setBalanceAmount] = useState('')
+  const [balanceReason, setBalanceReason] = useState('')
+  const [balanceSaving, setBalanceSaving] = useState(false)
+  const [balanceErr, setBalanceErr] = useState('')
 
   const fetchCustomers = useCallback(async () => {
     const res = await fetch('/api/admin/customers')
@@ -73,6 +82,31 @@ export function AdminCustomerTable({ initial, agents, branches }: {
       branch_id: c.branch_id ?? '', notes: '',
     })
     setErr(''); setDialogOpen(true)
+  }
+
+  function openBalance(c: Customer) {
+    setBalanceCustomer(c)
+    setBalanceAmount('')
+    setBalanceReason('')
+    setBalanceErr('')
+    setBalanceDialog(true)
+  }
+
+  async function saveBalance() {
+    if (!balanceCustomer) return
+    const amt = parseFloat(balanceAmount)
+    if (isNaN(amt) || amt < 0) { setBalanceErr('Enter a valid non-negative amount'); return }
+    if (!balanceReason.trim()) { setBalanceErr('Reason is required'); return }
+    setBalanceSaving(true); setBalanceErr('')
+    const res = await fetch(`/api/admin/customers/${balanceCustomer.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ balance_deduction: amt, _balance_reason: balanceReason }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setBalanceErr(data.error ?? 'Failed to update'); setBalanceSaving(false); return }
+    await fetchCustomers()
+    setBalanceDialog(false); setBalanceSaving(false)
   }
 
   const filtered = customers.filter(c => {
@@ -103,7 +137,8 @@ export function AdminCustomerTable({ initial, agents, branches }: {
         email: form.email || null,
         assigned_agent_id: form.assigned_agent_id || null,
         branch_id: form.branch_id || null,
-        opening_balance: parseFloat(form.opening_balance) || 0,
+        // Only send opening_balance on CREATE — never overwrite it on edit
+        ...(editing ? {} : { opening_balance: parseFloat(form.opening_balance) || 0 }),
       }),
     })
     const data = await res.json()
@@ -187,7 +222,7 @@ export function AdminCustomerTable({ initial, agents, branches }: {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  {['Code', 'Name', 'Phone', 'Area', 'Agent', 'Outstanding', 'Status', 'Actions'].map(h => (
+                  {['Code', 'Name', 'Phone', 'Area', 'Agent', 'Active Loan', 'Outstanding', 'Status', 'Actions'].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
                   ))}
                 </tr>
@@ -201,6 +236,14 @@ export function AdminCustomerTable({ initial, agents, branches }: {
                     <td className="px-4 py-3 text-gray-600">{c.phone ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-600">{c.area ?? c.city ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-600">{c.agent_name ?? '—'}</td>
+                    <td className="px-4 py-3 text-sm">
+                      {c.active_loan_count > 0 ? (
+                        <div>
+                          <span className="font-medium text-gray-800">₹{parseFloat(c.total_loan_amount).toLocaleString()}</span>
+                          <span className="text-xs text-gray-400 ml-1">(+₹{parseFloat(c.total_loan_interest).toLocaleString()} int.)</span>
+                        </div>
+                      ) : <span className="text-gray-300">—</span>}
+                    </td>
                     <td className="px-4 py-3 font-medium text-orange-600">₹{parseFloat(c.outstanding_total).toLocaleString()}</td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
@@ -210,6 +253,7 @@ export function AdminCustomerTable({ initial, agents, branches }: {
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
                         <Button variant="ghost" size="sm" onClick={() => openEdit(c)}><Pencil size={14} /></Button>
+                        <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-800 text-xs px-1" onClick={() => openBalance(c)}>₹</Button>
                         <Button variant="ghost" size="sm"
                           className={c.is_active ? 'text-red-500 hover:text-red-700' : 'text-green-600 hover:text-green-800'}
                           onClick={() => toggleActive(c)}>
@@ -244,7 +288,9 @@ export function AdminCustomerTable({ initial, agents, branches }: {
             <div className="space-y-1"><Label>Area</Label><Input value={form.area} onChange={e => setForm(f => ({ ...f, area: e.target.value }))} /></div>
             <div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} /></div>
             <div className="space-y-1"><Label>Address</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></div>
-            <div className="space-y-1"><Label>Outstanding Balance</Label><Input type="number" min="0" step="0.01" value={form.opening_balance} onChange={e => setForm(f => ({ ...f, opening_balance: e.target.value }))} /></div>
+            {!editing && (
+              <div className="space-y-1"><Label>Opening Balance (Starting Debt)</Label><Input type="number" min="0" step="0.01" value={form.opening_balance} onChange={e => setForm(f => ({ ...f, opening_balance: e.target.value }))} /><p className="text-xs text-gray-400">Initial debt before any collections. Cannot be changed after creation.</p></div>
+            )}
             <div className="space-y-1"><Label>Assigned Agent</Label>
               <Select value={form.assigned_agent_id || '_none'} onValueChange={(v: string | null) => setForm(f => ({ ...f, assigned_agent_id: !v || v === '_none' ? '' : v }))}>
                 <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
@@ -268,6 +314,28 @@ export function AdminCustomerTable({ initial, agents, branches }: {
           <div className="flex gap-2 pt-2">
             <Button onClick={save} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? 'Save Changes' : 'Add Customer'}</Button>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={balanceDialog} onOpenChange={setBalanceDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogTitle className="font-semibold">Adjust Opening Balance</DialogTitle>
+          <p className="text-sm text-gray-500">Customer: <span className="font-medium text-gray-800">{balanceCustomer?.full_name}</span></p>
+          {balanceErr && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{balanceErr}</p>}
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Amount to Deduct (₹)</Label>
+              <Input type="number" min="0.01" step="0.01" value={balanceAmount} onChange={e => setBalanceAmount(e.target.value)} placeholder="e.g. 500" />
+            </div>
+            <div className="space-y-1">
+              <Label>Reason *</Label>
+              <Input value={balanceReason} onChange={e => setBalanceReason(e.target.value)} placeholder="e.g. Data correction, migrated balance" />
+            </div>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button onClick={saveBalance} disabled={balanceSaving}>{balanceSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Update Balance'}</Button>
+            <Button variant="outline" onClick={() => setBalanceDialog(false)}>Cancel</Button>
           </div>
         </DialogContent>
       </Dialog>

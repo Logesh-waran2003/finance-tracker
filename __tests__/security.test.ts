@@ -262,7 +262,7 @@ describe('lib/validation — expense schema', () => {
     expect(result.success).toBe(false)
   })
 
-  it('rejects empty description', async () => {
+  it('accepts empty description (schema defaults to empty string)', async () => {
     const { createExpenseSchema } = await import('@/lib/validation')
     const result = createExpenseSchema.safeParse({
       category_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
@@ -270,7 +270,7 @@ describe('lib/validation — expense schema', () => {
       description: '',
       expense_date: '2026-08-01',
     })
-    expect(result.success).toBe(false)
+    expect(result.success).toBe(true)
   })
 
   it('accepts valid expense', async () => {

@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { customers, dues, profiles, auditLogs } from '@/lib/db/schema'
+import { customers, dues, profiles, auditLogs, collections, loans } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq, and, sql, isNull } from 'drizzle-orm'
 import { requireAdmin, isResponse } from '@/lib/auth/authorize'
@@ -46,27 +46,56 @@ export async function GET(request: Request) {
   if (is_active === 'true') filtered = filtered.filter(r => r.is_active === true)
   if (is_active === 'false') filtered = filtered.filter(r => r.is_active === false)
 
-  // Calculate outstanding per customer (soft-delete aware)
-  const outstanding = await db.select({
-    customer_id: dues.customer_id,
-    total: sql<string>`coalesce(sum(${dues.outstanding_amount}), '0')`,
-  }).from(dues)
-    .where(and(
-      sql`${dues.status} NOT IN ('PAID', 'CANCELLED')`,
-      isNull(dues.deleted_at)
-    ))
-    .groupBy(dues.customer_id)
+  // Calculate outstanding per customer (query-time formula):
+  // outstanding = opening_balance + dues_outstanding - confirmed_freeform_collections
+  const [duesAgg, freeformAgg] = await Promise.all([
+    db.select({
+      customer_id: dues.customer_id,
+      total: sql<string>`coalesce(sum(${dues.outstanding_amount}), '0')`,
+    }).from(dues)
+      .where(and(
+        sql`${dues.status} NOT IN ('PAID', 'CANCELLED')`,
+        isNull(dues.deleted_at)
+      ))
+      .groupBy(dues.customer_id),
+    db.select({
+      customer_id: collections.customer_id,
+      total: sql<string>`coalesce(sum(${collections.amount}), '0')`,
+    }).from(collections)
+      .where(and(
+        eq(collections.status, 'CONFIRMED'),
+        isNull(collections.due_id),
+        isNull(collections.deleted_at)
+      ))
+      .groupBy(collections.customer_id),
+  ])
 
-  const outstandingMap = new Map(outstanding.map(o => [o.customer_id, o.total ?? '0']))
+  // Loan totals per customer (active/overdue loans only)
+  const loanAgg = await db.select({
+    customer_id: loans.customer_id,
+    total_loan_amount: sql<string>`coalesce(sum(${loans.principal_outstanding}), '0')`,
+    total_loan_interest: sql<string>`coalesce(max(${loans.interest_percentage}), '0')`,
+    active_loan_count: sql<string>`count(*)::text`,
+  }).from(loans)
+    .where(sql`${loans.status} NOT IN ('COMPLETED', 'CANCELLED', 'DRAFT')`)
+    .groupBy(loans.customer_id)
+
+  const loanMap = new Map(loanAgg.map(o => [o.customer_id, o]))
+  const duesMap = new Map(duesAgg.map(o => [o.customer_id, o.total ?? '0']))
+  const freeformMap = new Map(freeformAgg.map(o => [o.customer_id, o.total ?? '0']))
 
   const result = filtered.map(r => ({
     ...r,
     outstanding_total: String(
       Math.max(0,
-        parseFloat(outstandingMap.get(r.id) ?? '0')
-        + parseFloat(r.opening_balance as string ?? '0')
+        parseFloat(r.opening_balance as string ?? '0')
+        + parseFloat(duesMap.get(r.id) ?? '0')
+        - parseFloat(freeformMap.get(r.id) ?? '0')
       )
     ),
+    total_loan_amount: loanMap.get(r.id)?.total_loan_amount ?? '0',
+    total_loan_interest: loanMap.get(r.id)?.total_loan_interest ?? '0',
+    active_loan_count: parseInt(loanMap.get(r.id)?.active_loan_count ?? '0'),
   }))
 
   return NextResponse.json(result)

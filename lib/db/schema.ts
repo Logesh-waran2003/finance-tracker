@@ -359,3 +359,209 @@ export const profilesRelations = relations(profiles, ({ one }) => ({
 export const branchesRelations = relations(branches, ({ many }) => ({
   profiles: many(profiles),
 }))
+
+// ============================================================
+// LOAN ENUMS
+// ============================================================
+export const loanStatusEnum = pgEnum('loan_status', ['DRAFT', 'APPROVED', 'DISBURSED', 'ACTIVE', 'OVERDUE', 'COMPLETED', 'CANCELLED'])
+export const scheduleStatusEnum = pgEnum('schedule_status', ['PENDING', 'PAID', 'MISSED'])
+
+// ============================================================
+// LOANS
+// ============================================================
+export const loans = pgTable('loans', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  loan_number: text('loan_number').unique().notNull(),
+  customer_id: uuid('customer_id').notNull().references(() => customers.id),
+  branch_id: uuid('branch_id').references(() => branches.id),
+  loan_amount: numeric('loan_amount', { precision: 12, scale: 2 }).notNull(),
+  interest_percentage: numeric('interest_percentage', { precision: 5, scale: 2 }).notNull(),
+  interest_amount: numeric('interest_amount', { precision: 12, scale: 2 }).notNull(),
+  disbursed_amount: numeric('disbursed_amount', { precision: 12, scale: 2 }).notNull(),
+  daily_installment: numeric('daily_installment', { precision: 12, scale: 2 }).notNull(),
+  penalty_amount: numeric('penalty_amount', { precision: 12, scale: 2 }).notNull(),
+  disbursement_date: date('disbursement_date').notNull(),
+  repayment_start_date: date('repayment_start_date').notNull(),
+  principal_collected: numeric('principal_collected', { precision: 12, scale: 2 }).notNull().default('0'),
+  principal_outstanding: numeric('principal_outstanding', { precision: 12, scale: 2 }).notNull(),
+  penalty_outstanding: numeric('penalty_outstanding', { precision: 12, scale: 2 }).notNull().default('0'),
+  total_outstanding: numeric('total_outstanding', { precision: 12, scale: 2 }).notNull(),
+  status: loanStatusEnum('status').notNull().default('DRAFT'),
+  assigned_agent_id: uuid('assigned_agent_id').references(() => profiles.id),
+  notes: text('notes'),
+  created_by: uuid('created_by').references(() => profiles.id),
+  foreclosure_enabled: boolean('foreclosure_enabled').default(false),
+  deleted_at: timestamp('deleted_at', { withTimezone: true }),
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (t) => [
+  index('idx_loans_customer').on(t.customer_id),
+  index('idx_loans_agent').on(t.assigned_agent_id),
+  index('idx_loans_status').on(t.status),
+  index('idx_loans_branch').on(t.branch_id),
+  check('chk_loans_loan_amount_positive', sql`loan_amount > 0`),
+  check('chk_loans_interest_non_negative', sql`interest_percentage >= 0`),
+  check('chk_loans_daily_installment_positive', sql`daily_installment > 0`),
+  check('chk_loans_penalty_non_negative', sql`penalty_amount >= 0`),
+])
+
+// ============================================================
+// LOAN SCHEDULES
+// ============================================================
+export const loanSchedules = pgTable('loan_schedules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  loan_id: uuid('loan_id').notNull().references(() => loans.id),
+  scheduled_date: date('scheduled_date').notNull(),
+  installment_amount: numeric('installment_amount', { precision: 12, scale: 2 }).notNull(),
+  status: scheduleStatusEnum('status').notNull().default('PENDING'),
+  paid_at: timestamp('paid_at', { withTimezone: true }),
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (t) => [
+  unique('uq_loan_schedules_loan_date').on(t.loan_id, t.scheduled_date),
+  index('idx_loan_schedules_loan').on(t.loan_id),
+  index('idx_loan_schedules_status').on(t.status),
+  index('idx_loan_schedules_date').on(t.scheduled_date),
+])
+
+// ============================================================
+// LOAN PENALTIES
+// ============================================================
+export const loanPenalties = pgTable('loan_penalties', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  loan_id: uuid('loan_id').notNull().references(() => loans.id),
+  schedule_id: uuid('schedule_id').notNull().references(() => loanSchedules.id),
+  penalty_amount: numeric('penalty_amount', { precision: 12, scale: 2 }).notNull(),
+  is_waived: boolean('is_waived').default(false),
+  waived_amount: numeric('waived_amount', { precision: 12, scale: 2 }).default('0'),
+  waived_by: uuid('waived_by').references(() => profiles.id),
+  waived_at: timestamp('waived_at', { withTimezone: true }),
+  waiver_reason: text('waiver_reason'),
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (t) => [
+  unique('uq_loan_penalties_schedule').on(t.loan_id, t.schedule_id),
+  index('idx_loan_penalties_loan').on(t.loan_id),
+  index('idx_loan_penalties_schedule').on(t.schedule_id),
+])
+
+// ============================================================
+// LOAN PAYMENTS
+// Note: partial unique index (WHERE NOT is_reversed) is enforced
+// via CREATE UNIQUE INDEX in migration 0003 — not expressible in Drizzle DSL.
+// Application layer must also check before insert.
+// ============================================================
+export const loanPayments = pgTable('loan_payments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  payment_number: text('payment_number').unique().notNull(),
+  loan_id: uuid('loan_id').notNull().references(() => loans.id),
+  loan_schedule_id: uuid('loan_schedule_id').notNull().references(() => loanSchedules.id),
+  customer_id: uuid('customer_id').notNull().references(() => customers.id),
+  agent_id: uuid('agent_id').notNull().references(() => profiles.id),
+  branch_id: uuid('branch_id').references(() => branches.id),
+  scheduled_date: date('scheduled_date').notNull(),
+  payment_date: date('payment_date').notNull(),
+  amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
+  payment_type: text('payment_type').notNull().default('PRINCIPAL'),
+  payment_mode: paymentModeEnum('payment_mode').notNull().default('CASH'),
+  payment_reference: text('payment_reference'),
+  transaction_reference: text('transaction_reference'),
+  status: text('status').notNull().default('CONFIRMED'),
+  is_reversed: boolean('is_reversed').default(false),
+  reversed_by: uuid('reversed_by').references(() => profiles.id),
+  reversed_at: timestamp('reversed_at', { withTimezone: true }),
+  reversal_reason: text('reversal_reason'),
+  created_by: uuid('created_by').references(() => profiles.id),
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (t) => [
+  index('idx_loan_payments_loan').on(t.loan_id),
+  index('idx_loan_payments_customer').on(t.customer_id),
+  index('idx_loan_payments_agent').on(t.agent_id),
+  index('idx_loan_payments_scheduled_date').on(t.scheduled_date),
+  index('idx_loan_payments_schedule').on(t.loan_schedule_id),
+  check('chk_loan_payments_amount_positive', sql`amount > 0`),
+])
+
+// ============================================================
+// PAYMENT REVERSALS
+// ============================================================
+export const paymentReversals = pgTable('payment_reversals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  loan_payment_id: uuid('loan_payment_id').notNull().references(() => loanPayments.id),
+  loan_id: uuid('loan_id').notNull().references(() => loans.id),
+  reversal_amount: numeric('reversal_amount', { precision: 12, scale: 2 }).notNull(),
+  reason: text('reason').notNull(),
+  reversed_by: uuid('reversed_by').notNull().references(() => profiles.id),
+  reversed_at: timestamp('reversed_at', { withTimezone: true }).notNull().defaultNow(),
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (t) => [
+  index('idx_payment_reversals_payment').on(t.loan_payment_id),
+  index('idx_payment_reversals_loan').on(t.loan_id),
+])
+
+// ============================================================
+// AGENT LOAN ASSIGNMENTS
+// ============================================================
+export const agentLoanAssignments = pgTable('agent_loan_assignments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  loan_id: uuid('loan_id').notNull().references(() => loans.id),
+  agent_id: uuid('agent_id').notNull().references(() => profiles.id),
+  assigned_by: uuid('assigned_by').references(() => profiles.id),
+  assigned_at: timestamp('assigned_at', { withTimezone: true }).notNull().defaultNow(),
+  unassigned_at: timestamp('unassigned_at', { withTimezone: true }),
+  is_current: boolean('is_current').default(true),
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (t) => [
+  index('idx_agent_loan_assignments_loan').on(t.loan_id),
+  index('idx_agent_loan_assignments_agent').on(t.agent_id),
+])
+
+// ============================================================
+// LOAN RELATIONS
+// ============================================================
+export const loansRelations = relations(loans, ({ one, many }) => ({
+  customer: one(customers, { fields: [loans.customer_id], references: [customers.id] }),
+  branch: one(branches, { fields: [loans.branch_id], references: [branches.id] }),
+  assignedAgent: one(profiles, { fields: [loans.assigned_agent_id], references: [profiles.id] }),
+  createdBy: one(profiles, { fields: [loans.created_by], references: [profiles.id] }),
+  schedules: many(loanSchedules),
+  penalties: many(loanPenalties),
+  payments: many(loanPayments),
+  assignments: many(agentLoanAssignments),
+}))
+
+export const loanSchedulesRelations = relations(loanSchedules, ({ one, many }) => ({
+  loan: one(loans, { fields: [loanSchedules.loan_id], references: [loans.id] }),
+  penalty: many(loanPenalties),
+  payment: many(loanPayments),
+}))
+
+export const loanPenaltiesRelations = relations(loanPenalties, ({ one }) => ({
+  loan: one(loans, { fields: [loanPenalties.loan_id], references: [loans.id] }),
+  schedule: one(loanSchedules, { fields: [loanPenalties.schedule_id], references: [loanSchedules.id] }),
+  waivedBy: one(profiles, { fields: [loanPenalties.waived_by], references: [profiles.id] }),
+}))
+
+export const loanPaymentsRelations = relations(loanPayments, ({ one, many }) => ({
+  loan: one(loans, { fields: [loanPayments.loan_id], references: [loans.id] }),
+  schedule: one(loanSchedules, { fields: [loanPayments.loan_schedule_id], references: [loanSchedules.id] }),
+  customer: one(customers, { fields: [loanPayments.customer_id], references: [customers.id] }),
+  agent: one(profiles, { fields: [loanPayments.agent_id], references: [profiles.id] }),
+  branch: one(branches, { fields: [loanPayments.branch_id], references: [branches.id] }),
+  reversedBy: one(profiles, { fields: [loanPayments.reversed_by], references: [profiles.id] }),
+  createdBy: one(profiles, { fields: [loanPayments.created_by], references: [profiles.id] }),
+  reversals: many(paymentReversals),
+}))
+
+export const paymentReversalsRelations = relations(paymentReversals, ({ one }) => ({
+  loanPayment: one(loanPayments, { fields: [paymentReversals.loan_payment_id], references: [loanPayments.id] }),
+  loan: one(loans, { fields: [paymentReversals.loan_id], references: [loans.id] }),
+  reversedBy: one(profiles, { fields: [paymentReversals.reversed_by], references: [profiles.id] }),
+}))
+
+export const agentLoanAssignmentsRelations = relations(agentLoanAssignments, ({ one }) => ({
+  loan: one(loans, { fields: [agentLoanAssignments.loan_id], references: [loans.id] }),
+  agent: one(profiles, { fields: [agentLoanAssignments.agent_id], references: [profiles.id] }),
+  assignedBy: one(profiles, { fields: [agentLoanAssignments.assigned_by], references: [profiles.id] }),
+}))

@@ -25,13 +25,17 @@ function selectChain(rows: unknown[]) {
   return chain
 }
 
-/** Build a minimal insert mock that returns the given rows. */
+/** Build a minimal insert mock that returns the given rows.
+ * Supports the full Drizzle insert chain: .values().onConflictDoNothing().returning()
+ */
 function insertReturning(rows: unknown[]) {
+  const chain: Record<string, unknown> = {
+    returning: () => Promise.resolve(rows),
+  }
+  chain.onConflictDoNothing = () => chain
   return {
     insert: () => ({
-      values: () => ({
-        returning: () => Promise.resolve(rows),
-      }),
+      values: () => chain,
     }),
   }
 }
@@ -62,12 +66,12 @@ describe('createCollection — idempotency', () => {
     const { createCollection } = await import('@/lib/modules/collections/service')
     const existing = { id: UUID, amount: '100', status: 'PENDING', collection_number: 'COL-001' }
 
-    // tx mock: select returns existing record → transaction should NOT insert
-    let insertCalled = false
+    // tx mock: insert returns [] (conflict → onConflictDoNothing swallows it),
+    // then select returns the existing record. Service returns created: false.
     const db = {
       transaction: async (fn: Function) => fn({
         select: () => selectChain([existing]),
-        insert: () => { insertCalled = true; return insertReturning([]).insert() },
+        insert: () => insertReturning([]).insert(),
         execute: () => Promise.resolve([]),
       }),
     } as any
@@ -79,7 +83,6 @@ describe('createCollection — idempotency', () => {
 
     expect(result.created).toBe(false)
     expect((result.collection as any).id).toBe(UUID)
-    expect(insertCalled).toBe(false)
   })
 })
 
@@ -92,8 +95,12 @@ describe('createCollection — due validation', () => {
         select: () => selectChain([]),
         // FOR UPDATE execute → return due row (or empty for not found)
         execute: () => Promise.resolve(due ? [due] : []),
-        // insert collections + audit_logs
-        insert: () => ({ values: () => ({ returning: () => Promise.resolve(insertResult) }) }),
+        // insert collections + audit_logs (supports .onConflictDoNothing().returning())
+        insert: () => {
+          const chain: Record<string, unknown> = { returning: () => Promise.resolve(insertResult) }
+          chain.onConflictDoNothing = () => chain
+          return { values: () => chain }
+        },
       }),
     } as any
   }
