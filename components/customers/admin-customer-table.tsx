@@ -105,16 +105,34 @@ export function AdminCustomerTable({ initial, agents, branches }: {
     if (!res.ok) { setErr(data.error ?? 'Failed to save'); setSaving(false); return }
 
     if (editing) {
+      const oldOpeningBalance = parseFloat(editing.opening_balance ?? '0')
+      const newOpeningBalance = parseFloat(data.opening_balance ?? '0')
+      const oldOutstanding = parseFloat(editing.outstanding_total ?? '0')
+      const newOutstanding = oldOutstanding - oldOpeningBalance + newOpeningBalance
+
       setCustomers(prev => prev.map(c => c.id === editing.id ? {
         ...c,
-        ...data,
-        outstanding_total: String(
-          parseFloat(c.outstanding_total) - parseFloat(c.opening_balance) + parseFloat(data.opening_balance ?? '0')
-        ),
+        full_name: data.full_name ?? c.full_name,
+        customer_code: data.customer_code ?? c.customer_code,
+        phone: data.phone ?? c.phone,
+        area: data.area ?? c.area,
+        city: data.city ?? c.city,
+        assigned_agent_id: data.assigned_agent_id ?? c.assigned_agent_id,
+        agent_name: data.assigned_agent_id === c.assigned_agent_id
+          ? c.agent_name
+          : agents.find(a => a.id === data.assigned_agent_id)?.full_name ?? null,
+        branch_id: data.branch_id ?? c.branch_id,
         opening_balance: data.opening_balance ?? c.opening_balance,
+        is_active: data.is_active ?? c.is_active,
+        outstanding_total: String(newOutstanding),
       } : c))
     } else {
-      setCustomers(prev => [{ ...data, outstanding_total: '0', agent_name: agents.find(a => a.id === data.assigned_agent_id)?.full_name ?? null }, ...prev])
+      const newOpeningBalance = parseFloat(data.opening_balance ?? '0')
+      setCustomers(prev => [{
+        ...data,
+        outstanding_total: String(newOpeningBalance),
+        agent_name: agents.find(a => a.id === data.assigned_agent_id)?.full_name ?? null,
+      }, ...prev])
     }
     setDialogOpen(false); setSaving(false)
   }
