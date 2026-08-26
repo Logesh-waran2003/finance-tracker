@@ -34,16 +34,11 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
     db.select().from(collections).where(eq(collections.customer_id, id)).orderBy(collections.collected_at),
   ])
 
-  const freeformConfirmed = collectionsList
-    .filter(c => (c as any).status === 'CONFIRMED' && !(c as any).due_id)
-    .reduce((sum, c) => sum + parseFloat((c as any).amount), 0)
-
   const totalOutstanding = Math.max(0,
     parseFloat(customer.opening_balance as string ?? '0')
     + duesList
         .filter(d => d.status !== 'PAID' && d.status !== 'CANCELLED')
         .reduce((sum, d) => sum + parseFloat(d.outstanding_amount as string), 0)
-    - freeformConfirmed
   )
 
   const STATUS_BADGE: Record<string, string> = {

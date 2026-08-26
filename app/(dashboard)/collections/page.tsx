@@ -15,7 +15,7 @@ export default async function CollectionsPage() {
 
   const userId = session.user.id
 
-  const [assignedCustomers, initialCollections, outstanding, freeformCollections] = await Promise.all([
+  const [assignedCustomers, initialCollections, outstanding] = await Promise.all([
     db.select({
       id: customers.id,
       customer_code: customers.customer_code,
@@ -50,21 +50,9 @@ export default async function CollectionsPage() {
         isNull(dues.deleted_at)
       ))
       .groupBy(dues.customer_id),
-
-    db.select({
-      customer_id: collections.customer_id,
-      total: sql<string>`coalesce(sum(${collections.amount}), '0')`,
-    }).from(collections)
-      .where(and(
-        eq(collections.status, 'CONFIRMED'),
-        isNull(collections.due_id),
-        isNull(collections.deleted_at)
-      ))
-      .groupBy(collections.customer_id),
   ])
 
   const outMap = new Map(outstanding.map(o => [o.customer_id, o.total ?? '0']))
-  const freeformMap = new Map(freeformCollections.map(f => [f.customer_id, f.total ?? '0']))
 
   return (
     <CollectionForm
@@ -74,7 +62,6 @@ export default async function CollectionsPage() {
           Math.max(0,
             parseFloat(outMap.get(c.id) ?? '0')
             + parseFloat(c.opening_balance as string ?? '0')
-            - parseFloat(freeformMap.get(c.id) ?? '0')
           )
         ),
       }))}
