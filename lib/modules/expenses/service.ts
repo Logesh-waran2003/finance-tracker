@@ -99,6 +99,12 @@ export async function approveExpense(
     .then((r: any[]) => r[0])
 
   if (!expense) throw new ServiceError('Expense not found', 404)
+
+  // IDOR: branch isolation — branch-scoped admin cannot action another branch's expense
+  if (params.adminBranchId && expense.branch_id !== params.adminBranchId) {
+    throw new ServiceError('Expense not found', 404)
+  }
+
   if (expense.status !== 'PENDING') {
     throw new ServiceError('Only PENDING expenses can be actioned', 400)
   }
