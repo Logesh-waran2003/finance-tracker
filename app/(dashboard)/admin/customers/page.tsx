@@ -1,8 +1,8 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
-import { customers, dues, profiles, branches } from '@/lib/db/schema'
-import { eq, and, sql } from 'drizzle-orm'
+import { customers, dues, profiles, branches, collections } from '@/lib/db/schema'
+import { eq, and, sql, isNull } from 'drizzle-orm'
 import { AdminCustomerTable } from '@/components/customers/admin-customer-table'
 import type { Session } from 'next-auth'
 
@@ -10,7 +10,7 @@ export default async function AdminCustomersPage() {
   const session = (await auth()) as Session | null
   if (!session?.user?.id || (session.user as any).role !== 'ADMIN') redirect('/dashboard')
 
-  const [custList, agents, branchList] = await Promise.all([
+  const [custList, agents, branchList, outstanding, freeformCollections] = await Promise.all([
     db.select({
       id: customers.id,
       customer_code: customers.customer_code,
@@ -31,20 +31,41 @@ export default async function AdminCustomersPage() {
       .where(and(eq(profiles.role, 'COLLECTION_AGENT'), eq(profiles.is_active, true))),
 
     db.select({ id: branches.id, name: branches.name }).from(branches).where(eq(branches.is_active, true)),
+
+    db.select({
+      customer_id: dues.customer_id,
+      total: sql<string>`coalesce(sum(${dues.outstanding_amount}), '0')`,
+    }).from(dues)
+      .where(and(
+        sql`${dues.status} NOT IN ('PAID', 'CANCELLED')`,
+        isNull(dues.deleted_at)
+      ))
+      .groupBy(dues.customer_id),
+
+    db.select({
+      customer_id: collections.customer_id,
+      total: sql<string>`coalesce(sum(${collections.amount}), '0')`,
+    }).from(collections)
+      .where(and(
+        eq(collections.status, 'CONFIRMED'),
+        isNull(collections.due_id),
+        isNull(collections.deleted_at)
+      ))
+      .groupBy(collections.customer_id),
   ])
 
-  const outstanding = await db.select({
-    customer_id: dues.customer_id,
-    total: sql<string>`sum(${dues.outstanding_amount})`,
-  }).from(dues)
-    .where(sql`${dues.status} NOT IN ('PAID', 'CANCELLED')`)
-    .groupBy(dues.customer_id)
-
   const outMap = new Map(outstanding.map(o => [o.customer_id, o.total ?? '0']))
+  const freeformMap = new Map(freeformCollections.map(f => [f.customer_id, f.total ?? '0']))
 
   const data = custList.map(c => ({
     ...c,
-    outstanding_total: outMap.get(c.id) ?? '0',
+    outstanding_total: String(
+      Math.max(0,
+        parseFloat(outMap.get(c.id) ?? '0')
+        + parseFloat(c.opening_balance as string ?? '0')
+        - parseFloat(freeformMap.get(c.id) ?? '0')
+      )
+    ),
   }))
 
   return <AdminCustomerTable initial={data} agents={agents} branches={branchList} />

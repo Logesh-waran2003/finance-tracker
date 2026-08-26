@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -57,6 +57,11 @@ export function AdminCustomerTable({ initial, agents, branches }: {
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
 
+  const fetchCustomers = useCallback(async () => {
+    const res = await fetch('/api/admin/customers')
+    if (res.ok) setCustomers(await res.json())
+  }, [])
+
   function openAdd() { setEditing(null); setForm(emptyForm); setErr(''); setDialogOpen(true) }
   function openEdit(c: Customer) {
     setEditing(c)
@@ -104,11 +109,7 @@ export function AdminCustomerTable({ initial, agents, branches }: {
     const data = await res.json()
     if (!res.ok) { setErr(data.error ?? 'Failed to save'); setSaving(false); return }
 
-    if (editing) {
-      setCustomers(prev => prev.map(c => c.id === editing.id ? { ...c, ...data } : c))
-    } else {
-      setCustomers(prev => [{ ...data, outstanding_total: '0', agent_name: agents.find(a => a.id === data.assigned_agent_id)?.full_name ?? null }, ...prev])
-    }
+    await fetchCustomers()
     setDialogOpen(false); setSaving(false)
   }
 
@@ -118,7 +119,7 @@ export function AdminCustomerTable({ initial, agents, branches }: {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_active: !c.is_active }),
     })
-    if (res.ok) setCustomers(prev => prev.map(x => x.id === c.id ? { ...x, is_active: !c.is_active } : x))
+    if (res.ok) await fetchCustomers()
   }
 
   return (

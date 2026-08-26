@@ -1,8 +1,8 @@
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import { customers, dues } from '@/lib/db/schema'
+import { customers, dues, collections } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq, and, sql } from 'drizzle-orm'
+import { eq, and, sql, isNull } from 'drizzle-orm'
 import type { Session } from 'next-auth'
 
 export async function GET() {
@@ -32,17 +32,40 @@ export async function GET() {
       eq(customers.is_active, true)
     ))
 
-  const outstanding = await db.select({
-    customer_id: dues.customer_id,
-    total: sql<string>`sum(${dues.outstanding_amount})`,
-  }).from(dues)
-    .where(sql`${dues.status} NOT IN ('PAID', 'CANCELLED')`)
-    .groupBy(dues.customer_id)
+  const [outstanding, freeformCollections] = await Promise.all([
+    db.select({
+      customer_id: dues.customer_id,
+      total: sql<string>`coalesce(sum(${dues.outstanding_amount}), '0')`,
+    }).from(dues)
+      .where(and(
+        sql`${dues.status} NOT IN ('PAID', 'CANCELLED')`,
+        isNull(dues.deleted_at)
+      ))
+      .groupBy(dues.customer_id),
+
+    db.select({
+      customer_id: collections.customer_id,
+      total: sql<string>`coalesce(sum(${collections.amount}), '0')`,
+    }).from(collections)
+      .where(and(
+        eq(collections.status, 'CONFIRMED'),
+        isNull(collections.due_id),
+        isNull(collections.deleted_at)
+      ))
+      .groupBy(collections.customer_id),
+  ])
 
   const outstandingMap = new Map(outstanding.map(o => [o.customer_id, o.total ?? '0']))
+  const freeformMap = new Map(freeformCollections.map(f => [f.customer_id, f.total ?? '0']))
 
   return NextResponse.json(rows.map(r => ({
     ...r,
-    outstanding_total: outstandingMap.get(r.id) ?? '0',
+    outstanding_total: String(
+      Math.max(0,
+        parseFloat(outstandingMap.get(r.id) ?? '0')
+        + parseFloat(r.opening_balance as string ?? '0')
+        - parseFloat(freeformMap.get(r.id) ?? '0')
+      )
+    ),
   })))
 }
