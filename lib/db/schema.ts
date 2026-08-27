@@ -565,3 +565,39 @@ export const agentLoanAssignmentsRelations = relations(agentLoanAssignments, ({ 
   agent: one(profiles, { fields: [agentLoanAssignments.agent_id], references: [profiles.id] }),
   assignedBy: one(profiles, { fields: [agentLoanAssignments.assigned_by], references: [profiles.id] }),
 }))
+
+// ============================================================
+// LOAN REQUESTS
+// ============================================================
+export const loanRequestStatusEnum = pgEnum('loan_request_status', ['PENDING', 'APPROVED', 'REJECTED'])
+
+export const loanRequests = pgTable('loan_requests', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  request_number: text('request_number').unique().notNull(),
+  // existing customer — null if new customer
+  customer_id: uuid('customer_id').references(() => customers.id),
+  // new customer fields — null if existing customer
+  new_customer_name: text('new_customer_name'),
+  new_customer_phone: text('new_customer_phone'),
+  new_customer_area: text('new_customer_area'),
+  // loan terms
+  loan_amount: numeric('loan_amount', { precision: 12, scale: 2 }).notNull(),
+  interest_percentage: numeric('interest_percentage', { precision: 5, scale: 2 }).notNull().default('0'),
+  daily_installment: numeric('daily_installment', { precision: 12, scale: 2 }).notNull(),
+  penalty_amount: numeric('penalty_amount', { precision: 12, scale: 2 }).notNull().default('0'),
+  disbursement_date: date('disbursement_date').notNull(),
+  notes: text('notes'),
+  // workflow
+  status: loanRequestStatusEnum('status').notNull().default('PENDING'),
+  requested_by: uuid('requested_by').notNull().references(() => profiles.id),
+  reviewed_by: uuid('reviewed_by').references(() => profiles.id),
+  rejection_reason: text('rejection_reason'),
+  created_loan_id: uuid('created_loan_id').references(() => loans.id),
+  branch_id: uuid('branch_id').references(() => branches.id),
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (t) => [
+  index('idx_loan_requests_agent').on(t.requested_by),
+  index('idx_loan_requests_status').on(t.status),
+  index('idx_loan_requests_branch').on(t.branch_id),
+])

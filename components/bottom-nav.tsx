@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, CreditCard, Users, Clock, Settings, Banknote } from 'lucide-react'
+import { LayoutDashboard, CreditCard, Users, Clock, Settings, Banknote, ClipboardList } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type Role = 'ADMIN' | 'COLLECTION_AGENT' | 'STAFF'
@@ -25,9 +25,9 @@ const adminBottomNav: NavItem[] = [
   { label: 'Home', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Collections', href: '/admin/collections', icon: CreditCard },
   { label: 'Loans', href: '/admin/loans', icon: Banknote },
+  { label: 'Requests', href: '/admin/loan-requests', icon: ClipboardList },
   { label: 'Customers', href: '/admin/customers', icon: Users },
   { label: 'Attendance', href: '/admin/attendance', icon: Clock },
-  { label: 'Settings', href: '/admin/settings', icon: Settings },
 ]
 
 const staffBottomNav: NavItem[] = [
