@@ -1,7 +1,7 @@
 import { db } from '@/lib/db'
-import { collections, customers, notifications, profiles } from '@/lib/db/schema'
+import { collections, customers, notifications, profiles, dues } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq, and, desc, gte, lte } from 'drizzle-orm'
+import { eq, and, desc, gte, lte, sql, isNull } from 'drizzle-orm'
 import { requireRole, requireCustomerAccess, isResponse } from '@/lib/auth/authorize'
 import { parseBody, createCollectionSchema } from '@/lib/validation'
 import { createCollection } from '@/lib/modules/collections/service'
@@ -23,6 +23,51 @@ export async function POST(request: Request) {
   // Verify customer access server-side (agent must be assigned)
   const accessErr = await requireCustomerAccess(actor, customer_id)
   if (accessErr) return accessErr
+
+  // Freeform cap — if no due_id, amount cannot exceed real outstanding (server-side guard)
+  if (!due_id) {
+    const [custRow] = await db
+      .select({ opening_balance: customers.opening_balance })
+      .from(customers)
+      .where(eq(customers.id, customer_id))
+      .limit(1)
+
+    if (!custRow) return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
+
+    const [duesAgg] = await db
+      .select({ total: sql<string>`coalesce(sum(${dues.outstanding_amount}), '0')` })
+      .from(dues)
+      .where(and(
+        eq(dues.customer_id, customer_id),
+        sql`${dues.status} NOT IN ('PAID', 'CANCELLED')`,
+        isNull(dues.deleted_at),
+      ))
+
+    const [freeformAgg] = await db
+      .select({ total: sql<string>`coalesce(sum(${collections.amount}), '0')` })
+      .from(collections)
+      .where(and(
+        eq(collections.customer_id, customer_id),
+        eq(collections.status, 'CONFIRMED'),
+        isNull(collections.due_id),
+        isNull(collections.deleted_at),
+      ))
+
+    const outstandingCents = Math.max(0, Math.round(
+      parseFloat(custRow.opening_balance as string ?? '0') * 100
+      + parseFloat(duesAgg?.total ?? '0') * 100
+      - parseFloat(freeformAgg?.total ?? '0') * 100
+    ))
+
+    if (outstandingCents <= 0) {
+      return NextResponse.json({ error: 'This customer has no outstanding balance' }, { status: 400 })
+    }
+    if (Math.round(amount * 100) > outstandingCents) {
+      return NextResponse.json({
+        error: `Amount exceeds outstanding balance of ₹${(outstandingCents / 100).toLocaleString('en-IN')}`,
+      }, { status: 400 })
+    }
+  }
 
   try {
     const result = await createCollection(db, {
