@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { signIn, useSession } from 'next-auth/react'
+import { signIn, getSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,7 +11,6 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { data: session, status } = useSession()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -20,10 +19,10 @@ export default function LoginPage() {
 
   // If already authenticated, go straight to dashboard
   useEffect(() => {
-    if (status === 'authenticated' && session?.user) {
-      router.replace('/dashboard')
-    }
-  }, [status, session, router])
+    getSession().then(s => {
+      if (s?.user) router.replace('/dashboard')
+    })
+  }, [router])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
