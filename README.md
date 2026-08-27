@@ -15,8 +15,8 @@ A full-stack loan and collections management platform for field collection busin
 
 | Role | Access |
 |------|--------|
-| ADMIN | Full access — loans, customers, employees, reports, collections |
-| COLLECTION_AGENT | Own assigned loans and customers only |
+| ADMIN | Full access — loans, customers, employees, reports, collections, loan request approvals |
+| COLLECTION_AGENT | Own assigned loans, customers, collections; can submit loan requests |
 | STAFF | Attendance and expenses only |
 
 ## Default Logins
@@ -34,41 +34,85 @@ A full-stack loan and collections management platform for field collection busin
 The primary business module. Manages the full lifecycle of micro-finance loans with daily installment collection.
 
 **Loan model:**
-- Loan amount configured by admin (e.g. ₹10,000)
-- Interest deducted upfront (e.g. 10% = ₹1,000)
-- Customer receives disbursed amount (₹9,000) but repays full loan amount (₹10,000)
-- Daily installment configurable per loan (e.g. ₹50/day)
+- Loan amount configured (e.g. ₹5,000)
+- Interest deducted upfront (e.g. 10% = ₹500 → customer receives ₹4,500 but repays ₹5,000)
+- Tenure (days) determines daily installment: daily installment = loan amount / tenure
 - Penalty per missed day configurable (e.g. ₹50)
+- Loan auto-closes (status → COMPLETED) when both principal and penalty outstanding = 0
 
 **Flow:**
-1. Admin creates loan, assigns agent, sets disbursement date
-2. System generates all daily repayment schedules automatically
-3. Agent collects daily installments via their Loans page
-4. Admin can collect lump-sum cash payments via loan detail → Collect Cash
-5. Missed days auto-flagged by cron job, penalty generated (idempotent)
-6. Loan auto-closes when principal outstanding = 0
+1. Agent submits loan request via their Loans page (existing or new customer)
+2. Admin reviews pending requests on /admin/loan-requests, approves or rejects
+3. On approval: new customer is created (if new), loan is created and assigned to agent automatically
+4. System generates all daily repayment schedules automatically
+5. Agent collects daily installments via their Loans page
+6. Admin can collect lump-sum cash payments via loan detail → Collect Cash
+7. Missed days auto-flagged by cron job, penalty generated (idempotent)
 
 **Key financial equations:**
 ```
-Interest Amount = Loan Amount × Interest % / 100
-Disbursed Amount = Loan Amount - Interest Amount
-Principal Outstanding = Loan Amount - Principal Collected (NOT disbursed amount)
-Penalty Outstanding = Generated - Paid - Waived
-Total Outstanding = Principal Outstanding + Penalty Outstanding
+Interest Amount       = Loan Amount × Interest % / 100
+Disbursed Amount      = Loan Amount - Interest Amount
+Daily Installment     = Loan Amount / Tenure (days)
+Principal Outstanding = Loan Amount - Principal Collected
+Penalty Outstanding   = Generated - Paid - Waived
+Total Outstanding     = Principal Outstanding + Penalty Outstanding
 ```
+
+### Customer Outstanding Formula
+
+The "amount owed" shown for every customer is always calculated live from the DB:
+```
+Outstanding = Opening Balance + Active Dues + Active Loan Outstanding - Confirmed Freeform Collections
+```
+
+- Opening Balance: starting debt when customer was added
+- Active Dues: unpaid invoices (not PAID/CANCELLED)
+- Active Loan Outstanding: total_outstanding across all active loans (principal + penalties)
+- Freeform Collections: confirmed cash collections with no linked due
+
+This formula is applied consistently in 5 places:
+1. Admin customers page (SSR)
+2. Agent customers page (SSR)
+3. Admin customers API (after mutations)
+4. Agent customers API (after mutations)
+5. Freeform collection cap guard (POST /api/collections) — agent cannot collect more than this
+
+### Loan Request Workflow
+
+Agents can request loans for customers without admin access to the loan creation form.
+
+**Agent side:**
+- "Request Loan" button on the Loans page
+- Toggle between existing customer or new customer (enter name/phone/area)
+- Enter loan amount, interest %, tenure (days), penalty, disbursement date
+- Daily installment auto-computed from loan amount / tenure with live preview
+- Submitted requests show PENDING/APPROVED/REJECTED status in "My Loan Requests" section
+
+**Admin side:**
+- /admin/loan-requests page — filter by All/Pending/Approved/Rejected
+- Each pending request shows full loan terms and customer details
+- Approve: pick an agent to assign, system creates customer (if new) + loan automatically
+- Reject: enter a reason, agent is notified
+
+**Notifications:**
+- Agent submits → admin bell shows "New Loan Request"
+- Admin approves → agent bell shows "Loan Request Approved"
 
 ### Collections (Freeform)
 
-General-purpose cash collection from customers against dues or freeform balances. Agent creates collection → Admin confirms/rejects.
+General-purpose cash collection from customers against dues or freeform balances.
+
+- Agent records collection (with GPS capture), selects customer and optionally a linked due
+- Amount is capped at customer's outstanding balance — cannot over-collect
+- Admin confirms or rejects with a reason
+- Confirmed collections reduce the customer's outstanding immediately
 
 ### Customer Management
 
-Customer profiles with GPS coordinates, assigned agent, opening balance (starting debt), and full outstanding calculation:
-```
-Outstanding = Opening Balance + Active Dues - Confirmed Freeform Collections
-```
+Customer profiles with GPS coordinates, assigned agent, branch, and opening balance.
 
-Opening balance can only be adjusted via the dedicated "₹" button (requires reason, fully audited). Regular customer edits never touch outstanding balance.
+Opening balance can only be adjusted via the dedicated "₹" button (requires reason, fully audited). Regular customer edits never touch the balance.
 
 ### Employees
 
@@ -102,10 +146,11 @@ Admin dashboard with period-based analytics — toggle between Daily, Monthly, a
 
 ### Notifications
 
-Admin bell shows two types of alerts:
+Both admin and agent have a notification bell:
 
-1. **Individual alerts** (from `notifications` table): per-collection notifications when an agent submits a collection — "John collected ₹500 from CustomerX — pending your confirmation". Dismissing marks it read in DB.
-2. **Aggregate alerts** (live-computed): pending collections count, overdue dues, absent agents, pending reconciliations, pending expense claims. Polled every 2 minutes.
+- **Admin**: per-collection alerts ("John collected ₹500 from CustomerX"), plus live-computed aggregates (pending collections count, overdue dues, absent agents, pending reconciliations, pending expenses). Polled every 2 minutes.
+- **Agent**: loan request approval/rejection notifications. Polled every 2 minutes.
+- Dismissing a notification marks it read in DB — won't reappear.
 
 ## Setup
 
@@ -147,12 +192,40 @@ bun run dev -- --hostname 0.0.0.0 --port 3001
 
 Set `NEXTAUTH_URL` and `NEXT_PUBLIC_SITE_URL` to your WiFi IP when hosting on LAN.
 
-### Database migrations
+### Manual DB migrations
 
-Manual migrations live in `lib/db/migrations/`. Apply them in order:
+Two additional migrations must be applied after `db:push`:
 
 ```bash
+# Loan collection module (schedules, payments, penalties, agent assignments)
 psql $DATABASE_URL -f lib/db/migrations/0003_daily_loan_collection.sql
+
+# Loan requests table (agent → admin approval workflow)
+psql $DATABASE_URL -c "
+CREATE TYPE loan_request_status AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
+CREATE TABLE IF NOT EXISTS loan_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_number text UNIQUE NOT NULL,
+  customer_id uuid REFERENCES customers(id),
+  new_customer_name text, new_customer_phone text, new_customer_area text,
+  loan_amount numeric(12,2) NOT NULL,
+  interest_percentage numeric(5,2) NOT NULL DEFAULT 0,
+  tenure integer,
+  daily_installment numeric(12,2) NOT NULL,
+  penalty_amount numeric(12,2) NOT NULL DEFAULT 0,
+  disbursement_date date NOT NULL,
+  notes text,
+  status loan_request_status NOT NULL DEFAULT 'PENDING',
+  requested_by uuid NOT NULL REFERENCES profiles(id),
+  reviewed_by uuid REFERENCES profiles(id),
+  rejection_reason text,
+  created_loan_id uuid REFERENCES loans(id),
+  branch_id uuid REFERENCES branches(id),
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE loans ADD COLUMN IF NOT EXISTS tenure integer;
+"
 ```
 
 ### Production build
@@ -194,41 +267,50 @@ bun test --watch       # watch mode
 
 ```
 app/
-  (auth)/              # login, forgot/reset password
+  (auth)/              # login
   (dashboard)/
-    admin/             # admin pages (customers, employees, loans, collections, etc.)
-    loans/             # agent loan collection page
+    admin/
+      customers/       # admin customer list (outstanding = opening + dues + loans - freeform)
+      loans/           # admin loan list + detail (schedule, payments, penalties)
+      loan-requests/   # pending loan request approvals
+      collections/     # confirm/reject agent collections
+      ...
+    loans/             # agent loan collection page (today's schedules)
     collections/       # agent freeform collections
-    customers/         # agent customer list and detail
-    dashboard/         # admin dashboard (period-based analytics)
-    ...
+    customers/         # agent customer list (same outstanding formula)
+    dashboard/         # admin period-based analytics
   api/
     admin/
-      dashboard/       # GET /api/admin/dashboard?period=daily|monthly|yearly
-      notifications/   # GET (aggregated + DB notifications), PATCH (mark read)
-      collections/     # collection confirm/reject
-      ...
-    agent/             # agent-scoped API routes
-    cron/              # scheduled job endpoints
+      dashboard/       # GET ?period=daily|monthly|yearly
+      notifications/   # GET (aggregated + DB), PATCH (mark read)
+      loan-requests/   # GET (list), PATCH /[id] (approve/reject)
+      loans/           # CRUD + collect + bulk-collect + reverse + waive
+      collections/     # confirm/reject
+      customers/       # CRUD
+    agent/
+      loan-requests/   # GET (own), POST (submit)
+      notifications/   # GET (own), PATCH (mark read)
+      loans/           # GET (assigned), /[id]/collect (collect installment)
+    cron/
+      mark-missed/     # POST — marks overdue schedules, generates penalties
 
 components/
-  loans/               # loan module UI components
-  customers/           # customer management components
-  collections/         # collection form and admin table
-  dashboard/           # dashboard-client (self-fetching, period toggle)
-  notification-bell/   # admin notification bell
-  ui/                  # shadcn/ui base components
+  loans/               # admin + agent loan UI, loan request review
+  customers/           # admin customer table + dialogs
+  collections/         # collection form (agent) + admin table
+  dashboard/           # self-fetching period dashboard
+  notification-bell/   # shared bell (admin + agent, different endpoints)
 
 lib/
   db/
-    schema.ts          # full Drizzle schema
-    migrations/        # SQL migration files
+    schema.ts          # full Drizzle schema (all tables + enums + relations)
+    index.ts           # singleton postgres client (prevents HMR pool exhaustion)
   modules/
-    loans/             # loan service, schedule service, payment service
-    collections/       # collections service
-    audit/             # audit log service
-    ledger/            # ledger entry service
-  auth/                # authorization middleware
+    loans/             # createLoan, updateLoanBalances, collectInstallment, reversePayment, waivePenalty
+    collections/       # createCollection (with idempotency + SELECT FOR UPDATE)
+    audit/             # append-only audit log
+    ledger/            # append-only financial ledger
+  auth/                # requireAdmin, requireAgent, requireRole, requireCustomerAccess
   validation/          # Zod schemas
 ```
 
@@ -236,9 +318,10 @@ lib/
 
 - All financial math uses integer cents to avoid float errors
 - Every money-changing operation runs inside a DB transaction
+- Loan + schedule rows are SELECT FOR UPDATE locked before payment to prevent double-collection
 - Audit logs written atomically alongside every mutation
-- Opening balance on customers is a one-time setup field — outstanding is always calculated dynamically at query time
-- Loan balances (principal_collected, principal_outstanding) are maintained on the loans table and recalculated after every payment/reversal/waiver via `updateLoanBalances()`
-- Concurrency: loan and schedule rows are SELECT FOR UPDATE locked before payment to prevent double-collection
-- Notifications table is written on every agent collection (fire-and-forget); admin bell reads both live-computed aggregates and unread DB rows, combining them in one response
-- Dashboard data fetched client-side per period selection — no SSR data fetching for the admin dashboard view
+- Loan balances (principal_outstanding, total_outstanding) recalculated from payment records after every collection/reversal/waiver via `updateLoanBalances()` — never stored as running totals
+- Customer outstanding is always computed at query time from source tables — never cached or pre-computed
+- Notifications are fire-and-forget inserts — failure never blocks the main operation
+- DB client is a global singleton to prevent connection pool exhaustion on Next.js HMR reloads
+- Agent cannot collect more than customer's outstanding balance (enforced on both frontend and backend)
