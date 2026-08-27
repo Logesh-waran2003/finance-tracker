@@ -234,15 +234,15 @@ export function AdminLoansClient({ loans: initialLoans, customers, agents }: Pro
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-2">
         <Input
           placeholder="Search customer / loan #"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="w-64"
+          className="w-full sm:w-64"
         />
         <Select value={statusFilter} onValueChange={v => v !== null && setStatusFilter(v)}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-full sm:w-40">
             <SelectValue placeholder="All Statuses" />
           </SelectTrigger>
           <SelectContent>
@@ -255,7 +255,7 @@ export function AdminLoansClient({ loans: initialLoans, customers, agents }: Pro
           </SelectContent>
         </Select>
         <Select value={agentFilter} onValueChange={v => v !== null && setAgentFilter(v)}>
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="w-full sm:w-44">
             <SelectValue placeholder="All Agents" />
           </SelectTrigger>
           <SelectContent>
@@ -271,7 +271,46 @@ export function AdminLoansClient({ loans: initialLoans, customers, agents }: Pro
 
       {/* Table */}
       <Card>
-        <div className="overflow-x-auto">
+        {/* Mobile cards */}
+        <div className="sm:hidden space-y-3 p-3">
+          {filtered.length === 0 && (
+            <p className="text-center text-gray-400 py-6 text-sm">No loans found</p>
+          )}
+          {filtered.map(row => (
+            <Card key={row.id}>
+              <CardContent className="p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs text-gray-400">{row.loan_number}</span>
+                  <span
+                    className={cn(
+                      'px-2 py-0.5 rounded-full text-xs font-medium',
+                      STATUS_COLOR[row.status] ?? 'bg-gray-100',
+                    )}
+                  >
+                    {row.status}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-sm">{row.customer_name ?? '—'}</span>
+                  <span className="font-bold text-sm">{fmt(row.loan_amount)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">{row.assigned_agent_name ?? '—'}</span>
+                  <span className="text-xs text-gray-500">O/S: {fmt(row.principal_outstanding)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-400">₹{row.daily_installment}/day</span>
+                  <Link href={'/admin/loans/' + row.id}>
+                    <Button variant="outline" size="sm">View</Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden sm:block overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
