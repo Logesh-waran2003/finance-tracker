@@ -73,6 +73,7 @@ export default async function AdminCustomersPage() {
       Math.max(0,
         parseFloat(c.opening_balance as string ?? '0')
         + parseFloat(outMap.get(c.id) ?? '0')
+        + parseFloat(loanMap.get(c.id)?.total_loan_amount ?? '0')
         - parseFloat(freeformMap.get(c.id) ?? '0')
       )
     ),

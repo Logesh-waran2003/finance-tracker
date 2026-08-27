@@ -1,7 +1,7 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
-import { customers, dues } from '@/lib/db/schema'
+import { customers, dues, loans, collections } from '@/lib/db/schema'
 import { eq, and, sql, isNull } from 'drizzle-orm'
 import Link from 'next/link'
 import type { Session } from 'next-auth'
@@ -15,7 +15,7 @@ export default async function AgentCustomersPage() {
 
   const agentId = session.user.id
 
-  const [custList, outstanding] = await Promise.all([
+  const [custList, duesAgg, loanAgg, freeformAgg] = await Promise.all([
     db.select({
       id: customers.id,
       customer_code: customers.customer_code,
@@ -38,9 +38,29 @@ export default async function AgentCustomersPage() {
         isNull(dues.deleted_at)
       ))
       .groupBy(dues.customer_id),
+
+    db.select({
+      customer_id: loans.customer_id,
+      total: sql<string>`coalesce(sum(${loans.total_outstanding}), '0')`,
+    }).from(loans)
+      .where(sql`${loans.status} NOT IN ('COMPLETED', 'CANCELLED', 'DRAFT')`)
+      .groupBy(loans.customer_id),
+
+    db.select({
+      customer_id: collections.customer_id,
+      total: sql<string>`coalesce(sum(${collections.amount}), '0')`,
+    }).from(collections)
+      .where(and(
+        eq(collections.status, 'CONFIRMED'),
+        isNull(collections.due_id),
+        isNull(collections.deleted_at)
+      ))
+      .groupBy(collections.customer_id),
   ])
 
-  const outMap = new Map(outstanding.map(o => [o.customer_id, o.total ?? '0']))
+  const duesMap = new Map(duesAgg.map(o => [o.customer_id, o.total ?? '0']))
+  const loanMap = new Map(loanAgg.map(o => [o.customer_id, o.total ?? '0']))
+  const freeformMap = new Map(freeformAgg.map(o => [o.customer_id, o.total ?? '0']))
 
   return (
     <div className="space-y-4 max-w-3xl">
@@ -64,8 +84,10 @@ export default async function AgentCustomersPage() {
             <tbody className="divide-y">
               {custList.map(c => {
                 const outstanding_total = Math.max(0,
-                  parseFloat(outMap.get(c.id) ?? '0')
+                  parseFloat(duesMap.get(c.id) ?? '0')
                   + parseFloat(c.opening_balance as string ?? '0')
+                  + parseFloat(loanMap.get(c.id) ?? '0')
+                  - parseFloat(freeformMap.get(c.id) ?? '0')
                 )
                 return (
                   <tr key={c.id} className="hover:bg-gray-50">
