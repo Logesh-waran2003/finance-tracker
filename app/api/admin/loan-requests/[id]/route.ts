@@ -99,6 +99,7 @@ export async function PATCH(
           opening_balance: '0',
           is_active: true,
           created_by: actor.id,
+          assigned_agent_id: agent_id,
         })
         .returning()
 

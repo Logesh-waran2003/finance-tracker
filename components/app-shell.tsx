@@ -165,7 +165,7 @@ export function AppShell({ children, userName, userRole }: AppShellProps) {
           <div className="flex-1" />
 
           <div className="flex items-center gap-2">
-            {userRole === 'ADMIN' && <NotificationBell />}
+            {(userRole === 'ADMIN' || userRole === 'COLLECTION_AGENT') && <NotificationBell userRole={userRole} />}
             <Badge variant={ROLE_BADGE[userRole]} className="hidden sm:flex">
               {ROLE_LABEL[userRole]}
             </Badge>

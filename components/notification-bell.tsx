@@ -32,7 +32,8 @@ const DOT_MAP: Record<string, string> = {
   info: 'bg-blue-500',
 }
 
-export function NotificationBell() {
+export function NotificationBell({ userRole }: { userRole?: 'ADMIN' | 'COLLECTION_AGENT' }) {
+  const endpoint = userRole === 'COLLECTION_AGENT' ? '/api/agent/notifications' : '/api/admin/notifications'
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [count, setCount] = useState(0)
@@ -42,7 +43,7 @@ export function NotificationBell() {
   async function fetchNotifications() {
     setLoading(true)
     try {
-      const res = await fetch('/api/admin/notifications')
+      const res = await fetch(endpoint)
       if (res.ok) {
         const data = await res.json()
         setNotifications(data.notifications ?? [])
@@ -126,7 +127,7 @@ export function NotificationBell() {
                       onClick={async () => {
                         setDismissed(prev => new Set([...prev, i]))
                         if (n.dbNotification && n.id) {
-                          await fetch('/api/admin/notifications', {
+                          await fetch(endpoint, {
                             method: 'PATCH',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ id: n.id }),
