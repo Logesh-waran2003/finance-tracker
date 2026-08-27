@@ -256,12 +256,41 @@ The job is fully idempotent — running it twice never creates duplicate penalti
 
 ## Tests
 
+### Unit tests
+
 ```bash
 bun test               # run all tests
 bun test --watch       # watch mode
 ```
 
 166 tests across 5 files covering financial calculations, business rules, service logic, security hardening, and API validation.
+
+### E2E tests (Robot Framework)
+
+```bash
+# First time setup
+uv venv .venv-robot
+source .venv-robot/bin/activate
+uv pip install robotframework robotframework-browser robotframework-requests
+rfbrowser init
+
+# Run all suites (headless)
+bash tests/robot/run.sh
+
+# Run a specific suite
+bash tests/robot/run.sh 01_auth
+
+# Run with visible browser
+bash tests/robot/run.sh --headed
+```
+
+36 tests across 4 suites:
+- `01_auth` — login valid/invalid, redirect if authenticated, logout
+- `02_admin` — all admin pages, dashboard period toggle, notification bell, create loan dialog
+- `03_agent` — all agent pages, outstanding column, request loan dialog, access control
+- `04_loan_collection_workflow` — agent submits loan request, admin approves, collection form
+
+Results in `tests/robot/results/report.html` after a run.
 
 ## Project Structure
 

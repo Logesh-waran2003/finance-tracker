@@ -55,3 +55,10 @@ next-env.d.ts
 # supabase local
 supabase/.temp/
 supabase/functions/.env
+
+# robot framework artifacts
+log.html
+output.xml
+report.html
+playwright-log.txt
+tests/robot/results/
