@@ -90,6 +90,7 @@ export async function GET(request: Request) {
       Math.max(0,
         parseFloat(r.opening_balance as string ?? '0')
         + parseFloat(duesMap.get(r.id) ?? '0')
+        + parseFloat(loanMap.get(r.id)?.total_loan_amount ?? '0')
         - parseFloat(freeformMap.get(r.id) ?? '0')
       )
     ),

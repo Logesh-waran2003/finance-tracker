@@ -1,6 +1,6 @@
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import { customers, dues, collections } from '@/lib/db/schema'
+import { customers, dues, collections, loans } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq, and, sql, isNull } from 'drizzle-orm'
 import type { Session } from 'next-auth'
@@ -32,7 +32,7 @@ export async function GET() {
       eq(customers.is_active, true)
     ))
 
-  const [duesAgg, freeformAgg] = await Promise.all([
+  const [duesAgg, freeformAgg, loanAgg] = await Promise.all([
     db.select({
       customer_id: dues.customer_id,
       total: sql<string>`coalesce(sum(${dues.outstanding_amount}), '0')`,
@@ -52,10 +52,17 @@ export async function GET() {
         isNull(collections.deleted_at)
       ))
       .groupBy(collections.customer_id),
+    db.select({
+      customer_id: loans.customer_id,
+      total: sql<string>`coalesce(sum(${loans.total_outstanding}), '0')`,
+    }).from(loans)
+      .where(sql`${loans.status} NOT IN ('COMPLETED', 'CANCELLED', 'DRAFT')`)
+      .groupBy(loans.customer_id),
   ])
 
   const duesMap = new Map(duesAgg.map(o => [o.customer_id, o.total ?? '0']))
   const freeformMap = new Map(freeformAgg.map(o => [o.customer_id, o.total ?? '0']))
+  const loanMap = new Map(loanAgg.map(o => [o.customer_id, o.total ?? '0']))
 
   return NextResponse.json(rows.map(r => ({
     ...r,
@@ -63,6 +70,7 @@ export async function GET() {
       Math.max(0,
         parseFloat(r.opening_balance as string ?? '0')
         + parseFloat(duesMap.get(r.id) ?? '0')
+        + parseFloat(loanMap.get(r.id) ?? '0')
         - parseFloat(freeformMap.get(r.id) ?? '0')
       )
     ),

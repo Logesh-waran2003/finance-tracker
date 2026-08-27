@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { collections, customers, notifications, profiles, dues } from '@/lib/db/schema'
+import { collections, customers, notifications, profiles, dues, loans } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq, and, desc, gte, lte, sql, isNull } from 'drizzle-orm'
 import { requireRole, requireCustomerAccess, isResponse } from '@/lib/auth/authorize'
@@ -53,9 +53,18 @@ export async function POST(request: Request) {
         isNull(collections.deleted_at),
       ))
 
+    const [loanAgg] = await db
+      .select({ total: sql<string>`coalesce(sum(${loans.total_outstanding}), '0')` })
+      .from(loans)
+      .where(and(
+        eq(loans.customer_id, customer_id),
+        sql`${loans.status} NOT IN ('COMPLETED', 'CANCELLED', 'DRAFT')`,
+      ))
+
     const outstandingCents = Math.max(0, Math.round(
       parseFloat(custRow.opening_balance as string ?? '0') * 100
       + parseFloat(duesAgg?.total ?? '0') * 100
+      + parseFloat(loanAgg?.total ?? '0') * 100
       - parseFloat(freeformAgg?.total ?? '0') * 100
     ))
 
