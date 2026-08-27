@@ -68,6 +68,7 @@ export default function LoginPage() {
               onChange={e => setEmail(e.target.value)}
               required
               autoComplete="email"
+              suppressHydrationWarning
             />
           </div>
           <div className="space-y-2">
@@ -81,6 +82,7 @@ export default function LoginPage() {
                 required
                 autoComplete="current-password"
                 className="pr-10"
+                suppressHydrationWarning
               />
               <button
                 type="button"
