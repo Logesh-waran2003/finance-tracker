@@ -1,0 +1,3538 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot generator="Robot 7.4.2 (Python 3.11.14 on linux)" generated="2026-08-28T01:20:38.230443" rpa="false" schemaversion="5">
+<suite id="s1" name="Suites" source="/home/logesh/Coding/Projects/finance-tracker/tests/robot/suites">
+<suite id="s1-s1" name="01 Auth" source="/home/logesh/Coding/Projects/finance-tracker/tests/robot/suites/01_auth.robot">
+<kw name="Open App" owner="common" type="SETUP">
+<kw name="New Browser" owner="Browser">
+<msg time="2026-08-28T01:20:38.368564" level="INFO">{"browser": "chromium", "headless": true, "chromiumSandbox": false, "devtools": false, "handleSIGHUP": true, "handleSIGINT": true, "handleSIGTERM": true, "slowMo": 0.0, "timeout": 30000.0, "tracesDir": "/home/logesh/Coding/Projects/finance-tracker/tests/robot/results/browser/traces/temp/42f4ecdb-d09c-4613-b716-9f6eb2ab6595"}</msg>
+<msg time="2026-08-28T01:20:38.387204" level="INFO">Starting Browser process /home/logesh/Coding/Projects/finance-tracker/.venv-robot/lib/python3.11/site-packages/Browser/wrapper/index.js using at 127.0.0.1:54911</msg>
+<msg time="2026-08-28T01:20:38.977154" level="INFO">Successfully created browser with options: {"browser":"chromium","headless":true,"chromiumSandbox":false,"devtools":false,"handleSIGHUP":true,"handleSIGINT":true,"handleSIGTERM":true,"slowMo":0,"timeout":30000,"tracesDir":"/home/logesh/Coding/Projects/finance-tracker/tests/robot/results/browser/traces/temp/42f4ecdb-d09c-4613-b716-9f6eb2ab6595"}</msg>
+<arg>browser=${BROWSER}</arg>
+<arg>headless=${HEADLESS}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Create a new playwright Browser with specified options.</doc>
+<status status="PASS" start="2026-08-28T01:20:38.367989" elapsed="0.609335"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:38.367455" elapsed="0.609986"/>
+</kw>
+<test id="s1-s1-t1" name="Admin Login Valid Credentials" line="8">
+<kw name="Login As Admin" owner="common">
+<kw name="New Context" owner="Browser">
+<msg time="2026-08-28T01:20:38.984980" level="INFO">{
+  "acceptDownloads": true,
+  "bypassCSP": false,
+  "forcedColors": "none",
+  "ignoreHTTPSErrors": false,
+  "javaScriptEnabled": true,
+  "offline": false,
+  "reducedMotion": "no-preference",
+  "serviceWorkers": "allow",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  }
+}</msg>
+<msg time="2026-08-28T01:20:38.994074" level="INFO">Successfully created context. </msg>
+<msg time="2026-08-28T01:20:38.994183" level="INFO">{'acceptDownloads': True, 'bypassCSP': False, 'forcedColors': 'none', 'ignoreHTTPSErrors': False, 'javaScriptEnabled': True, 'offline': False, 'reducedMotion': 'no-preference', 'serviceWorkers': 'allow', 'viewport': {'width': 1280, 'height': 800}}</msg>
+<arg>viewport={'width': 1280, 'height': 800}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Create a new BrowserContext with specified options.</doc>
+<status status="PASS" start="2026-08-28T01:20:38.983865" elapsed="0.010394"/>
+</kw>
+<kw name="New Page" owner="Browser">
+<msg time="2026-08-28T01:20:39.241995" level="INFO">Successfully initialized new page object and opened url: http://192.168.0.109:3001/login</msg>
+<arg>${BASE_URL}/login</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Open a new Page.</doc>
+<status status="PASS" start="2026-08-28T01:20:38.994449" elapsed="0.247742"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:20:39.291434" level="INFO">Waited for Element with selector id=email at state visible</msg>
+<arg>id=email</arg>
+<arg>visible</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:20:39.242380" elapsed="0.049204"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:20:39.292218" level="INFO">Fills the text 'admin@demo.com' in the given field.</msg>
+<arg>id=email</arg>
+<arg>${ADMIN_EMAIL}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:39.291766" elapsed="0.049453"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:20:39.341933" level="INFO">Fills the text 'Demo@1234' in the given field.</msg>
+<arg>id=password</arg>
+<arg>${ADMIN_PASS}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:39.341454" elapsed="0.026242"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:20:39.368385" level="INFO">Clicks the element 'css=button[type="submit"]'.</msg>
+<arg>css=button[type="submit"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:39.367911" elapsed="0.409691"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:39.778723" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:20:41.045147" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:39.777915" elapsed="1.267519"/>
+</kw>
+<kw name="Get Url" owner="Browser">
+<msg time="2026-08-28T01:20:41.050336" level="INFO">${url} = http://192.168.0.109:3001/dashboard</msg>
+<var>${url}</var>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns the current URL.</doc>
+<status status="PASS" start="2026-08-28T01:20:41.045737" elapsed="0.004659"/>
+</kw>
+<kw name="Should Not Contain" owner="BuiltIn">
+<arg>${url}</arg>
+<arg>/login</arg>
+<doc>Fails if ``container`` contains ``item`` one or more times.</doc>
+<status status="PASS" start="2026-08-28T01:20:41.050609" elapsed="0.000648"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:38.983528" elapsed="2.067851"/>
+</kw>
+<kw name="Get Url" owner="Browser">
+<msg time="2026-08-28T01:20:41.054700" level="INFO">${url} = http://192.168.0.109:3001/dashboard</msg>
+<var>${url}</var>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns the current URL.</doc>
+<status status="PASS" start="2026-08-28T01:20:41.051542" elapsed="0.003231"/>
+</kw>
+<kw name="Should Not Contain" owner="BuiltIn">
+<arg>${url}</arg>
+<arg>/login</arg>
+<doc>Fails if ``container`` contains ``item`` one or more times.</doc>
+<status status="PASS" start="2026-08-28T01:20:41.055026" elapsed="0.000649"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:20:41.107858" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="login_admin_success.png" target="_blank"&gt;&lt;img src="login_admin_success.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:20:41.056489" elapsed="0.051477"/>
+</kw>
+<arg>login_admin_success</arg>
+<status status="PASS" start="2026-08-28T01:20:41.055964" elapsed="0.052087"/>
+</kw>
+<kw name="Logout And Close" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:20:41.154883" level="INFO">Successfully opened URL http://192.168.0.109:3001/api/auth/signout</msg>
+<arg>${BASE_URL}/api/auth/signout</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:20:41.108444" elapsed="0.046590"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:41.155746" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:20:41.654769" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:41.155260" elapsed="0.499644"/>
+</kw>
+<kw name="Close Context" owner="Browser">
+<msg time="2026-08-28T01:20:41.657548" level="INFO">Switching browser to CURRENT</msg>
+<msg time="2026-08-28T01:20:41.659862" level="INFO">Returned active browser id. CURRENT</msg>
+<msg time="2026-08-28T01:20:41.661429" level="INFO">Switching context to CURRENT in CURRENT</msg>
+<msg time="2026-08-28T01:20:41.665324" level="INFO">Returned active context id: CURRENT</msg>
+<msg time="2026-08-28T01:20:41.665857" level="INFO">Switching context to context=65f20b82-9462-4a36-8bb3-f69591c8afb6 in CURRENT</msg>
+<msg time="2026-08-28T01:20:41.669427" level="INFO">Successfully changed active context: context=65f20b82-9462-4a36-8bb3-f69591c8afb6</msg>
+<msg time="2026-08-28T01:20:41.676035" level="INFO">Successfully closed Context</msg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Closes a Context.</doc>
+<status status="PASS" start="2026-08-28T01:20:41.655111" elapsed="0.021081"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:41.108215" elapsed="0.568073"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:38.977512" elapsed="2.698885"/>
+</test>
+<test id="s1-s1-t2" name="Admin Login Invalid Password" line="15">
+<kw name="New Context" owner="Browser">
+<msg time="2026-08-28T01:20:41.683580" level="INFO">{
+  "acceptDownloads": true,
+  "bypassCSP": false,
+  "forcedColors": "none",
+  "ignoreHTTPSErrors": false,
+  "javaScriptEnabled": true,
+  "offline": false,
+  "reducedMotion": "no-preference",
+  "serviceWorkers": "allow",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  }
+}</msg>
+<msg time="2026-08-28T01:20:41.687356" level="INFO">Successfully created context. </msg>
+<msg time="2026-08-28T01:20:41.687430" level="INFO">{'acceptDownloads': True, 'bypassCSP': False, 'forcedColors': 'none', 'ignoreHTTPSErrors': False, 'javaScriptEnabled': True, 'offline': False, 'reducedMotion': 'no-preference', 'serviceWorkers': 'allow', 'viewport': {'width': 1280, 'height': 800}}</msg>
+<arg>viewport={'width': 1280, 'height': 800}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Create a new BrowserContext with specified options.</doc>
+<status status="PASS" start="2026-08-28T01:20:41.682420" elapsed="0.005065"/>
+</kw>
+<kw name="New Page" owner="Browser">
+<msg time="2026-08-28T01:20:41.969478" level="INFO">Successfully initialized new page object and opened url: http://192.168.0.109:3001/login</msg>
+<arg>${BASE_URL}/login</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Open a new Page.</doc>
+<status status="PASS" start="2026-08-28T01:20:41.687639" elapsed="0.282020"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:20:42.023071" level="INFO">Waited for Element with selector id=email at state visible</msg>
+<arg>id=email</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:20:41.969819" elapsed="0.053422"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:20:42.023805" level="INFO">Fills the text 'admin@demo.com' in the given field.</msg>
+<arg>id=email</arg>
+<arg>${ADMIN_EMAIL}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:42.023402" elapsed="0.034854"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:20:42.059142" level="INFO">Fills the text 'wrongpassword' in the given field.</msg>
+<arg>id=password</arg>
+<arg>wrongpassword</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:42.058547" elapsed="0.017718"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:20:42.077245" level="INFO">Clicks the element 'css=button[type="submit"]'.</msg>
+<arg>css=button[type="submit"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:42.076564" elapsed="0.046380"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:20:42.914174" level="INFO">Waited for Element with selector text=Invalid email or password at state visible</msg>
+<arg>text=Invalid email or password</arg>
+<arg>visible</arg>
+<arg>timeout=10s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:20:42.123152" elapsed="0.791326"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:20:42.969022" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="login_invalid_password.png" target="_blank"&gt;&lt;img src="login_invalid_password.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:20:42.915678" elapsed="0.053470"/>
+</kw>
+<arg>login_invalid_password</arg>
+<status status="PASS" start="2026-08-28T01:20:42.914929" elapsed="0.054317"/>
+</kw>
+<kw name="Close Context" owner="Browser">
+<msg time="2026-08-28T01:20:42.971745" level="INFO">Switching browser to CURRENT</msg>
+<msg time="2026-08-28T01:20:42.973653" level="INFO">Returned active browser id. CURRENT</msg>
+<msg time="2026-08-28T01:20:42.975104" level="INFO">Switching context to CURRENT in CURRENT</msg>
+<msg time="2026-08-28T01:20:42.978593" level="INFO">Returned active context id: CURRENT</msg>
+<msg time="2026-08-28T01:20:42.979052" level="INFO">Switching context to context=23a268e1-c43b-4f02-babf-6a22c06d65fc in CURRENT</msg>
+<msg time="2026-08-28T01:20:42.982216" level="INFO">Successfully changed active context: context=23a268e1-c43b-4f02-babf-6a22c06d65fc</msg>
+<msg time="2026-08-28T01:20:42.986050" level="INFO">Successfully closed Context</msg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Closes a Context.</doc>
+<status status="PASS" start="2026-08-28T01:20:42.969363" elapsed="0.016844"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:41.680049" elapsed="1.306299"/>
+</test>
+<test id="s1-s1-t3" name="Agent Login Valid Credentials" line="26">
+<kw name="Login As Agent" owner="common">
+<kw name="New Context" owner="Browser">
+<msg time="2026-08-28T01:20:42.993317" level="INFO">{
+  "acceptDownloads": true,
+  "bypassCSP": false,
+  "forcedColors": "none",
+  "ignoreHTTPSErrors": false,
+  "javaScriptEnabled": true,
+  "offline": false,
+  "reducedMotion": "no-preference",
+  "serviceWorkers": "allow",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  }
+}</msg>
+<msg time="2026-08-28T01:20:42.996632" level="INFO">Successfully created context. </msg>
+<msg time="2026-08-28T01:20:42.996701" level="INFO">{'acceptDownloads': True, 'bypassCSP': False, 'forcedColors': 'none', 'ignoreHTTPSErrors': False, 'javaScriptEnabled': True, 'offline': False, 'reducedMotion': 'no-preference', 'serviceWorkers': 'allow', 'viewport': {'width': 1280, 'height': 800}}</msg>
+<arg>viewport={'width': 1280, 'height': 800}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Create a new BrowserContext with specified options.</doc>
+<status status="PASS" start="2026-08-28T01:20:42.992422" elapsed="0.004331"/>
+</kw>
+<kw name="New Page" owner="Browser">
+<msg time="2026-08-28T01:20:43.224131" level="INFO">Successfully initialized new page object and opened url: http://192.168.0.109:3001/login</msg>
+<arg>${BASE_URL}/login</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Open a new Page.</doc>
+<status status="PASS" start="2026-08-28T01:20:42.996898" elapsed="0.227402"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:20:43.275725" level="INFO">Waited for Element with selector id=email at state visible</msg>
+<arg>id=email</arg>
+<arg>visible</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:20:43.224457" elapsed="0.051461"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:20:43.276498" level="INFO">Fills the text 'agent@demo.com' in the given field.</msg>
+<arg>id=email</arg>
+<arg>${AGENT_EMAIL}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:43.276078" elapsed="0.038865"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:20:43.315829" level="INFO">Fills the text 'Demo@1234' in the given field.</msg>
+<arg>id=password</arg>
+<arg>${AGENT_PASS}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:43.315194" elapsed="0.012544"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:20:43.328490" level="INFO">Clicks the element 'css=button[type="submit"]'.</msg>
+<arg>css=button[type="submit"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:43.328011" elapsed="0.045941"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:43.374974" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:20:44.510067" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:43.374241" elapsed="1.136138"/>
+</kw>
+<kw name="Get Url" owner="Browser">
+<msg time="2026-08-28T01:20:44.515244" level="INFO">${url} = http://192.168.0.109:3001/dashboard</msg>
+<var>${url}</var>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns the current URL.</doc>
+<status status="PASS" start="2026-08-28T01:20:44.510746" elapsed="0.004586"/>
+</kw>
+<kw name="Should Not Contain" owner="BuiltIn">
+<arg>${url}</arg>
+<arg>/login</arg>
+<doc>Fails if ``container`` contains ``item`` one or more times.</doc>
+<status status="PASS" start="2026-08-28T01:20:44.515653" elapsed="0.000783"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:42.992126" elapsed="1.524483"/>
+</kw>
+<kw name="Get Url" owner="Browser">
+<msg time="2026-08-28T01:20:44.521289" level="INFO">${url} = http://192.168.0.109:3001/dashboard</msg>
+<var>${url}</var>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns the current URL.</doc>
+<status status="PASS" start="2026-08-28T01:20:44.516845" elapsed="0.004532"/>
+</kw>
+<kw name="Should Not Contain" owner="BuiltIn">
+<arg>${url}</arg>
+<arg>/login</arg>
+<doc>Fails if ``container`` contains ``item`` one or more times.</doc>
+<status status="PASS" start="2026-08-28T01:20:44.521689" elapsed="0.000786"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:20:44.564470" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="login_agent_success.png" target="_blank"&gt;&lt;img src="login_agent_success.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:20:44.523440" elapsed="0.041145"/>
+</kw>
+<arg>login_agent_success</arg>
+<status status="PASS" start="2026-08-28T01:20:44.522818" elapsed="0.041857"/>
+</kw>
+<kw name="Logout And Close" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:20:44.609124" level="INFO">Successfully opened URL http://192.168.0.109:3001/api/auth/signout</msg>
+<arg>${BASE_URL}/api/auth/signout</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:20:44.565095" elapsed="0.044202"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:44.610081" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:20:45.109473" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:44.609502" elapsed="0.500122"/>
+</kw>
+<kw name="Close Context" owner="Browser">
+<msg time="2026-08-28T01:20:45.111637" level="INFO">Switching browser to CURRENT</msg>
+<msg time="2026-08-28T01:20:45.113389" level="INFO">Returned active browser id. CURRENT</msg>
+<msg time="2026-08-28T01:20:45.115079" level="INFO">Switching context to CURRENT in CURRENT</msg>
+<msg time="2026-08-28T01:20:45.118907" level="INFO">Returned active context id: CURRENT</msg>
+<msg time="2026-08-28T01:20:45.119370" level="INFO">Switching context to context=fb459971-fa5d-4b36-9355-e4b2a2d310a0 in CURRENT</msg>
+<msg time="2026-08-28T01:20:45.123463" level="INFO">Successfully changed active context: context=fb459971-fa5d-4b36-9355-e4b2a2d310a0</msg>
+<msg time="2026-08-28T01:20:45.128057" level="INFO">Successfully closed Context</msg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Closes a Context.</doc>
+<status status="PASS" start="2026-08-28T01:20:45.109786" elapsed="0.018432"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:44.564849" elapsed="0.563467"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:42.989716" elapsed="2.138707"/>
+</test>
+<test id="s1-s1-t4" name="Authenticated User Redirected From Login" line="33">
+<kw name="Login As Agent" owner="common">
+<kw name="New Context" owner="Browser">
+<msg time="2026-08-28T01:20:45.135396" level="INFO">{
+  "acceptDownloads": true,
+  "bypassCSP": false,
+  "forcedColors": "none",
+  "ignoreHTTPSErrors": false,
+  "javaScriptEnabled": true,
+  "offline": false,
+  "reducedMotion": "no-preference",
+  "serviceWorkers": "allow",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  }
+}</msg>
+<msg time="2026-08-28T01:20:45.139176" level="INFO">Successfully created context. </msg>
+<msg time="2026-08-28T01:20:45.139269" level="INFO">{'acceptDownloads': True, 'bypassCSP': False, 'forcedColors': 'none', 'ignoreHTTPSErrors': False, 'javaScriptEnabled': True, 'offline': False, 'reducedMotion': 'no-preference', 'serviceWorkers': 'allow', 'viewport': {'width': 1280, 'height': 800}}</msg>
+<arg>viewport={'width': 1280, 'height': 800}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Create a new BrowserContext with specified options.</doc>
+<status status="PASS" start="2026-08-28T01:20:45.134483" elapsed="0.004847"/>
+</kw>
+<kw name="New Page" owner="Browser">
+<msg time="2026-08-28T01:20:45.385081" level="INFO">Successfully initialized new page object and opened url: http://192.168.0.109:3001/login</msg>
+<arg>${BASE_URL}/login</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Open a new Page.</doc>
+<status status="PASS" start="2026-08-28T01:20:45.139495" elapsed="0.245764"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:20:45.441938" level="INFO">Waited for Element with selector id=email at state visible</msg>
+<arg>id=email</arg>
+<arg>visible</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:20:45.385426" elapsed="0.056744"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:20:45.443045" level="INFO">Fills the text 'agent@demo.com' in the given field.</msg>
+<arg>id=email</arg>
+<arg>${AGENT_EMAIL}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:45.442423" elapsed="0.046759"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:20:45.489932" level="INFO">Fills the text 'Demo@1234' in the given field.</msg>
+<arg>id=password</arg>
+<arg>${AGENT_PASS}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:45.489473" elapsed="0.016402"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:20:45.506442" level="INFO">Clicks the element 'css=button[type="submit"]'.</msg>
+<arg>css=button[type="submit"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:45.506055" elapsed="0.050354"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:45.557066" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:20:46.671785" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:45.556592" elapsed="1.115485"/>
+</kw>
+<kw name="Get Url" owner="Browser">
+<msg time="2026-08-28T01:20:46.676705" level="INFO">${url} = http://192.168.0.109:3001/dashboard</msg>
+<var>${url}</var>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns the current URL.</doc>
+<status status="PASS" start="2026-08-28T01:20:46.672482" elapsed="0.004313"/>
+</kw>
+<kw name="Should Not Contain" owner="BuiltIn">
+<arg>${url}</arg>
+<arg>/login</arg>
+<doc>Fails if ``container`` contains ``item`` one or more times.</doc>
+<status status="PASS" start="2026-08-28T01:20:46.677137" elapsed="0.000775"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:45.134192" elapsed="1.543886"/>
+</kw>
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:20:46.866134" level="INFO">Successfully opened URL http://192.168.0.109:3001/login</msg>
+<arg>${BASE_URL}/login</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:20:46.678329" elapsed="0.187979"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:46.866872" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:20:47.464502" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:46.866470" elapsed="0.598320"/>
+</kw>
+<kw name="Get Url" owner="Browser">
+<msg time="2026-08-28T01:20:47.470049" level="INFO">${url} = http://192.168.0.109:3001/dashboard</msg>
+<var>${url}</var>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns the current URL.</doc>
+<status status="PASS" start="2026-08-28T01:20:47.465177" elapsed="0.004982"/>
+</kw>
+<kw name="Should Not Contain" owner="BuiltIn">
+<arg>${url}</arg>
+<arg>/login</arg>
+<doc>Fails if ``container`` contains ``item`` one or more times.</doc>
+<status status="PASS" start="2026-08-28T01:20:47.470477" elapsed="0.000775"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:20:47.516241" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="login_redirect_already_auth.png" target="_blank"&gt;&lt;img src="login_redirect_already_auth.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:20:47.472171" elapsed="0.044207"/>
+</kw>
+<arg>login_redirect_already_auth</arg>
+<status status="PASS" start="2026-08-28T01:20:47.471576" elapsed="0.044882"/>
+</kw>
+<kw name="Logout And Close" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:20:47.562853" level="INFO">Successfully opened URL http://192.168.0.109:3001/api/auth/signout</msg>
+<arg>${BASE_URL}/api/auth/signout</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:20:47.516834" elapsed="0.046237"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:47.563863" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:20:48.063141" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:47.563331" elapsed="0.499976"/>
+</kw>
+<kw name="Close Context" owner="Browser">
+<msg time="2026-08-28T01:20:48.065678" level="INFO">Switching browser to CURRENT</msg>
+<msg time="2026-08-28T01:20:48.067751" level="INFO">Returned active browser id. CURRENT</msg>
+<msg time="2026-08-28T01:20:48.069295" level="INFO">Switching context to CURRENT in CURRENT</msg>
+<msg time="2026-08-28T01:20:48.072698" level="INFO">Returned active context id: CURRENT</msg>
+<msg time="2026-08-28T01:20:48.073193" level="INFO">Switching context to context=44643499-0597-49cf-bd77-c99e6a07f22d in CURRENT</msg>
+<msg time="2026-08-28T01:20:48.077177" level="INFO">Successfully changed active context: context=44643499-0597-49cf-bd77-c99e6a07f22d</msg>
+<msg time="2026-08-28T01:20:48.081637" level="INFO">Successfully closed Context</msg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Closes a Context.</doc>
+<status status="PASS" start="2026-08-28T01:20:48.063468" elapsed="0.018318"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:47.516606" elapsed="0.565268"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:45.131880" elapsed="2.950104"/>
+</test>
+<test id="s1-s1-t5" name="Logout Works" line="42">
+<kw name="Login As Admin" owner="common">
+<kw name="New Context" owner="Browser">
+<msg time="2026-08-28T01:20:48.089534" level="INFO">{
+  "acceptDownloads": true,
+  "bypassCSP": false,
+  "forcedColors": "none",
+  "ignoreHTTPSErrors": false,
+  "javaScriptEnabled": true,
+  "offline": false,
+  "reducedMotion": "no-preference",
+  "serviceWorkers": "allow",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  }
+}</msg>
+<msg time="2026-08-28T01:20:48.093859" level="INFO">Successfully created context. </msg>
+<msg time="2026-08-28T01:20:48.093931" level="INFO">{'acceptDownloads': True, 'bypassCSP': False, 'forcedColors': 'none', 'ignoreHTTPSErrors': False, 'javaScriptEnabled': True, 'offline': False, 'reducedMotion': 'no-preference', 'serviceWorkers': 'allow', 'viewport': {'width': 1280, 'height': 800}}</msg>
+<arg>viewport={'width': 1280, 'height': 800}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Create a new BrowserContext with specified options.</doc>
+<status status="PASS" start="2026-08-28T01:20:48.088617" elapsed="0.005366"/>
+</kw>
+<kw name="New Page" owner="Browser">
+<msg time="2026-08-28T01:20:48.338022" level="INFO">Successfully initialized new page object and opened url: http://192.168.0.109:3001/login</msg>
+<arg>${BASE_URL}/login</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Open a new Page.</doc>
+<status status="PASS" start="2026-08-28T01:20:48.094140" elapsed="0.244127"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:20:48.389433" level="INFO">Waited for Element with selector id=email at state visible</msg>
+<arg>id=email</arg>
+<arg>visible</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:20:48.338491" elapsed="0.051127"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:20:48.390486" level="INFO">Fills the text 'admin@demo.com' in the given field.</msg>
+<arg>id=email</arg>
+<arg>${ADMIN_EMAIL}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:48.389891" elapsed="0.043105"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:20:48.433942" level="INFO">Fills the text 'Demo@1234' in the given field.</msg>
+<arg>id=password</arg>
+<arg>${ADMIN_PASS}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:48.433291" elapsed="0.017079"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:20:48.451255" level="INFO">Clicks the element 'css=button[type="submit"]'.</msg>
+<arg>css=button[type="submit"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:48.450629" elapsed="0.047016"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:48.498552" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:20:49.767647" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:48.497857" elapsed="1.269964"/>
+</kw>
+<kw name="Get Url" owner="Browser">
+<msg time="2026-08-28T01:20:49.770732" level="INFO">${url} = http://192.168.0.109:3001/dashboard</msg>
+<var>${url}</var>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns the current URL.</doc>
+<status status="PASS" start="2026-08-28T01:20:49.768022" elapsed="0.002761"/>
+</kw>
+<kw name="Should Not Contain" owner="BuiltIn">
+<arg>${url}</arg>
+<arg>/login</arg>
+<doc>Fails if ``container`` contains ``item`` one or more times.</doc>
+<status status="PASS" start="2026-08-28T01:20:49.770971" elapsed="0.000484"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:48.088344" elapsed="1.683199"/>
+</kw>
+<kw name="Logout And Close" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:20:49.819497" level="INFO">Successfully opened URL http://192.168.0.109:3001/api/auth/signout</msg>
+<arg>${BASE_URL}/api/auth/signout</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:20:49.771996" elapsed="0.047655"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:49.820260" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:20:50.319494" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:49.819820" elapsed="0.499817"/>
+</kw>
+<kw name="Close Context" owner="Browser">
+<msg time="2026-08-28T01:20:50.321781" level="INFO">Switching browser to CURRENT</msg>
+<msg time="2026-08-28T01:20:50.323531" level="INFO">Returned active browser id. CURRENT</msg>
+<msg time="2026-08-28T01:20:50.325313" level="INFO">Switching context to CURRENT in CURRENT</msg>
+<msg time="2026-08-28T01:20:50.328680" level="INFO">Returned active context id: CURRENT</msg>
+<msg time="2026-08-28T01:20:50.329161" level="INFO">Switching context to context=b509d824-6060-4115-9498-b1c99089379d in CURRENT</msg>
+<msg time="2026-08-28T01:20:50.332512" level="INFO">Successfully changed active context: context=b509d824-6060-4115-9498-b1c99089379d</msg>
+<msg time="2026-08-28T01:20:50.337406" level="INFO">Successfully closed Context</msg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Closes a Context.</doc>
+<status status="PASS" start="2026-08-28T01:20:50.319792" elapsed="0.017763"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:49.771703" elapsed="0.565943"/>
+</kw>
+<kw name="New Context" owner="Browser">
+<msg time="2026-08-28T01:20:50.338795" level="INFO">{
+  "acceptDownloads": true,
+  "bypassCSP": false,
+  "forcedColors": "none",
+  "ignoreHTTPSErrors": false,
+  "javaScriptEnabled": true,
+  "offline": false,
+  "reducedMotion": "no-preference",
+  "serviceWorkers": "allow",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  }
+}</msg>
+<msg time="2026-08-28T01:20:50.342740" level="INFO">Successfully created context. </msg>
+<msg time="2026-08-28T01:20:50.342815" level="INFO">{'acceptDownloads': True, 'bypassCSP': False, 'forcedColors': 'none', 'ignoreHTTPSErrors': False, 'javaScriptEnabled': True, 'offline': False, 'reducedMotion': 'no-preference', 'serviceWorkers': 'allow', 'viewport': {'width': 1280, 'height': 800}}</msg>
+<arg>viewport={'width': 1280, 'height': 800}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Create a new BrowserContext with specified options.</doc>
+<status status="PASS" start="2026-08-28T01:20:50.337777" elapsed="0.005097"/>
+</kw>
+<kw name="New Page" owner="Browser">
+<msg time="2026-08-28T01:20:50.643592" level="INFO">Successfully initialized new page object and opened url: http://192.168.0.109:3001</msg>
+<arg>${BASE_URL}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Open a new Page.</doc>
+<status status="PASS" start="2026-08-28T01:20:50.343039" elapsed="0.300756"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:50.644351" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:20:51.249539" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:50.643959" elapsed="0.605726"/>
+</kw>
+<kw name="Get Url" owner="Browser">
+<msg time="2026-08-28T01:20:51.251766" level="INFO">${url} = http://192.168.0.109:3001/login</msg>
+<var>${url}</var>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns the current URL.</doc>
+<status status="PASS" start="2026-08-28T01:20:51.249852" elapsed="0.001946"/>
+</kw>
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${url}</arg>
+<arg>/login</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-08-28T01:20:51.251924" elapsed="0.000311"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:20:51.295093" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="logout_success.png" target="_blank"&gt;&lt;img src="logout_success.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:20:51.252582" elapsed="0.042662"/>
+</kw>
+<arg>logout_success</arg>
+<status status="PASS" start="2026-08-28T01:20:51.252379" elapsed="0.042954"/>
+</kw>
+<kw name="Close Context" owner="Browser">
+<msg time="2026-08-28T01:20:51.297276" level="INFO">Switching browser to CURRENT</msg>
+<msg time="2026-08-28T01:20:51.298928" level="INFO">Returned active browser id. CURRENT</msg>
+<msg time="2026-08-28T01:20:51.300324" level="INFO">Switching context to CURRENT in CURRENT</msg>
+<msg time="2026-08-28T01:20:51.303505" level="INFO">Returned active context id: CURRENT</msg>
+<msg time="2026-08-28T01:20:51.303957" level="INFO">Switching context to context=959fc2d8-9975-41de-b7d4-86e35f796729 in CURRENT</msg>
+<msg time="2026-08-28T01:20:51.307237" level="INFO">Successfully changed active context: context=959fc2d8-9975-41de-b7d4-86e35f796729</msg>
+<msg time="2026-08-28T01:20:51.311612" level="INFO">Successfully closed Context</msg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Closes a Context.</doc>
+<status status="PASS" start="2026-08-28T01:20:51.295457" elapsed="0.016362"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:48.085825" elapsed="3.226149"/>
+</test>
+<kw name="Close Browser" owner="Browser" type="TEARDOWN">
+<msg time="2026-08-28T01:20:51.338776" level="INFO">Closed browser</msg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Closes the current browser.</doc>
+<status status="PASS" start="2026-08-28T01:20:51.316867" elapsed="0.022056"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:38.249507" elapsed="13.089480"/>
+</suite>
+<suite id="s1-s2" name="02 Admin" source="/home/logesh/Coding/Projects/finance-tracker/tests/robot/suites/02_admin.robot">
+<kw name="Run Keywords" owner="BuiltIn" type="SETUP">
+<kw name="Open App" owner="common">
+<kw name="New Browser" owner="Browser">
+<msg time="2026-08-28T01:20:51.351180" level="INFO">{"browser": "chromium", "headless": true, "chromiumSandbox": false, "devtools": false, "handleSIGHUP": true, "handleSIGINT": true, "handleSIGTERM": true, "slowMo": 0.0, "timeout": 30000.0, "tracesDir": "/home/logesh/Coding/Projects/finance-tracker/tests/robot/results/browser/traces/temp/40370de5-ee28-4c0c-9092-145d2c586018"}</msg>
+<msg time="2026-08-28T01:20:51.408586" level="INFO">Successfully created browser with options: {"browser":"chromium","headless":true,"chromiumSandbox":false,"devtools":false,"handleSIGHUP":true,"handleSIGINT":true,"handleSIGTERM":true,"slowMo":0,"timeout":30000,"tracesDir":"/home/logesh/Coding/Projects/finance-tracker/tests/robot/results/browser/traces/temp/40370de5-ee28-4c0c-9092-145d2c586018"}</msg>
+<arg>browser=${BROWSER}</arg>
+<arg>headless=${HEADLESS}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Create a new playwright Browser with specified options.</doc>
+<status status="PASS" start="2026-08-28T01:20:51.350657" elapsed="0.058138"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:51.350490" elapsed="0.058442"/>
+</kw>
+<kw name="Login As Admin" owner="common">
+<kw name="New Context" owner="Browser">
+<msg time="2026-08-28T01:20:51.412337" level="INFO">{
+  "acceptDownloads": true,
+  "bypassCSP": false,
+  "forcedColors": "none",
+  "ignoreHTTPSErrors": false,
+  "javaScriptEnabled": true,
+  "offline": false,
+  "reducedMotion": "no-preference",
+  "serviceWorkers": "allow",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  }
+}</msg>
+<msg time="2026-08-28T01:20:51.417461" level="INFO">Successfully created context. </msg>
+<msg time="2026-08-28T01:20:51.417550" level="INFO">{'acceptDownloads': True, 'bypassCSP': False, 'forcedColors': 'none', 'ignoreHTTPSErrors': False, 'javaScriptEnabled': True, 'offline': False, 'reducedMotion': 'no-preference', 'serviceWorkers': 'allow', 'viewport': {'width': 1280, 'height': 800}}</msg>
+<arg>viewport={'width': 1280, 'height': 800}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Create a new BrowserContext with specified options.</doc>
+<status status="PASS" start="2026-08-28T01:20:51.410750" elapsed="0.006861"/>
+</kw>
+<kw name="New Page" owner="Browser">
+<msg time="2026-08-28T01:20:51.681986" level="INFO">Successfully initialized new page object and opened url: http://192.168.0.109:3001/login</msg>
+<arg>${BASE_URL}/login</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Open a new Page.</doc>
+<status status="PASS" start="2026-08-28T01:20:51.417778" elapsed="0.264385"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:20:51.736048" level="INFO">Waited for Element with selector id=email at state visible</msg>
+<arg>id=email</arg>
+<arg>visible</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:20:51.682315" elapsed="0.053891"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:20:51.736746" level="INFO">Fills the text 'admin@demo.com' in the given field.</msg>
+<arg>id=email</arg>
+<arg>${ADMIN_EMAIL}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:51.736357" elapsed="0.045248"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:20:51.782463" level="INFO">Fills the text 'Demo@1234' in the given field.</msg>
+<arg>id=password</arg>
+<arg>${ADMIN_PASS}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:51.781852" elapsed="0.012727"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:20:51.795468" level="INFO">Clicks the element 'css=button[type="submit"]'.</msg>
+<arg>css=button[type="submit"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:51.794852" elapsed="0.413297"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:52.209040" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:20:53.557575" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:52.208325" elapsed="1.349483"/>
+</kw>
+<kw name="Get Url" owner="Browser">
+<msg time="2026-08-28T01:20:53.562246" level="INFO">${url} = http://192.168.0.109:3001/dashboard</msg>
+<var>${url}</var>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns the current URL.</doc>
+<status status="PASS" start="2026-08-28T01:20:53.558070" elapsed="0.004241"/>
+</kw>
+<kw name="Should Not Contain" owner="BuiltIn">
+<arg>${url}</arg>
+<arg>/login</arg>
+<doc>Fails if ``container`` contains ``item`` one or more times.</doc>
+<status status="PASS" start="2026-08-28T01:20:53.562543" elapsed="0.000557"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:51.410309" elapsed="2.152924"/>
+</kw>
+<arg>Open App</arg>
+<arg>AND</arg>
+<arg>Login As Admin</arg>
+<doc>Executes all the given keywords in a sequence.</doc>
+<status status="PASS" start="2026-08-28T01:20:51.350019" elapsed="2.213289"/>
+</kw>
+<test id="s1-s2-t1" name="Admin Dashboard Loads" line="8">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:20:53.766431" level="INFO">Successfully opened URL http://192.168.0.109:3001/dashboard</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:20:53.571514" elapsed="0.195065"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:53.767132" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:20:54.501032" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:53.766744" elapsed="0.734505"/>
+</kw>
+<arg>/dashboard</arg>
+<status status="PASS" start="2026-08-28T01:20:53.570993" elapsed="0.930392"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:20:54.529994" level="INFO">Waited for Element with selector h1 at state visible</msg>
+<arg>h1</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:20:54.501580" elapsed="0.028577"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:20:54.572054" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="admin_dashboard.png" target="_blank"&gt;&lt;img src="admin_dashboard.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:20:54.530664" elapsed="0.041563"/>
+</kw>
+<arg>admin_dashboard</arg>
+<status status="PASS" start="2026-08-28T01:20:54.530367" elapsed="0.041943"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:53.563409" elapsed="1.008989"/>
+</test>
+<test id="s1-s2-t2" name="Admin Dashboard Period Toggle Daily" line="13">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:20:54.779699" level="INFO">Successfully opened URL http://192.168.0.109:3001/dashboard</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:20:54.583575" elapsed="0.196346"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:54.780494" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:20:55.464024" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:54.780105" elapsed="0.684264"/>
+</kw>
+<arg>/dashboard</arg>
+<status status="PASS" start="2026-08-28T01:20:54.583271" elapsed="0.881339"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:20:55.465930" level="INFO">Clicks the element 'role=button[name="Daily"]'.</msg>
+<arg>role=button[name="Daily"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:55.464928" elapsed="0.150528"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:55.615999" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:20:55.617951" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:55.615636" elapsed="0.002427"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:20:55.701084" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="admin_dashboard_daily.png" target="_blank"&gt;&lt;img src="admin_dashboard_daily.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:20:55.618517" elapsed="0.082705"/>
+</kw>
+<arg>admin_dashboard_daily</arg>
+<status status="PASS" start="2026-08-28T01:20:55.618241" elapsed="0.083063"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:54.579302" elapsed="1.122094"/>
+</test>
+<test id="s1-s2-t3" name="Admin Dashboard Period Toggle Monthly" line="19">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:20:55.912715" level="INFO">Successfully opened URL http://192.168.0.109:3001/dashboard</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:20:55.708908" elapsed="0.204015"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:55.913576" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:20:56.604911" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:55.913106" elapsed="0.691970"/>
+</kw>
+<arg>/dashboard</arg>
+<status status="PASS" start="2026-08-28T01:20:55.708548" elapsed="0.896650"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:20:56.605873" level="INFO">Clicks the element 'role=button[name="Monthly"]'.</msg>
+<arg>role=button[name="Monthly"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:56.605345" elapsed="0.061721"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:56.667628" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:20:56.669318" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:56.667249" elapsed="0.002174"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:20:56.721745" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="admin_dashboard_monthly.png" target="_blank"&gt;&lt;img src="admin_dashboard_monthly.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:20:56.669830" elapsed="0.052026"/>
+</kw>
+<arg>admin_dashboard_monthly</arg>
+<status status="PASS" start="2026-08-28T01:20:56.669589" elapsed="0.052352"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:55.705637" elapsed="1.016391"/>
+</test>
+<test id="s1-s2-t4" name="Admin Dashboard Period Toggle Yearly" line="25">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:20:56.934454" level="INFO">Successfully opened URL http://192.168.0.109:3001/dashboard</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:20:56.731355" elapsed="0.203250"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:56.935384" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:20:57.639497" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:56.934772" elapsed="0.704918"/>
+</kw>
+<arg>/dashboard</arg>
+<status status="PASS" start="2026-08-28T01:20:56.731050" elapsed="0.908813"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:20:57.640841" level="INFO">Clicks the element 'role=button[name="Yearly"]'.</msg>
+<arg>role=button[name="Yearly"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:20:57.640095" elapsed="0.149860"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:57.790523" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:20:57.792924" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:57.790143" elapsed="0.002907"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:20:57.901293" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="admin_dashboard_yearly.png" target="_blank"&gt;&lt;img src="admin_dashboard_yearly.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:20:57.793492" elapsed="0.107979"/>
+</kw>
+<arg>admin_dashboard_yearly</arg>
+<status status="PASS" start="2026-08-28T01:20:57.793239" elapsed="0.108321"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:56.727461" elapsed="1.174193"/>
+</test>
+<test id="s1-s2-t5" name="Admin Customers Page Loads" line="31">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:20:58.125767" level="INFO">Successfully opened URL http://192.168.0.109:3001/admin/customers</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:20:57.913738" elapsed="0.212182"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:58.126488" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:20:58.765847" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:58.126087" elapsed="0.639934"/>
+</kw>
+<arg>/admin/customers</arg>
+<status status="PASS" start="2026-08-28T01:20:57.913416" elapsed="0.852696"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:20:58.785898" level="INFO">Waited for Element with selector h1 at state visible</msg>
+<arg>h1</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:20:58.766251" elapsed="0.019839"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:20:58.826525" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="admin_customers.png" target="_blank"&gt;&lt;img src="admin_customers.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:20:58.786631" elapsed="0.040008"/>
+</kw>
+<arg>admin_customers</arg>
+<status status="PASS" start="2026-08-28T01:20:58.786338" elapsed="0.040384"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:57.906384" elapsed="0.920419"/>
+</test>
+<test id="s1-s2-t6" name="Admin Loans Page Loads" line="36">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:20:59.035211" level="INFO">Successfully opened URL http://192.168.0.109:3001/admin/loans</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:20:58.835048" elapsed="0.200419"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:59.036140" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:20:59.666427" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:59.035707" elapsed="0.631024"/>
+</kw>
+<arg>/admin/loans</arg>
+<status status="PASS" start="2026-08-28T01:20:58.834751" elapsed="0.832192"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:20:59.697663" level="INFO">Waited for Element with selector h1 at state visible</msg>
+<arg>h1</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:20:59.667262" elapsed="0.030576"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:20:59.737427" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="admin_loans.png" target="_blank"&gt;&lt;img src="admin_loans.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:20:59.698478" elapsed="0.039061"/>
+</kw>
+<arg>admin_loans</arg>
+<status status="PASS" start="2026-08-28T01:20:59.698072" elapsed="0.039549"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:58.831080" elapsed="0.906623"/>
+</test>
+<test id="s1-s2-t7" name="Admin Collections Page Loads" line="41">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:20:59.925136" level="INFO">Successfully opened URL http://192.168.0.109:3001/admin/collections</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:20:59.746502" elapsed="0.178786"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:20:59.925880" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:00.542172" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:20:59.925449" elapsed="0.617026"/>
+</kw>
+<arg>/admin/collections</arg>
+<status status="PASS" start="2026-08-28T01:20:59.746198" elapsed="0.796488"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:00.570047" level="INFO">Waited for Element with selector h1 at state visible</msg>
+<arg>h1</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:00.542990" elapsed="0.027221"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:00.620444" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="admin_collections.png" target="_blank"&gt;&lt;img src="admin_collections.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:00.570685" elapsed="0.049875"/>
+</kw>
+<arg>admin_collections</arg>
+<status status="PASS" start="2026-08-28T01:21:00.570407" elapsed="0.050236"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:59.742067" elapsed="0.878664"/>
+</test>
+<test id="s1-s2-t8" name="Admin Loan Requests Page Loads" line="46">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:00.808920" level="INFO">Successfully opened URL http://192.168.0.109:3001/admin/loan-requests</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:00.629794" elapsed="0.179347"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:00.809922" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:01.414962" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:00.809364" elapsed="0.605921"/>
+</kw>
+<arg>/admin/loan-requests</arg>
+<status status="PASS" start="2026-08-28T01:21:00.629498" elapsed="0.786133"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:01.451065" level="INFO">Waited for Element with selector h1 at state visible</msg>
+<arg>h1</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:01.415954" elapsed="0.035323"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:01.488475" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="admin_loan_requests.png" target="_blank"&gt;&lt;img src="admin_loan_requests.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:01.451920" elapsed="0.036673"/>
+</kw>
+<arg>admin_loan_requests</arg>
+<status status="PASS" start="2026-08-28T01:21:01.451536" elapsed="0.037142"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:00.625431" elapsed="0.863333"/>
+</test>
+<test id="s1-s2-t9" name="Admin Attendance Page Loads" line="51">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:01.680160" level="INFO">Successfully opened URL http://192.168.0.109:3001/admin/attendance</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:01.498995" elapsed="0.181310"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:01.680990" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:02.279391" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:01.680483" elapsed="0.599256"/>
+</kw>
+<arg>/admin/attendance</arg>
+<status status="PASS" start="2026-08-28T01:21:01.498677" elapsed="0.781300"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:02.308641" level="INFO">Waited for Element with selector h1 at state visible</msg>
+<arg>h1</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:02.280311" elapsed="0.028488"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:02.349100" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="admin_attendance.png" target="_blank"&gt;&lt;img src="admin_attendance.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:02.309281" elapsed="0.039955"/>
+</kw>
+<arg>admin_attendance</arg>
+<status status="PASS" start="2026-08-28T01:21:02.308990" elapsed="0.040330"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:01.494752" elapsed="0.854659"/>
+</test>
+<test id="s1-s2-t10" name="Admin Reconciliation Page Loads" line="56">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:02.534800" level="INFO">Successfully opened URL http://192.168.0.109:3001/admin/reconciliation</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:02.357819" elapsed="0.177128"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:02.535555" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:03.139661" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:02.535104" elapsed="0.604848"/>
+</kw>
+<arg>/admin/reconciliation</arg>
+<status status="PASS" start="2026-08-28T01:21:02.357532" elapsed="0.782651"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:03.167492" level="INFO">Waited for Element with selector h1 at state visible</msg>
+<arg>h1</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:03.140486" elapsed="0.027231"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:03.198301" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="admin_reconciliation.png" target="_blank"&gt;&lt;img src="admin_reconciliation.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:03.168537" elapsed="0.029877"/>
+</kw>
+<arg>admin_reconciliation</arg>
+<status status="PASS" start="2026-08-28T01:21:03.168030" elapsed="0.030476"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:02.353983" elapsed="0.844614"/>
+</test>
+<test id="s1-s2-t11" name="Admin Reports Page Loads" line="61">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:03.381361" level="INFO">Successfully opened URL http://192.168.0.109:3001/admin/reports</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:03.206964" elapsed="0.174544"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:03.382196" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:03.989067" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:03.381683" elapsed="0.607710"/>
+</kw>
+<arg>/admin/reports</arg>
+<status status="PASS" start="2026-08-28T01:21:03.206676" elapsed="0.782926"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:04.019718" level="INFO">Waited for Element with selector h1 at state visible</msg>
+<arg>h1</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:03.989904" elapsed="0.029956"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:04.067922" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="admin_reports.png" target="_blank"&gt;&lt;img src="admin_reports.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:04.020326" elapsed="0.047709"/>
+</kw>
+<arg>admin_reports</arg>
+<status status="PASS" start="2026-08-28T01:21:04.020046" elapsed="0.048146"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:03.203113" elapsed="0.865181"/>
+</test>
+<test id="s1-s2-t12" name="Admin Notification Bell Visible" line="66">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:04.349834" level="INFO">Successfully opened URL http://192.168.0.109:3001/dashboard</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:04.078493" elapsed="0.271504"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:04.350691" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:05.036538" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:04.350172" elapsed="0.686580"/>
+</kw>
+<arg>/dashboard</arg>
+<status status="PASS" start="2026-08-28T01:21:04.078177" elapsed="0.958719"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:05.037728" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:05.041172" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:05.037101" elapsed="0.004267"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:05.070236" level="INFO">Waited for Element with selector css=div.relative &gt; button &gt;&gt; nth=0 at state visible</msg>
+<arg>css=div.relative &gt; button &gt;&gt; nth=0</arg>
+<arg>visible</arg>
+<arg>timeout=10s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:05.041631" elapsed="0.028754"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:05.119124" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="admin_notification_bell.png" target="_blank"&gt;&lt;img src="admin_notification_bell.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:05.070864" elapsed="0.048389"/>
+</kw>
+<arg>admin_notification_bell</arg>
+<status status="PASS" start="2026-08-28T01:21:05.070585" elapsed="0.048755"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:04.073880" elapsed="1.045551"/>
+</test>
+<test id="s1-s2-t13" name="Admin Can Open Create Loan Dialog" line="73">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:05.329086" level="INFO">Successfully opened URL http://192.168.0.109:3001/admin/loans</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:05.129723" elapsed="0.199534"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:05.329823" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:05.963808" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:05.329423" elapsed="0.634684"/>
+</kw>
+<arg>/admin/loans</arg>
+<status status="PASS" start="2026-08-28T01:21:05.129422" elapsed="0.834925"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:21:05.965567" level="INFO">Clicks the element 'role=button[name="Create Loan"]'.</msg>
+<arg>role=button[name="Create Loan"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:05.964635" elapsed="0.148687"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:06.119147" level="INFO">Waited for Element with selector css=[role="dialog"] at state visible</msg>
+<arg>css=[role="dialog"]</arg>
+<arg>visible</arg>
+<arg>timeout=10s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:06.113509" elapsed="0.005784"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:06.234529" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="admin_create_loan_dialog.png" target="_blank"&gt;&lt;img src="admin_create_loan_dialog.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:06.119755" elapsed="0.114963"/>
+</kw>
+<arg>admin_create_loan_dialog</arg>
+<status status="PASS" start="2026-08-28T01:21:06.119482" elapsed="0.115359"/>
+</kw>
+<kw name="Keyboard Key" owner="Browser">
+<arg>press</arg>
+<arg>Escape</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Press a keyboard key on the virtual keyboard or set a key up or down.</doc>
+<status status="PASS" start="2026-08-28T01:21:06.234973" elapsed="0.059034"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:05.124805" elapsed="1.169487"/>
+</test>
+<kw name="Run Keywords" owner="BuiltIn" type="TEARDOWN">
+<kw name="Logout And Close" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:06.351681" level="INFO">Successfully opened URL http://192.168.0.109:3001/api/auth/signout</msg>
+<arg>${BASE_URL}/api/auth/signout</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:06.301318" elapsed="0.050517"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:06.352455" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:06.851830" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:06.352025" elapsed="0.499994"/>
+</kw>
+<kw name="Close Context" owner="Browser">
+<msg time="2026-08-28T01:21:06.854570" level="INFO">Switching browser to CURRENT</msg>
+<msg time="2026-08-28T01:21:06.856481" level="INFO">Returned active browser id. CURRENT</msg>
+<msg time="2026-08-28T01:21:06.858040" level="INFO">Switching context to CURRENT in CURRENT</msg>
+<msg time="2026-08-28T01:21:06.861858" level="INFO">Returned active context id: CURRENT</msg>
+<msg time="2026-08-28T01:21:06.862583" level="INFO">Switching context to context=7f404b7f-6810-4a10-a9ed-a340977f1962 in CURRENT</msg>
+<msg time="2026-08-28T01:21:06.866379" level="INFO">Successfully changed active context: context=7f404b7f-6810-4a10-a9ed-a340977f1962</msg>
+<msg time="2026-08-28T01:21:06.870953" level="INFO">Successfully closed Context</msg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Closes a Context.</doc>
+<status status="PASS" start="2026-08-28T01:21:06.852246" elapsed="0.018868"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:06.301125" elapsed="0.570090"/>
+</kw>
+<kw name="Close Browser" owner="Browser">
+<msg time="2026-08-28T01:21:06.890085" level="INFO">Closed browser</msg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Closes the current browser.</doc>
+<status status="PASS" start="2026-08-28T01:21:06.871414" elapsed="0.018921"/>
+</kw>
+<arg>Logout And Close</arg>
+<arg>AND</arg>
+<arg>Close Browser</arg>
+<doc>Executes all the given keywords in a sequence.</doc>
+<status status="PASS" start="2026-08-28T01:21:06.300647" elapsed="0.589761"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:20:51.344361" elapsed="15.546081"/>
+</suite>
+<suite id="s1-s3" name="03 Agent" source="/home/logesh/Coding/Projects/finance-tracker/tests/robot/suites/03_agent.robot">
+<kw name="Run Keywords" owner="BuiltIn" type="SETUP">
+<kw name="Open App" owner="common">
+<kw name="New Browser" owner="Browser">
+<msg time="2026-08-28T01:21:06.900662" level="INFO">{"browser": "chromium", "headless": true, "chromiumSandbox": false, "devtools": false, "handleSIGHUP": true, "handleSIGINT": true, "handleSIGTERM": true, "slowMo": 0.0, "timeout": 30000.0, "tracesDir": "/home/logesh/Coding/Projects/finance-tracker/tests/robot/results/browser/traces/temp/bdce9d6c-9779-4abb-83b6-9522fa203c1b"}</msg>
+<msg time="2026-08-28T01:21:06.949529" level="INFO">Successfully created browser with options: {"browser":"chromium","headless":true,"chromiumSandbox":false,"devtools":false,"handleSIGHUP":true,"handleSIGINT":true,"handleSIGTERM":true,"slowMo":0,"timeout":30000,"tracesDir":"/home/logesh/Coding/Projects/finance-tracker/tests/robot/results/browser/traces/temp/bdce9d6c-9779-4abb-83b6-9522fa203c1b"}</msg>
+<arg>browser=${BROWSER}</arg>
+<arg>headless=${HEADLESS}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Create a new playwright Browser with specified options.</doc>
+<status status="PASS" start="2026-08-28T01:21:06.900207" elapsed="0.049539"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:06.900049" elapsed="0.049807"/>
+</kw>
+<kw name="Login As Agent" owner="common">
+<kw name="New Context" owner="Browser">
+<msg time="2026-08-28T01:21:06.951320" level="INFO">{
+  "acceptDownloads": true,
+  "bypassCSP": false,
+  "forcedColors": "none",
+  "ignoreHTTPSErrors": false,
+  "javaScriptEnabled": true,
+  "offline": false,
+  "reducedMotion": "no-preference",
+  "serviceWorkers": "allow",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  }
+}</msg>
+<msg time="2026-08-28T01:21:06.956285" level="INFO">Successfully created context. </msg>
+<msg time="2026-08-28T01:21:06.956370" level="INFO">{'acceptDownloads': True, 'bypassCSP': False, 'forcedColors': 'none', 'ignoreHTTPSErrors': False, 'javaScriptEnabled': True, 'offline': False, 'reducedMotion': 'no-preference', 'serviceWorkers': 'allow', 'viewport': {'width': 1280, 'height': 800}}</msg>
+<arg>viewport={'width': 1280, 'height': 800}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Create a new BrowserContext with specified options.</doc>
+<status status="PASS" start="2026-08-28T01:21:06.950301" elapsed="0.006132"/>
+</kw>
+<kw name="New Page" owner="Browser">
+<msg time="2026-08-28T01:21:07.196063" level="INFO">Successfully initialized new page object and opened url: http://192.168.0.109:3001/login</msg>
+<arg>${BASE_URL}/login</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Open a new Page.</doc>
+<status status="PASS" start="2026-08-28T01:21:06.956600" elapsed="0.239700"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:07.248513" level="INFO">Waited for Element with selector id=email at state visible</msg>
+<arg>id=email</arg>
+<arg>visible</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:07.196517" elapsed="0.052148"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:21:07.249278" level="INFO">Fills the text 'agent@demo.com' in the given field.</msg>
+<arg>id=email</arg>
+<arg>${AGENT_EMAIL}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:07.248836" elapsed="0.052671"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:21:07.302458" level="INFO">Fills the text 'Demo@1234' in the given field.</msg>
+<arg>id=password</arg>
+<arg>${AGENT_PASS}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:07.301800" elapsed="0.014543"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:21:07.316910" level="INFO">Clicks the element 'css=button[type="submit"]'.</msg>
+<arg>css=button[type="submit"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:07.316525" elapsed="0.420496"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:07.737642" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:08.803115" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:07.737211" elapsed="1.066223"/>
+</kw>
+<kw name="Get Url" owner="Browser">
+<msg time="2026-08-28T01:21:08.807812" level="INFO">${url} = http://192.168.0.109:3001/dashboard</msg>
+<var>${url}</var>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns the current URL.</doc>
+<status status="PASS" start="2026-08-28T01:21:08.803792" elapsed="0.004052"/>
+</kw>
+<kw name="Should Not Contain" owner="BuiltIn">
+<arg>${url}</arg>
+<arg>/login</arg>
+<doc>Fails if ``container`` contains ``item`` one or more times.</doc>
+<status status="PASS" start="2026-08-28T01:21:08.807969" elapsed="0.000298"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:06.950045" elapsed="1.858276"/>
+</kw>
+<arg>Open App</arg>
+<arg>AND</arg>
+<arg>Login As Agent</arg>
+<doc>Executes all the given keywords in a sequence.</doc>
+<status status="PASS" start="2026-08-28T01:21:06.899685" elapsed="1.908673"/>
+</kw>
+<test id="s1-s3-t1" name="Agent Dashboard Loads" line="8">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:08.992494" level="INFO">Successfully opened URL http://192.168.0.109:3001/dashboard</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:08.813289" elapsed="0.179410"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:08.993541" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:09.588184" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:08.992924" elapsed="0.595581"/>
+</kw>
+<arg>/dashboard</arg>
+<status status="PASS" start="2026-08-28T01:21:08.812769" elapsed="0.775966"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:09.590087" level="INFO">Waiting page load to state to receive networkidle in 20000.0</msg>
+<msg time="2026-08-28T01:21:09.594558" level="INFO">Load state networkidle got in 20000</msg>
+<arg>networkidle</arg>
+<arg>timeout=20s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:09.589033" elapsed="0.005827"/>
+</kw>
+<kw name="Get Url" owner="Browser">
+<msg time="2026-08-28T01:21:09.596967" level="INFO">${url} = http://192.168.0.109:3001/dashboard</msg>
+<var>${url}</var>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns the current URL.</doc>
+<status status="PASS" start="2026-08-28T01:21:09.595231" elapsed="0.001765"/>
+</kw>
+<kw name="Should Contain" owner="BuiltIn">
+<arg>${url}</arg>
+<arg>/dashboard</arg>
+<doc>Fails if ``container`` does not contain ``item`` one or more times.</doc>
+<status status="PASS" start="2026-08-28T01:21:09.597179" elapsed="0.000268"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:09.638329" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="agent_dashboard.png" target="_blank"&gt;&lt;img src="agent_dashboard.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:09.597718" elapsed="0.040731"/>
+</kw>
+<arg>agent_dashboard</arg>
+<status status="PASS" start="2026-08-28T01:21:09.597550" elapsed="0.040987"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:08.808409" elapsed="0.830219"/>
+</test>
+<test id="s1-s3-t2" name="Agent Loans Page Loads" line="15">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:09.820836" level="INFO">Successfully opened URL http://192.168.0.109:3001/loans</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:09.648914" elapsed="0.172132"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:09.821841" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:10.509192" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:09.821277" elapsed="0.688207"/>
+</kw>
+<arg>/loans</arg>
+<status status="PASS" start="2026-08-28T01:21:09.648598" elapsed="0.861095"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:10.544615" level="INFO">Waited for Element with selector h1 at state visible</msg>
+<arg>h1</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:10.509987" elapsed="0.034778"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:10.581853" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="agent_loans.png" target="_blank"&gt;&lt;img src="agent_loans.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:10.545277" elapsed="0.036695"/>
+</kw>
+<arg>agent_loans</arg>
+<status status="PASS" start="2026-08-28T01:21:10.544960" elapsed="0.037102"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:09.643717" elapsed="0.938470"/>
+</test>
+<test id="s1-s3-t3" name="Agent Loans Shows Request Loan Button" line="20">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:10.751211" level="INFO">Successfully opened URL http://192.168.0.109:3001/loans</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:10.590612" elapsed="0.160797"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:10.752177" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:11.405984" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:10.751632" elapsed="0.654676"/>
+</kw>
+<arg>/loans</arg>
+<status status="PASS" start="2026-08-28T01:21:10.590327" elapsed="0.816197"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:11.441651" level="INFO">Waited for Element with selector role=button[name="Request Loan"] at state visible</msg>
+<arg>role=button[name="Request Loan"]</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:11.406818" elapsed="0.034979"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:11.487812" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="agent_loans_request_button.png" target="_blank"&gt;&lt;img src="agent_loans_request_button.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:11.442291" elapsed="0.045636"/>
+</kw>
+<arg>agent_loans_request_button</arg>
+<status status="PASS" start="2026-08-28T01:21:11.441994" elapsed="0.046020"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:10.586943" elapsed="0.901155"/>
+</test>
+<test id="s1-s3-t4" name="Agent Can Open Request Loan Dialog" line="25">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:11.654326" level="INFO">Successfully opened URL http://192.168.0.109:3001/loans</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:11.496765" elapsed="0.157707"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:11.655019" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:12.317293" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:11.654629" elapsed="0.662975"/>
+</kw>
+<arg>/loans</arg>
+<status status="PASS" start="2026-08-28T01:21:11.496466" elapsed="0.821369"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:21:12.319058" level="INFO">Clicks the element 'role=button[name="Request Loan"]'.</msg>
+<arg>role=button[name="Request Loan"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:12.318171" elapsed="0.112622"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:12.437260" level="INFO">Waited for Element with selector css=[role="dialog"] at state visible</msg>
+<arg>css=[role="dialog"]</arg>
+<arg>visible</arg>
+<arg>timeout=10s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:12.431035" elapsed="0.006372"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:12.567022" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="agent_request_loan_dialog.png" target="_blank"&gt;&lt;img src="agent_request_loan_dialog.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:12.437885" elapsed="0.129276"/>
+</kw>
+<arg>agent_request_loan_dialog</arg>
+<status status="PASS" start="2026-08-28T01:21:12.437603" elapsed="0.129707"/>
+</kw>
+<kw name="Keyboard Key" owner="Browser">
+<arg>press</arg>
+<arg>Escape</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Press a keyboard key on the virtual keyboard or set a key up or down.</doc>
+<status status="PASS" start="2026-08-28T01:21:12.567446" elapsed="0.035018"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:11.492778" elapsed="1.109968"/>
+</test>
+<test id="s1-s3-t5" name="Agent Request Loan Dialog Has Mode Toggle" line="32">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:12.781142" level="INFO">Successfully opened URL http://192.168.0.109:3001/loans</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:12.613906" elapsed="0.167465"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:12.782178" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:13.446076" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:12.781637" elapsed="0.664766"/>
+</kw>
+<arg>/loans</arg>
+<status status="PASS" start="2026-08-28T01:21:12.613447" elapsed="0.833174"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:21:13.447813" level="INFO">Clicks the element 'role=button[name="Request Loan"]'.</msg>
+<arg>role=button[name="Request Loan"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:13.446913" elapsed="0.109132"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:13.563580" level="INFO">Waited for Element with selector text=Existing Customer at state visible</msg>
+<arg>text=Existing Customer</arg>
+<arg>visible</arg>
+<arg>timeout=10s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:13.556248" elapsed="0.007481"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:13.570521" level="INFO">Waited for Element with selector text=New Customer at state visible</msg>
+<arg>text=New Customer</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:13.563902" elapsed="0.006782"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:13.712146" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="agent_request_loan_mode_toggle.png" target="_blank"&gt;&lt;img src="agent_request_loan_mode_toggle.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:13.571198" elapsed="0.141078"/>
+</kw>
+<arg>agent_request_loan_mode_toggle</arg>
+<status status="PASS" start="2026-08-28T01:21:13.570897" elapsed="0.141473"/>
+</kw>
+<kw name="Keyboard Key" owner="Browser">
+<arg>press</arg>
+<arg>Escape</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Press a keyboard key on the virtual keyboard or set a key up or down.</doc>
+<status status="PASS" start="2026-08-28T01:21:13.712501" elapsed="0.034749"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:12.608377" elapsed="1.139176"/>
+</test>
+<test id="s1-s3-t6" name="Agent Collections Page Loads" line="40">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:13.983931" level="INFO">Successfully opened URL http://192.168.0.109:3001/collections</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:13.760912" elapsed="0.223424"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:13.986432" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:14.605385" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:13.984919" elapsed="0.620761"/>
+</kw>
+<arg>/collections</arg>
+<status status="PASS" start="2026-08-28T01:21:13.760556" elapsed="0.845355"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:14.636286" level="INFO">Waited for Element with selector h1 at state visible</msg>
+<arg>h1</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:14.606231" elapsed="0.030204"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:14.674961" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="agent_collections.png" target="_blank"&gt;&lt;img src="agent_collections.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:14.636926" elapsed="0.038155"/>
+</kw>
+<arg>agent_collections</arg>
+<status status="PASS" start="2026-08-28T01:21:14.636637" elapsed="0.038539"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:13.754924" elapsed="0.920340"/>
+</test>
+<test id="s1-s3-t7" name="Agent Collections Record Button Visible" line="45">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:14.852525" level="INFO">Successfully opened URL http://192.168.0.109:3001/collections</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:14.683049" elapsed="0.169678"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:14.853412" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:15.456919" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:14.852930" elapsed="0.604327"/>
+</kw>
+<arg>/collections</arg>
+<status status="PASS" start="2026-08-28T01:21:14.682768" elapsed="0.774703"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:15.491296" level="INFO">Waited for Element with selector role=button[name="Record Collection"] at state visible</msg>
+<arg>role=button[name="Record Collection"]</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:15.457764" elapsed="0.033678"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:15.540888" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="agent_collections_record_button.png" target="_blank"&gt;&lt;img src="agent_collections_record_button.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:15.491916" elapsed="0.049291"/>
+</kw>
+<arg>agent_collections_record_button</arg>
+<status status="PASS" start="2026-08-28T01:21:15.491634" elapsed="0.049738"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:14.679639" elapsed="0.861854"/>
+</test>
+<test id="s1-s3-t8" name="Agent Customers Page Loads" line="50">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:15.723231" level="INFO">Successfully opened URL http://192.168.0.109:3001/customers</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:15.551181" elapsed="0.172195"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:15.723919" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:16.303094" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:15.723536" elapsed="0.579878"/>
+</kw>
+<arg>/customers</arg>
+<status status="PASS" start="2026-08-28T01:21:15.550765" elapsed="0.752864"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:16.335351" level="INFO">Waited for Element with selector h1 at state visible</msg>
+<arg>h1</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:16.303930" elapsed="0.031601"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:16.381223" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="agent_customers.png" target="_blank"&gt;&lt;img src="agent_customers.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:16.336149" elapsed="0.045189"/>
+</kw>
+<arg>agent_customers</arg>
+<status status="PASS" start="2026-08-28T01:21:16.335775" elapsed="0.045645"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:15.546747" elapsed="0.834754"/>
+</test>
+<test id="s1-s3-t9" name="Agent Customers Shows Outstanding Column" line="55">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:16.562901" level="INFO">Successfully opened URL http://192.168.0.109:3001/customers</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:16.391485" elapsed="0.171571"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:16.563653" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:17.152532" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:16.563236" elapsed="0.589602"/>
+</kw>
+<arg>/customers</arg>
+<status status="PASS" start="2026-08-28T01:21:16.391151" elapsed="0.761897"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:17.191152" level="INFO">Waited for Element with selector text=Outstanding at state visible</msg>
+<arg>text=Outstanding</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:17.153387" elapsed="0.037912"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:17.230265" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="agent_customers_outstanding.png" target="_blank"&gt;&lt;img src="agent_customers_outstanding.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:17.191777" elapsed="0.038599"/>
+</kw>
+<arg>agent_customers_outstanding</arg>
+<status status="PASS" start="2026-08-28T01:21:17.191497" elapsed="0.038958"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:16.386909" elapsed="0.843626"/>
+</test>
+<test id="s1-s3-t10" name="Agent Attendance Page Loads" line="60">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:17.389497" level="INFO">Successfully opened URL http://192.168.0.109:3001/attendance</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:17.238820" elapsed="0.150827"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:17.390344" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:17.981281" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:17.389811" elapsed="0.591766"/>
+</kw>
+<arg>/attendance</arg>
+<status status="PASS" start="2026-08-28T01:21:17.238525" elapsed="0.743264"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:18.007846" level="INFO">Waited for Element with selector h1 at state visible</msg>
+<arg>h1</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:17.982092" elapsed="0.025963"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:18.036498" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="agent_attendance.png" target="_blank"&gt;&lt;img src="agent_attendance.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:18.008686" elapsed="0.027925"/>
+</kw>
+<arg>agent_attendance</arg>
+<status status="PASS" start="2026-08-28T01:21:18.008315" elapsed="0.028379"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:17.234861" elapsed="0.801919"/>
+</test>
+<test id="s1-s3-t11" name="Agent Reconciliation Page Loads" line="65">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:18.200374" level="INFO">Successfully opened URL http://192.168.0.109:3001/reconciliation</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:18.045035" elapsed="0.155492"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:18.201048" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:18.791157" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:18.200685" elapsed="0.590947"/>
+</kw>
+<arg>/reconciliation</arg>
+<status status="PASS" start="2026-08-28T01:21:18.044759" elapsed="0.747122"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:18.818163" level="INFO">Waited for Element with selector h1 at state visible</msg>
+<arg>h1</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:18.792273" elapsed="0.026084"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:18.863020" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="agent_reconciliation.png" target="_blank"&gt;&lt;img src="agent_reconciliation.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:18.819015" elapsed="0.044129"/>
+</kw>
+<arg>agent_reconciliation</arg>
+<status status="PASS" start="2026-08-28T01:21:18.818623" elapsed="0.044613"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:18.041612" elapsed="0.821712"/>
+</test>
+<test id="s1-s3-t12" name="Agent Notification Bell Visible" line="70">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:19.031374" level="INFO">Successfully opened URL http://192.168.0.109:3001/dashboard</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:18.871964" elapsed="0.159576"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:19.032108" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:19.618352" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:19.031706" elapsed="0.586966"/>
+</kw>
+<arg>/dashboard</arg>
+<status status="PASS" start="2026-08-28T01:21:18.871670" elapsed="0.747182"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:19.619339" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:19.621427" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:19.618975" elapsed="0.002564"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:19.659083" level="INFO">Waited for Element with selector css=div.relative &gt; button &gt;&gt; nth=0 at state visible</msg>
+<arg>css=div.relative &gt; button &gt;&gt; nth=0</arg>
+<arg>visible</arg>
+<arg>timeout=10s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:19.621675" elapsed="0.037563"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:19.685304" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="agent_notification_bell.png" target="_blank"&gt;&lt;img src="agent_notification_bell.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:19.659720" elapsed="0.025700"/>
+</kw>
+<arg>agent_notification_bell</arg>
+<status status="PASS" start="2026-08-28T01:21:19.659436" elapsed="0.026063"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:18.868124" elapsed="0.817456"/>
+</test>
+<test id="s1-s3-t13" name="Agent Cannot Access Admin Pages" line="77">
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:19.929639" level="INFO">Successfully opened URL http://192.168.0.109:3001/admin/customers</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:19.694211" elapsed="0.235584"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:19.930486" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:20.511763" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:19.930007" elapsed="0.582053"/>
+</kw>
+<arg>/admin/customers</arg>
+<status status="PASS" start="2026-08-28T01:21:19.693907" elapsed="0.818407"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:20.513525" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:20.518305" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:20.512614" elapsed="0.005955"/>
+</kw>
+<kw name="Get Url" owner="Browser">
+<msg time="2026-08-28T01:21:20.521886" level="INFO">${url} = http://192.168.0.109:3001/dashboard</msg>
+<var>${url}</var>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns the current URL.</doc>
+<status status="PASS" start="2026-08-28T01:21:20.518916" elapsed="0.002997"/>
+</kw>
+<kw name="Should Not Contain" owner="BuiltIn">
+<arg>${url}</arg>
+<arg>/admin/customers</arg>
+<doc>Fails if ``container`` contains ``item`` one or more times.</doc>
+<status status="PASS" start="2026-08-28T01:21:20.522026" elapsed="0.000261"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:20.557788" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="agent_admin_blocked.png" target="_blank"&gt;&lt;img src="agent_admin_blocked.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:20.522561" elapsed="0.035345"/>
+</kw>
+<arg>agent_admin_blocked</arg>
+<status status="PASS" start="2026-08-28T01:21:20.522389" elapsed="0.035605"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:19.690333" elapsed="0.867747"/>
+</test>
+<kw name="Run Keywords" owner="BuiltIn" type="TEARDOWN">
+<kw name="Logout And Close" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:20.613665" level="INFO">Successfully opened URL http://192.168.0.109:3001/api/auth/signout</msg>
+<arg>${BASE_URL}/api/auth/signout</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:20.563611" elapsed="0.050268"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:20.614600" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:21.113052" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:20.614112" elapsed="0.499159"/>
+</kw>
+<kw name="Close Context" owner="Browser">
+<msg time="2026-08-28T01:21:21.115331" level="INFO">Switching browser to CURRENT</msg>
+<msg time="2026-08-28T01:21:21.116905" level="INFO">Returned active browser id. CURRENT</msg>
+<msg time="2026-08-28T01:21:21.118229" level="INFO">Switching context to CURRENT in CURRENT</msg>
+<msg time="2026-08-28T01:21:21.121636" level="INFO">Returned active context id: CURRENT</msg>
+<msg time="2026-08-28T01:21:21.122138" level="INFO">Switching context to context=a26df1a4-038f-4a3e-8a25-1807056af64d in CURRENT</msg>
+<msg time="2026-08-28T01:21:21.125780" level="INFO">Successfully changed active context: context=a26df1a4-038f-4a3e-8a25-1807056af64d</msg>
+<msg time="2026-08-28T01:21:21.130282" level="INFO">Successfully closed Context</msg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Closes a Context.</doc>
+<status status="PASS" start="2026-08-28T01:21:21.113435" elapsed="0.017005"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:20.563458" elapsed="0.567072"/>
+</kw>
+<kw name="Close Browser" owner="Browser">
+<msg time="2026-08-28T01:21:21.207001" level="INFO">Closed browser</msg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Closes the current browser.</doc>
+<status status="PASS" start="2026-08-28T01:21:21.130665" elapsed="0.076517"/>
+</kw>
+<arg>Logout And Close</arg>
+<arg>AND</arg>
+<arg>Close Browser</arg>
+<doc>Executes all the given keywords in a sequence.</doc>
+<status status="PASS" start="2026-08-28T01:21:20.563007" elapsed="0.644252"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:06.895144" elapsed="14.312149"/>
+</suite>
+<suite id="s1-s4" name="04 Loan Collection Workflow" source="/home/logesh/Coding/Projects/finance-tracker/tests/robot/suites/04_loan_collection_workflow.robot">
+<kw name="Open App" owner="common" type="SETUP">
+<kw name="New Browser" owner="Browser">
+<msg time="2026-08-28T01:21:21.217126" level="INFO">{"browser": "chromium", "headless": true, "chromiumSandbox": false, "devtools": false, "handleSIGHUP": true, "handleSIGINT": true, "handleSIGTERM": true, "slowMo": 0.0, "timeout": 30000.0, "tracesDir": "/home/logesh/Coding/Projects/finance-tracker/tests/robot/results/browser/traces/temp/b6ba8dd2-8963-4419-a70a-759c385cd4c5"}</msg>
+<msg time="2026-08-28T01:21:21.270880" level="INFO">Successfully created browser with options: {"browser":"chromium","headless":true,"chromiumSandbox":false,"devtools":false,"handleSIGHUP":true,"handleSIGINT":true,"handleSIGTERM":true,"slowMo":0,"timeout":30000,"tracesDir":"/home/logesh/Coding/Projects/finance-tracker/tests/robot/results/browser/traces/temp/b6ba8dd2-8963-4419-a70a-759c385cd4c5"}</msg>
+<arg>browser=${BROWSER}</arg>
+<arg>headless=${HEADLESS}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Create a new playwright Browser with specified options.</doc>
+<status status="PASS" start="2026-08-28T01:21:21.216617" elapsed="0.054527"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:21.216328" elapsed="0.054978"/>
+</kw>
+<test id="s1-s4-t1" name="Agent Submits Loan Request For New Customer" line="8">
+<kw name="Login As Agent" owner="common">
+<kw name="New Context" owner="Browser">
+<msg time="2026-08-28T01:21:21.277725" level="INFO">{
+  "acceptDownloads": true,
+  "bypassCSP": false,
+  "forcedColors": "none",
+  "ignoreHTTPSErrors": false,
+  "javaScriptEnabled": true,
+  "offline": false,
+  "reducedMotion": "no-preference",
+  "serviceWorkers": "allow",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  }
+}</msg>
+<msg time="2026-08-28T01:21:21.283418" level="INFO">Successfully created context. </msg>
+<msg time="2026-08-28T01:21:21.283495" level="INFO">{'acceptDownloads': True, 'bypassCSP': False, 'forcedColors': 'none', 'ignoreHTTPSErrors': False, 'javaScriptEnabled': True, 'offline': False, 'reducedMotion': 'no-preference', 'serviceWorkers': 'allow', 'viewport': {'width': 1280, 'height': 800}}</msg>
+<arg>viewport={'width': 1280, 'height': 800}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Create a new BrowserContext with specified options.</doc>
+<status status="PASS" start="2026-08-28T01:21:21.276222" elapsed="0.007332"/>
+</kw>
+<kw name="New Page" owner="Browser">
+<msg time="2026-08-28T01:21:21.520851" level="INFO">Successfully initialized new page object and opened url: http://192.168.0.109:3001/login</msg>
+<arg>${BASE_URL}/login</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Open a new Page.</doc>
+<status status="PASS" start="2026-08-28T01:21:21.283714" elapsed="0.237302"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:21.569949" level="INFO">Waited for Element with selector id=email at state visible</msg>
+<arg>id=email</arg>
+<arg>visible</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:21.521179" elapsed="0.048919"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:21:21.570674" level="INFO">Fills the text 'agent@demo.com' in the given field.</msg>
+<arg>id=email</arg>
+<arg>${AGENT_EMAIL}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:21.570262" elapsed="0.041931"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:21:21.613077" level="INFO">Fills the text 'Demo@1234' in the given field.</msg>
+<arg>id=password</arg>
+<arg>${AGENT_PASS}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:21.612456" elapsed="0.011701"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:21:21.624712" level="INFO">Clicks the element 'css=button[type="submit"]'.</msg>
+<arg>css=button[type="submit"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:21.624344" elapsed="0.446306"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:22.071291" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:23.152695" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:22.070830" elapsed="1.082174"/>
+</kw>
+<kw name="Get Url" owner="Browser">
+<msg time="2026-08-28T01:21:23.157900" level="INFO">${url} = http://192.168.0.109:3001/dashboard</msg>
+<var>${url}</var>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns the current URL.</doc>
+<status status="PASS" start="2026-08-28T01:21:23.153402" elapsed="0.004587"/>
+</kw>
+<kw name="Should Not Contain" owner="BuiltIn">
+<arg>${url}</arg>
+<arg>/login</arg>
+<doc>Fails if ``container`` contains ``item`` one or more times.</doc>
+<status status="PASS" start="2026-08-28T01:21:23.158326" elapsed="0.000751"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:21.275786" elapsed="1.883473"/>
+</kw>
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:23.350001" level="INFO">Successfully opened URL http://192.168.0.109:3001/loans</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:23.160144" elapsed="0.190044"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:23.350754" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:24.031307" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:23.350386" elapsed="0.681290"/>
+</kw>
+<arg>/loans</arg>
+<status status="PASS" start="2026-08-28T01:21:23.159559" elapsed="0.872597"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:21:24.033509" level="INFO">Clicks the element 'role=button[name="Request Loan"]'.</msg>
+<arg>role=button[name="Request Loan"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:24.032551" elapsed="0.098606"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:24.137228" level="INFO">Waited for Element with selector css=[role="dialog"] at state visible</msg>
+<arg>css=[role="dialog"]</arg>
+<arg>visible</arg>
+<arg>timeout=10s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:24.131352" elapsed="0.006033"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:24.144633" level="INFO">Waited for Element with selector text=New Customer at state visible</msg>
+<arg>text=New Customer</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:24.137556" elapsed="0.007240"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:21:24.145381" level="INFO">Clicks the element 'text=New Customer'.</msg>
+<arg>text=New Customer</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:24.144967" elapsed="0.164113"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:21:24.309700" level="INFO">Fills the text 'RobotTest Customer' in the given field.</msg>
+<arg>css=input[placeholder="Full name"]</arg>
+<arg>RobotTest Customer</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:24.309292" elapsed="0.032422"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:21:24.342433" level="INFO">Fills the text '9999999999' in the given field.</msg>
+<arg>css=input[placeholder="Phone number"]</arg>
+<arg>9999999999</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:24.341905" elapsed="0.032245"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:21:24.374813" level="INFO">Fills the text 'Test Area' in the given field.</msg>
+<arg>css=input[placeholder="Area / locality"]</arg>
+<arg>Test Area</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:24.374376" elapsed="0.042968"/>
+</kw>
+<kw name="Get Elements" owner="Browser">
+<msg time="2026-08-28T01:21:24.428204" level="INFO">Found 4 Locators successfully.</msg>
+<msg time="2026-08-28T01:21:24.428439" level="INFO">${inputs} = ['css=[role="dialog"] input[type="number"] &gt;&gt; nth=0', 'css=[role="dialog"] input[type="number"] &gt;&gt; nth=1', 'css=[role="dialog"] input[type="number"] &gt;&gt; nth=2', 'css=[role="dialog"] input[type="number"...</msg>
+<var>${inputs}</var>
+<arg>css=[role="dialog"] input[type="number"]</arg>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns a list of selector strings, one for each element matched by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:24.417546" elapsed="0.010920"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:21:24.429128" level="INFO">Fills the text '5000' in the given field.</msg>
+<arg>${inputs}[0]</arg>
+<arg>5000</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:24.428650" elapsed="0.033337"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:21:24.462961" level="INFO">Fills the text '10' in the given field.</msg>
+<arg>${inputs}[1]</arg>
+<arg>10</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:24.462255" elapsed="0.034132"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:21:24.497177" level="INFO">Fills the text '100' in the given field.</msg>
+<arg>${inputs}[2]</arg>
+<arg>100</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:24.496603" elapsed="0.029888"/>
+</kw>
+<kw name="Get Current Date" owner="DateTime">
+<msg time="2026-08-28T01:21:24.527454" level="INFO">${today} = 2026-08-28</msg>
+<var>${today}</var>
+<arg>result_format=%Y-%m-%d</arg>
+<doc>Returns current local or UTC time with an optional increment.</doc>
+<status status="PASS" start="2026-08-28T01:21:24.526838" elapsed="0.000667"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:21:24.528197" level="INFO">Fills the text '2026-08-28' in the given field.</msg>
+<arg>css=input[type="date"]</arg>
+<arg>${today}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:24.527704" elapsed="0.029988"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:21:24.558501" level="INFO">Clicks the element 'role=button[name="Submit Request"]'.</msg>
+<arg>role=button[name="Submit Request"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:24.557911" elapsed="0.086814"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:24.706124" level="INFO">Waited for Element with selector text=submitted at state visible</msg>
+<arg>text=submitted</arg>
+<arg>visible</arg>
+<arg>timeout=10s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:24.644915" elapsed="0.061349"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:24.837623" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="loan_request_submitted.png" target="_blank"&gt;&lt;img src="loan_request_submitted.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:24.706794" elapsed="0.130979"/>
+</kw>
+<arg>loan_request_submitted</arg>
+<status status="PASS" start="2026-08-28T01:21:24.706476" elapsed="0.131389"/>
+</kw>
+<kw name="Logout And Close" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:24.915180" level="INFO">Successfully opened URL http://192.168.0.109:3001/api/auth/signout</msg>
+<arg>${BASE_URL}/api/auth/signout</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:24.838301" elapsed="0.077103"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:24.916242" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:25.415304" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:24.915640" elapsed="0.499812"/>
+</kw>
+<kw name="Close Context" owner="Browser">
+<msg time="2026-08-28T01:21:25.417580" level="INFO">Switching browser to CURRENT</msg>
+<msg time="2026-08-28T01:21:25.419186" level="INFO">Returned active browser id. CURRENT</msg>
+<msg time="2026-08-28T01:21:25.420671" level="INFO">Switching context to CURRENT in CURRENT</msg>
+<msg time="2026-08-28T01:21:25.424033" level="INFO">Returned active context id: CURRENT</msg>
+<msg time="2026-08-28T01:21:25.424567" level="INFO">Switching context to context=a6c3e384-9dd8-4347-9af2-206f8ad0013b in CURRENT</msg>
+<msg time="2026-08-28T01:21:25.447902" level="INFO">Successfully changed active context: context=a6c3e384-9dd8-4347-9af2-206f8ad0013b</msg>
+<msg time="2026-08-28T01:21:25.452831" level="INFO">Successfully closed Context</msg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Closes a Context.</doc>
+<status status="PASS" start="2026-08-28T01:21:25.415684" elapsed="0.037328"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:24.838017" elapsed="0.615088"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:21.271398" elapsed="4.181835"/>
+</test>
+<test id="s1-s4-t2" name="Admin Reviews Pending Loan Request" line="29">
+<kw name="Login As Admin" owner="common">
+<kw name="New Context" owner="Browser">
+<msg time="2026-08-28T01:21:25.460732" level="INFO">{
+  "acceptDownloads": true,
+  "bypassCSP": false,
+  "forcedColors": "none",
+  "ignoreHTTPSErrors": false,
+  "javaScriptEnabled": true,
+  "offline": false,
+  "reducedMotion": "no-preference",
+  "serviceWorkers": "allow",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  }
+}</msg>
+<msg time="2026-08-28T01:21:25.464967" level="INFO">Successfully created context. </msg>
+<msg time="2026-08-28T01:21:25.465046" level="INFO">{'acceptDownloads': True, 'bypassCSP': False, 'forcedColors': 'none', 'ignoreHTTPSErrors': False, 'javaScriptEnabled': True, 'offline': False, 'reducedMotion': 'no-preference', 'serviceWorkers': 'allow', 'viewport': {'width': 1280, 'height': 800}}</msg>
+<arg>viewport={'width': 1280, 'height': 800}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Create a new BrowserContext with specified options.</doc>
+<status status="PASS" start="2026-08-28T01:21:25.459715" elapsed="0.005390"/>
+</kw>
+<kw name="New Page" owner="Browser">
+<msg time="2026-08-28T01:21:25.716972" level="INFO">Successfully initialized new page object and opened url: http://192.168.0.109:3001/login</msg>
+<arg>${BASE_URL}/login</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Open a new Page.</doc>
+<status status="PASS" start="2026-08-28T01:21:25.465278" elapsed="0.251895"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:25.767758" level="INFO">Waited for Element with selector id=email at state visible</msg>
+<arg>id=email</arg>
+<arg>visible</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:25.717336" elapsed="0.050591"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:21:25.768593" level="INFO">Fills the text 'admin@demo.com' in the given field.</msg>
+<arg>id=email</arg>
+<arg>${ADMIN_EMAIL}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:25.768097" elapsed="0.040553"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:21:25.809545" level="INFO">Fills the text 'Demo@1234' in the given field.</msg>
+<arg>id=password</arg>
+<arg>${ADMIN_PASS}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:25.808920" elapsed="0.013246"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:21:25.823040" level="INFO">Clicks the element 'css=button[type="submit"]'.</msg>
+<arg>css=button[type="submit"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:25.822451" elapsed="0.050736"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:25.874085" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:27.173374" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:25.873440" elapsed="1.300170"/>
+</kw>
+<kw name="Get Url" owner="Browser">
+<msg time="2026-08-28T01:21:27.177511" level="INFO">${url} = http://192.168.0.109:3001/dashboard</msg>
+<var>${url}</var>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns the current URL.</doc>
+<status status="PASS" start="2026-08-28T01:21:27.173888" elapsed="0.003678"/>
+</kw>
+<kw name="Should Not Contain" owner="BuiltIn">
+<arg>${url}</arg>
+<arg>/login</arg>
+<doc>Fails if ``container`` contains ``item`` one or more times.</doc>
+<status status="PASS" start="2026-08-28T01:21:27.177768" elapsed="0.000472"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:25.459291" elapsed="1.719043"/>
+</kw>
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:27.372549" level="INFO">Successfully opened URL http://192.168.0.109:3001/admin/loan-requests</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:27.178818" elapsed="0.193887"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:27.373300" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:27.991510" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:27.372869" elapsed="0.618935"/>
+</kw>
+<arg>/admin/loan-requests</arg>
+<status status="PASS" start="2026-08-28T01:21:27.178502" elapsed="0.813515"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:28.020056" level="INFO">Waited for Element with selector h1 at state visible</msg>
+<arg>h1</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:27.992342" elapsed="0.027899"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:28.065748" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="admin_loan_requests_pending.png" target="_blank"&gt;&lt;img src="admin_loan_requests_pending.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:28.020774" elapsed="0.045088"/>
+</kw>
+<arg>admin_loan_requests_pending</arg>
+<status status="PASS" start="2026-08-28T01:21:28.020459" elapsed="0.045483"/>
+</kw>
+<kw name="Logout And Close" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:28.110708" level="INFO">Successfully opened URL http://192.168.0.109:3001/api/auth/signout</msg>
+<arg>${BASE_URL}/api/auth/signout</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:28.066336" elapsed="0.044549"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:28.111475" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:28.610487" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:28.111053" elapsed="0.499586"/>
+</kw>
+<kw name="Close Context" owner="Browser">
+<msg time="2026-08-28T01:21:28.612846" level="INFO">Switching browser to CURRENT</msg>
+<msg time="2026-08-28T01:21:28.615161" level="INFO">Returned active browser id. CURRENT</msg>
+<msg time="2026-08-28T01:21:28.616977" level="INFO">Switching context to CURRENT in CURRENT</msg>
+<msg time="2026-08-28T01:21:28.620848" level="INFO">Returned active context id: CURRENT</msg>
+<msg time="2026-08-28T01:21:28.621314" level="INFO">Switching context to context=32500ff7-9d68-444a-9476-8d3f352eca07 in CURRENT</msg>
+<msg time="2026-08-28T01:21:28.624400" level="INFO">Successfully changed active context: context=32500ff7-9d68-444a-9476-8d3f352eca07</msg>
+<msg time="2026-08-28T01:21:28.628563" level="INFO">Successfully closed Context</msg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Closes a Context.</doc>
+<status status="PASS" start="2026-08-28T01:21:28.610804" elapsed="0.017919"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:28.066080" elapsed="0.562730"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:25.456720" elapsed="3.172193"/>
+</test>
+<test id="s1-s4-t3" name="Admin Approves Loan Request" line="36">
+<kw name="Login As Admin" owner="common">
+<kw name="New Context" owner="Browser">
+<msg time="2026-08-28T01:21:28.635135" level="INFO">{
+  "acceptDownloads": true,
+  "bypassCSP": false,
+  "forcedColors": "none",
+  "ignoreHTTPSErrors": false,
+  "javaScriptEnabled": true,
+  "offline": false,
+  "reducedMotion": "no-preference",
+  "serviceWorkers": "allow",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  }
+}</msg>
+<msg time="2026-08-28T01:21:28.638477" level="INFO">Successfully created context. </msg>
+<msg time="2026-08-28T01:21:28.638561" level="INFO">{'acceptDownloads': True, 'bypassCSP': False, 'forcedColors': 'none', 'ignoreHTTPSErrors': False, 'javaScriptEnabled': True, 'offline': False, 'reducedMotion': 'no-preference', 'serviceWorkers': 'allow', 'viewport': {'width': 1280, 'height': 800}}</msg>
+<arg>viewport={'width': 1280, 'height': 800}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Create a new BrowserContext with specified options.</doc>
+<status status="PASS" start="2026-08-28T01:21:28.634225" elapsed="0.004400"/>
+</kw>
+<kw name="New Page" owner="Browser">
+<msg time="2026-08-28T01:21:28.878205" level="INFO">Successfully initialized new page object and opened url: http://192.168.0.109:3001/login</msg>
+<arg>${BASE_URL}/login</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Open a new Page.</doc>
+<status status="PASS" start="2026-08-28T01:21:28.638808" elapsed="0.239641"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:28.925960" level="INFO">Waited for Element with selector id=email at state visible</msg>
+<arg>id=email</arg>
+<arg>visible</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:28.878663" elapsed="0.047520"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:21:28.927056" level="INFO">Fills the text 'admin@demo.com' in the given field.</msg>
+<arg>id=email</arg>
+<arg>${ADMIN_EMAIL}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:28.926423" elapsed="0.042129"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:21:28.969500" level="INFO">Fills the text 'Demo@1234' in the given field.</msg>
+<arg>id=password</arg>
+<arg>${ADMIN_PASS}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:28.968822" elapsed="0.012822"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:21:28.982293" level="INFO">Clicks the element 'css=button[type="submit"]'.</msg>
+<arg>css=button[type="submit"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:28.981849" elapsed="0.042927"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:29.025712" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:30.313765" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:29.025040" elapsed="1.288937"/>
+</kw>
+<kw name="Get Url" owner="Browser">
+<msg time="2026-08-28T01:21:30.317401" level="INFO">${url} = http://192.168.0.109:3001/dashboard</msg>
+<var>${url}</var>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns the current URL.</doc>
+<status status="PASS" start="2026-08-28T01:21:30.314222" elapsed="0.003225"/>
+</kw>
+<kw name="Should Not Contain" owner="BuiltIn">
+<arg>${url}</arg>
+<arg>/login</arg>
+<doc>Fails if ``container`` contains ``item`` one or more times.</doc>
+<status status="PASS" start="2026-08-28T01:21:30.317616" elapsed="0.000374"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:28.633946" elapsed="1.684114"/>
+</kw>
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:30.526284" level="INFO">Successfully opened URL http://192.168.0.109:3001/admin/loan-requests</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:30.318457" elapsed="0.208033"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:30.527193" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:31.167079" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:30.526696" elapsed="0.640713"/>
+</kw>
+<arg>/admin/loan-requests</arg>
+<status status="PASS" start="2026-08-28T01:21:30.318205" elapsed="0.849424"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:31.168889" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:31.173596" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:31.167931" elapsed="0.005940"/>
+</kw>
+<kw name="Get Elements" owner="Browser">
+<msg time="2026-08-28T01:21:31.215868" level="INFO">Found 4 Locators successfully.</msg>
+<msg time="2026-08-28T01:21:31.216092" level="INFO">${approve_btns} = ['role=button[name="Approve"] &gt;&gt; nth=0', 'role=button[name="Approve"] &gt;&gt; nth=1', 'role=button[name="Approve"] &gt;&gt; nth=2', 'role=button[name="Approve"] &gt;&gt; nth=3']</msg>
+<var>${approve_btns}</var>
+<arg>role=button[name="Approve"]</arg>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns a list of selector strings, one for each element matched by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:31.174240" elapsed="0.041874"/>
+</kw>
+<kw name="Get Length" owner="BuiltIn">
+<msg time="2026-08-28T01:21:31.216711" level="INFO">Length is 4.</msg>
+<msg time="2026-08-28T01:21:31.216781" level="INFO">${count} = 4</msg>
+<var>${count}</var>
+<arg>${approve_btns}</arg>
+<doc>Returns and logs the length of the given item as an integer.</doc>
+<status status="PASS" start="2026-08-28T01:21:31.216283" elapsed="0.000515"/>
+</kw>
+<if>
+<branch type="IF" condition="${count} &gt; 0">
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:21:31.217628" level="INFO">Clicks the element 'role=button[name="Approve"] &gt;&gt; nth=0'.</msg>
+<arg>${approve_btns}[0]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:31.217284" elapsed="0.112072"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:31.335017" level="INFO">Waited for Element with selector css=[role="dialog"] at state visible</msg>
+<arg>css=[role="dialog"]</arg>
+<arg>visible</arg>
+<arg>timeout=5s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:31.329599" elapsed="0.005605"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:31.473154" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="admin_approve_dialog_open.png" target="_blank"&gt;&lt;img src="admin_approve_dialog_open.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:31.335796" elapsed="0.137482"/>
+</kw>
+<arg>admin_approve_dialog_open</arg>
+<status status="PASS" start="2026-08-28T01:21:31.335461" elapsed="0.137905"/>
+</kw>
+<kw name="Keyboard Key" owner="Browser">
+<arg>press</arg>
+<arg>Escape</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Press a keyboard key on the virtual keyboard or set a key up or down.</doc>
+<status status="PASS" start="2026-08-28T01:21:31.473494" elapsed="0.031307"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:31.217008" elapsed="0.287886"/>
+</branch>
+<branch type="ELSE">
+<kw name="Log" owner="BuiltIn">
+<arg>No pending requests — skipping approval</arg>
+<doc>Logs the given message with the given level.</doc>
+<status status="NOT RUN" start="2026-08-28T01:21:31.505182" elapsed="0.000059"/>
+</kw>
+<status status="NOT RUN" start="2026-08-28T01:21:31.504946" elapsed="0.000331"/>
+</branch>
+<status status="PASS" start="2026-08-28T01:21:31.216963" elapsed="0.288342"/>
+</if>
+<kw name="Logout And Close" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:31.566841" level="INFO">Successfully opened URL http://192.168.0.109:3001/api/auth/signout</msg>
+<arg>${BASE_URL}/api/auth/signout</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:31.505629" elapsed="0.061451"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:31.567896" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:32.067295" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:31.567322" elapsed="0.500130"/>
+</kw>
+<kw name="Close Context" owner="Browser">
+<msg time="2026-08-28T01:21:32.069318" level="INFO">Switching browser to CURRENT</msg>
+<msg time="2026-08-28T01:21:32.071019" level="INFO">Returned active browser id. CURRENT</msg>
+<msg time="2026-08-28T01:21:32.072560" level="INFO">Switching context to CURRENT in CURRENT</msg>
+<msg time="2026-08-28T01:21:32.076019" level="INFO">Returned active context id: CURRENT</msg>
+<msg time="2026-08-28T01:21:32.076503" level="INFO">Switching context to context=b957ab43-55fe-44e6-8dc9-f45db3f8d4e7 in CURRENT</msg>
+<msg time="2026-08-28T01:21:32.079256" level="INFO">Successfully changed active context: context=b957ab43-55fe-44e6-8dc9-f45db3f8d4e7</msg>
+<msg time="2026-08-28T01:21:32.083311" level="INFO">Successfully closed Context</msg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Closes a Context.</doc>
+<status status="PASS" start="2026-08-28T01:21:32.067614" elapsed="0.015852"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:31.505425" elapsed="0.578129"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:28.632007" elapsed="3.451648"/>
+</test>
+<test id="s1-s4-t4" name="Admin Collections Page Has Confirm Button" line="52">
+<kw name="Login As Admin" owner="common">
+<kw name="New Context" owner="Browser">
+<msg time="2026-08-28T01:21:32.090620" level="INFO">{
+  "acceptDownloads": true,
+  "bypassCSP": false,
+  "forcedColors": "none",
+  "ignoreHTTPSErrors": false,
+  "javaScriptEnabled": true,
+  "offline": false,
+  "reducedMotion": "no-preference",
+  "serviceWorkers": "allow",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  }
+}</msg>
+<msg time="2026-08-28T01:21:32.094583" level="INFO">Successfully created context. </msg>
+<msg time="2026-08-28T01:21:32.094657" level="INFO">{'acceptDownloads': True, 'bypassCSP': False, 'forcedColors': 'none', 'ignoreHTTPSErrors': False, 'javaScriptEnabled': True, 'offline': False, 'reducedMotion': 'no-preference', 'serviceWorkers': 'allow', 'viewport': {'width': 1280, 'height': 800}}</msg>
+<arg>viewport={'width': 1280, 'height': 800}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Create a new BrowserContext with specified options.</doc>
+<status status="PASS" start="2026-08-28T01:21:32.089688" elapsed="0.005024"/>
+</kw>
+<kw name="New Page" owner="Browser">
+<msg time="2026-08-28T01:21:32.344345" level="INFO">Successfully initialized new page object and opened url: http://192.168.0.109:3001/login</msg>
+<arg>${BASE_URL}/login</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Open a new Page.</doc>
+<status status="PASS" start="2026-08-28T01:21:32.094863" elapsed="0.249663"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:32.401833" level="INFO">Waited for Element with selector id=email at state visible</msg>
+<arg>id=email</arg>
+<arg>visible</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:32.344687" elapsed="0.057297"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:21:32.402580" level="INFO">Fills the text 'admin@demo.com' in the given field.</msg>
+<arg>id=email</arg>
+<arg>${ADMIN_EMAIL}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:32.402166" elapsed="0.050599"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:21:32.453749" level="INFO">Fills the text 'Demo@1234' in the given field.</msg>
+<arg>id=password</arg>
+<arg>${ADMIN_PASS}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:32.453065" elapsed="0.016624"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:21:32.470274" level="INFO">Clicks the element 'css=button[type="submit"]'.</msg>
+<arg>css=button[type="submit"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:32.469872" elapsed="0.050639"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:32.521135" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:33.862211" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:32.520690" elapsed="1.341721"/>
+</kw>
+<kw name="Get Url" owner="Browser">
+<msg time="2026-08-28T01:21:33.864687" level="INFO">${url} = http://192.168.0.109:3001/dashboard</msg>
+<var>${url}</var>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns the current URL.</doc>
+<status status="PASS" start="2026-08-28T01:21:33.862605" elapsed="0.002186"/>
+</kw>
+<kw name="Should Not Contain" owner="BuiltIn">
+<arg>${url}</arg>
+<arg>/login</arg>
+<doc>Fails if ``container`` contains ``item`` one or more times.</doc>
+<status status="PASS" start="2026-08-28T01:21:33.864966" elapsed="0.000398"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:32.089396" elapsed="1.776045"/>
+</kw>
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:34.086630" level="INFO">Successfully opened URL http://192.168.0.109:3001/admin/collections</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:33.865857" elapsed="0.220927"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:34.087374" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:34.715795" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:34.086952" elapsed="0.629141"/>
+</kw>
+<arg>/admin/collections</arg>
+<status status="PASS" start="2026-08-28T01:21:33.865589" elapsed="0.850748"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:34.746004" level="INFO">Waited for Element with selector h1 at state visible</msg>
+<arg>h1</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:34.716642" elapsed="0.029532"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:34.786859" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="admin_collections_confirm_check.png" target="_blank"&gt;&lt;img src="admin_collections_confirm_check.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:34.746655" elapsed="0.040317"/>
+</kw>
+<arg>admin_collections_confirm_check</arg>
+<status status="PASS" start="2026-08-28T01:21:34.746378" elapsed="0.040678"/>
+</kw>
+<kw name="Logout And Close" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:34.831573" level="INFO">Successfully opened URL http://192.168.0.109:3001/api/auth/signout</msg>
+<arg>${BASE_URL}/api/auth/signout</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:34.787434" elapsed="0.044375"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:34.832684" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:35.331365" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:34.832057" elapsed="0.499505"/>
+</kw>
+<kw name="Close Context" owner="Browser">
+<msg time="2026-08-28T01:21:35.334299" level="INFO">Switching browser to CURRENT</msg>
+<msg time="2026-08-28T01:21:35.336152" level="INFO">Returned active browser id. CURRENT</msg>
+<msg time="2026-08-28T01:21:35.337785" level="INFO">Switching context to CURRENT in CURRENT</msg>
+<msg time="2026-08-28T01:21:35.340724" level="INFO">Returned active context id: CURRENT</msg>
+<msg time="2026-08-28T01:21:35.341194" level="INFO">Switching context to context=a22740da-c8be-4b96-8a18-5abf1d7e6758 in CURRENT</msg>
+<msg time="2026-08-28T01:21:35.344545" level="INFO">Successfully changed active context: context=a22740da-c8be-4b96-8a18-5abf1d7e6758</msg>
+<msg time="2026-08-28T01:21:35.349034" level="INFO">Successfully closed Context</msg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Closes a Context.</doc>
+<status status="PASS" start="2026-08-28T01:21:35.331803" elapsed="0.017444"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:34.787212" elapsed="0.562152"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:32.087112" elapsed="3.262389"/>
+</test>
+<test id="s1-s4-t5" name="Agent Collection Form Opens" line="59">
+<kw name="Login As Agent" owner="common">
+<kw name="New Context" owner="Browser">
+<msg time="2026-08-28T01:21:35.359524" level="INFO">{
+  "acceptDownloads": true,
+  "bypassCSP": false,
+  "forcedColors": "none",
+  "ignoreHTTPSErrors": false,
+  "javaScriptEnabled": true,
+  "offline": false,
+  "reducedMotion": "no-preference",
+  "serviceWorkers": "allow",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  }
+}</msg>
+<msg time="2026-08-28T01:21:35.363584" level="INFO">Successfully created context. </msg>
+<msg time="2026-08-28T01:21:35.363655" level="INFO">{'acceptDownloads': True, 'bypassCSP': False, 'forcedColors': 'none', 'ignoreHTTPSErrors': False, 'javaScriptEnabled': True, 'offline': False, 'reducedMotion': 'no-preference', 'serviceWorkers': 'allow', 'viewport': {'width': 1280, 'height': 800}}</msg>
+<arg>viewport={'width': 1280, 'height': 800}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Create a new BrowserContext with specified options.</doc>
+<status status="PASS" start="2026-08-28T01:21:35.357910" elapsed="0.005800"/>
+</kw>
+<kw name="New Page" owner="Browser">
+<msg time="2026-08-28T01:21:35.619555" level="INFO">Successfully initialized new page object and opened url: http://192.168.0.109:3001/login</msg>
+<arg>${BASE_URL}/login</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Open a new Page.</doc>
+<status status="PASS" start="2026-08-28T01:21:35.363860" elapsed="0.255868"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:35.674354" level="INFO">Waited for Element with selector id=email at state visible</msg>
+<arg>id=email</arg>
+<arg>visible</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:35.619889" elapsed="0.054616"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:21:35.675074" level="INFO">Fills the text 'agent@demo.com' in the given field.</msg>
+<arg>id=email</arg>
+<arg>${AGENT_EMAIL}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:35.674664" elapsed="0.040053"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-08-28T01:21:35.715723" level="INFO">Fills the text 'Demo@1234' in the given field.</msg>
+<arg>id=password</arg>
+<arg>${AGENT_PASS}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:35.715014" elapsed="0.019531"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:21:35.735433" level="INFO">Clicks the element 'css=button[type="submit"]'.</msg>
+<arg>css=button[type="submit"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:35.734826" elapsed="0.052652"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:35.788100" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:36.903960" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:35.787659" elapsed="1.116626"/>
+</kw>
+<kw name="Get Url" owner="Browser">
+<msg time="2026-08-28T01:21:36.909019" level="INFO">${url} = http://192.168.0.109:3001/dashboard</msg>
+<var>${url}</var>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns the current URL.</doc>
+<status status="PASS" start="2026-08-28T01:21:36.904787" elapsed="0.004318"/>
+</kw>
+<kw name="Should Not Contain" owner="BuiltIn">
+<arg>${url}</arg>
+<arg>/login</arg>
+<doc>Fails if ``container`` contains ``item`` one or more times.</doc>
+<status status="PASS" start="2026-08-28T01:21:36.909453" elapsed="0.000779"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:35.357455" elapsed="1.552944"/>
+</kw>
+<kw name="Navigate To" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:37.104569" level="INFO">Successfully opened URL http://192.168.0.109:3001/collections</msg>
+<arg>${BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:36.911310" elapsed="0.193473"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:37.105606" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:37.749199" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:37.105010" elapsed="0.644501"/>
+</kw>
+<arg>/collections</arg>
+<status status="PASS" start="2026-08-28T01:21:36.910698" elapsed="0.839027"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-08-28T01:21:37.750911" level="INFO">Clicks the element 'role=button[name="Record Collection"]'.</msg>
+<arg>role=button[name="Record Collection"]</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-08-28T01:21:37.750009" elapsed="0.152377"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-08-28T01:21:37.908136" level="INFO">Waited for Element with selector css=[role="dialog"] at state visible</msg>
+<arg>css=[role="dialog"]</arg>
+<arg>visible</arg>
+<arg>timeout=10s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-08-28T01:21:37.902642" elapsed="0.005640"/>
+</kw>
+<kw name="Take Test Screenshot" owner="common">
+<kw name="Take Screenshot" owner="Browser">
+<msg time="2026-08-28T01:21:38.072808" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="agent_collection_form_open.png" target="_blank"&gt;&lt;img src="agent_collection_form_open.png" style="max-width:800px;max-height:800px;"/&gt;&lt;/a&gt;</msg>
+<arg>filename=/home/logesh/Coding/Projects/finance-tracker/tests/robot/resources/../results/${name}.png</arg>
+<tag>PageContent</tag>
+<doc>Takes a screenshot of the current window or element and saves it to disk.</doc>
+<status status="PASS" start="2026-08-28T01:21:37.908738" elapsed="0.164190"/>
+</kw>
+<arg>agent_collection_form_open</arg>
+<status status="PASS" start="2026-08-28T01:21:37.908471" elapsed="0.164539"/>
+</kw>
+<kw name="Keyboard Key" owner="Browser">
+<arg>press</arg>
+<arg>Escape</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Press a keyboard key on the virtual keyboard or set a key up or down.</doc>
+<status status="PASS" start="2026-08-28T01:21:38.073133" elapsed="0.045904"/>
+</kw>
+<kw name="Logout And Close" owner="common">
+<kw name="Go To" owner="Browser">
+<msg time="2026-08-28T01:21:38.188051" level="INFO">Successfully opened URL http://192.168.0.109:3001/api/auth/signout</msg>
+<arg>${BASE_URL}/api/auth/signout</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-08-28T01:21:38.119617" elapsed="0.068612"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-08-28T01:21:38.188906" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-08-28T01:21:38.688404" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits until the page reaches the required load state.</doc>
+<status status="PASS" start="2026-08-28T01:21:38.188448" elapsed="0.500119"/>
+</kw>
+<kw name="Close Context" owner="Browser">
+<msg time="2026-08-28T01:21:38.690683" level="INFO">Switching browser to CURRENT</msg>
+<msg time="2026-08-28T01:21:38.692814" level="INFO">Returned active browser id. CURRENT</msg>
+<msg time="2026-08-28T01:21:38.694346" level="INFO">Switching context to CURRENT in CURRENT</msg>
+<msg time="2026-08-28T01:21:38.697494" level="INFO">Returned active context id: CURRENT</msg>
+<msg time="2026-08-28T01:21:38.697987" level="INFO">Switching context to context=ff9e2cde-528f-4744-b770-a0a630f47a2b in CURRENT</msg>
+<msg time="2026-08-28T01:21:38.700950" level="INFO">Successfully changed active context: context=ff9e2cde-528f-4744-b770-a0a630f47a2b</msg>
+<msg time="2026-08-28T01:21:38.707078" level="INFO">Successfully closed Context</msg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Closes a Context.</doc>
+<status status="PASS" start="2026-08-28T01:21:38.688741" elapsed="0.018509"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:38.119329" elapsed="0.588015"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:35.354220" elapsed="3.353233"/>
+</test>
+<kw name="Close Browser" owner="Browser" type="TEARDOWN">
+<msg time="2026-08-28T01:21:38.726473" level="INFO">Closed browser</msg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Closes the current browser.</doc>
+<status status="PASS" start="2026-08-28T01:21:38.711011" elapsed="0.015634"/>
+</kw>
+<status status="PASS" start="2026-08-28T01:21:21.211802" elapsed="17.514915"/>
+</suite>
+<status status="PASS" start="2026-08-28T01:20:38.230989" elapsed="60.500854"/>
+</suite>
+<statistics>
+<total>
+<stat pass="36" fail="0" skip="0">All Tests</stat>
+</total>
+<tag>
+</tag>
+<suite>
+<stat name="Suites" id="s1" pass="36" fail="0" skip="0">Suites</stat>
+<stat name="01 Auth" id="s1-s1" pass="5" fail="0" skip="0">Suites.01 Auth</stat>
+<stat name="02 Admin" id="s1-s2" pass="13" fail="0" skip="0">Suites.02 Admin</stat>
+<stat name="03 Agent" id="s1-s3" pass="13" fail="0" skip="0">Suites.03 Agent</stat>
+<stat name="04 Loan Collection Workflow" id="s1-s4" pass="5" fail="0" skip="0">Suites.04 Loan Collection Workflow</stat>
+</suite>
+</statistics>
+<errors>
+</errors>
+</robot>

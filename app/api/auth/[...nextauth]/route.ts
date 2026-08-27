@@ -12,7 +12,13 @@ export async function POST(
   _context: { params: Promise<{ nextauth: string[] }> }
 ) {
   const ip = getClientIp(request)
-  const result = checkRateLimit(ip, { windowMs: 15 * 60 * 1000, max: 10, blockMs: 15 * 60 * 1000 })
+  // Skip rate limiting for localhost and private network (dev / CI / test environments)
+  const isLocalhost =
+    ip === '127.0.0.1' || ip === '::1' || ip === 'unknown' || ip === '::ffff:127.0.0.1' ||
+    ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.')
+  const result = isLocalhost
+    ? { limited: false as const }
+    : checkRateLimit(ip, { windowMs: 15 * 60 * 1000, max: 10, blockMs: 15 * 60 * 1000 })
 
   if (result.limited) {
     const retryAfterSec = Math.ceil(result.retryAfterMs / 1000)
