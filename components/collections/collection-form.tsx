@@ -94,6 +94,17 @@ export function CollectionForm({ customers, initial }: { customers: Customer[]; 
     if (!form.customer_id || !form.amount || !form.payment_mode) { toast.error('Customer, amount, and payment mode are required'); return }
     if (parseFloat(form.amount) <= 0) { toast.error('Amount must be greater than 0'); return }
 
+    // Freeform cap — if no due selected, amount cannot exceed customer outstanding
+    if (!form.due_id) {
+      const customer = customers.find(c => c.id === form.customer_id)
+      const outstanding = parseFloat(customer?.outstanding_total ?? '0')
+      if (outstanding <= 0) { toast.error('This customer has no outstanding balance'); return }
+      if (parseFloat(form.amount) > outstanding) {
+        toast.error(`Amount exceeds outstanding balance of ₹${outstanding.toLocaleString('en-IN')}`)
+        return
+      }
+    }
+
     setSaving(true)
     await acquireGps()
 
@@ -231,7 +242,9 @@ export function CollectionForm({ customers, initial }: { customers: Customer[]; 
                   <Select value={form.due_id || '_none'} onValueChange={v => {
                     const val = v === '_none' ? '' : (v || '')
                     const due = dues.find(d => d.id === val)
-                    setForm(f => ({ ...f, due_id: val, amount: due ? String(parseFloat(due.outstanding_amount)) : f.amount }))
+                    const customer = customers.find(c => c.id === form.customer_id)
+                    const freeformAmt = customer ? String(parseFloat(customer.outstanding_total)) : ''
+                    setForm(f => ({ ...f, due_id: val, amount: due ? String(parseFloat(due.outstanding_amount)) : freeformAmt }))
                   }}>
                     <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                     <SelectContent>
@@ -248,6 +261,13 @@ export function CollectionForm({ customers, initial }: { customers: Customer[]; 
             <div className="space-y-1">
               <Label>Amount (₹) *</Label>
               <Input type="number" min="0.01" step="0.01" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
+              {form.customer_id && !form.due_id && (() => {
+                const customer = customers.find(c => c.id === form.customer_id)
+                const outstanding = parseFloat(customer?.outstanding_total ?? '0')
+                return outstanding > 0
+                  ? <p className="text-xs text-gray-500">Outstanding: ₹{outstanding.toLocaleString('en-IN')}</p>
+                  : <p className="text-xs text-red-500">No outstanding balance</p>
+              })()}
             </div>
 
             <div className="space-y-1">
