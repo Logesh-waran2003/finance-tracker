@@ -91,7 +91,7 @@ interface FormState {
   agent_id: string
   loan_amount: string
   interest_pct: string
-  daily_installment: string
+  tenure: string
   penalty_amount: string
   disbursement_date: string
   notes: string
@@ -102,7 +102,7 @@ const EMPTY_FORM: FormState = {
   agent_id: '',
   loan_amount: '',
   interest_pct: '',
-  daily_installment: '',
+  tenure: '',
   penalty_amount: '0',
   disbursement_date: '',
   notes: '',
@@ -166,7 +166,7 @@ export function AdminLoansClient({ loans: initialLoans, customers, agents }: Pro
           assigned_agent_id: form.agent_id || undefined,
           loan_amount: parseFloat(form.loan_amount),
           interest_percentage: parseFloat(form.interest_pct) || 0,
-          daily_installment: parseFloat(form.daily_installment),
+          tenure: parseInt(form.tenure),
           penalty_amount: parseFloat(form.penalty_amount) || 0,
           disbursement_date: form.disbursement_date,
           notes: form.notes || undefined,
@@ -441,19 +441,24 @@ export function AdminLoansClient({ loans: initialLoans, customers, agents }: Pro
               </div>
             </div>
 
-            {/* Daily Installment + Penalty in 2 cols */}
+            {/* Tenure + Penalty in 2 cols */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label>Daily Installment</Label>
+                <Label>Tenure (days)</Label>
                 <Input
                   type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={form.daily_installment}
-                  onChange={e => setField('daily_installment', e.target.value)}
+                  min="1"
+                  step="1"
+                  placeholder="e.g. 100"
+                  value={form.tenure}
+                  onChange={e => setField('tenure', e.target.value)}
                   required
                 />
+                {loanAmt > 0 && parseInt(form.tenure) > 0 && (
+                  <p className="text-xs text-gray-500">
+                    Daily: ₹{(loanAmt / parseInt(form.tenure)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                )}
               </div>
               <div className="space-y-1">
                 <Label>Penalty Amount</Label>

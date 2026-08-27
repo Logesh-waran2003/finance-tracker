@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     new_customer_area,
     loan_amount,
     interest_percentage = 0,
-    daily_installment,
+    tenure,
     penalty_amount = 0,
     disbursement_date,
     notes,
@@ -60,12 +60,14 @@ export async function POST(request: Request) {
   if (!loan_amount || loan_amount <= 0) {
     return NextResponse.json({ error: 'loan_amount must be greater than 0' }, { status: 400 })
   }
-  if (!daily_installment || daily_installment <= 0) {
-    return NextResponse.json({ error: 'daily_installment must be greater than 0' }, { status: 400 })
+  if (!tenure || parseInt(tenure) <= 0) {
+    return NextResponse.json({ error: 'tenure must be greater than 0' }, { status: 400 })
   }
   if (!disbursement_date) {
     return NextResponse.json({ error: 'disbursement_date is required' }, { status: 400 })
   }
+
+  const daily_installment = parseFloat(loan_amount) / parseInt(tenure)
 
   try {
     // Generate request_number
@@ -90,7 +92,8 @@ export async function POST(request: Request) {
         new_customer_area: new_customer_area ?? null,
         loan_amount: String(loan_amount),
         interest_percentage: String(interest_percentage),
-        daily_installment: String(daily_installment),
+        tenure: parseInt(tenure),
+        daily_installment: daily_installment.toFixed(2),
         penalty_amount: String(penalty_amount),
         disbursement_date,
         notes: notes ?? null,

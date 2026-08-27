@@ -91,7 +91,7 @@ interface RequestForm {
   new_customer_area: string
   loan_amount: string
   interest_pct: string
-  daily_installment: string
+  tenure: string
   penalty_amount: string
   disbursement_date: string
   notes: string
@@ -100,7 +100,7 @@ interface RequestForm {
 const emptyRequestForm: RequestForm = {
   customer_id: '', new_customer_name: '', new_customer_phone: '',
   new_customer_area: '', loan_amount: '', interest_pct: '',
-  daily_installment: '', penalty_amount: '0', disbursement_date: '', notes: '',
+  tenure: '', penalty_amount: '0', disbursement_date: '', notes: '',
 }
 
 interface Props {
@@ -273,8 +273,12 @@ export default function AgentLoansClient({ loans: initialLoans, agentName }: Pro
   }, [])
 
   async function handleRequestSubmit() {
-    if (!requestForm.loan_amount || !requestForm.daily_installment || !requestForm.disbursement_date) {
-      toast.error('Loan amount, daily installment, and disbursement date are required')
+    if (!requestForm.loan_amount || !requestForm.tenure || !requestForm.disbursement_date) {
+      toast.error('Loan amount, tenure, and disbursement date are required')
+      return
+    }
+    if (!requestForm.tenure || parseInt(requestForm.tenure) <= 0) {
+      toast.error('Tenure must be greater than 0')
       return
     }
     if (requestMode === 'existing' && !requestForm.customer_id) {
@@ -290,7 +294,7 @@ export default function AgentLoansClient({ loans: initialLoans, agentName }: Pro
       const body: Record<string, unknown> = {
         loan_amount: parseFloat(requestForm.loan_amount),
         interest_percentage: parseFloat(requestForm.interest_pct) || 0,
-        daily_installment: parseFloat(requestForm.daily_installment),
+        tenure: parseInt(requestForm.tenure),
         penalty_amount: parseFloat(requestForm.penalty_amount) || 0,
         disbursement_date: requestForm.disbursement_date,
         notes: requestForm.notes || undefined,
@@ -535,8 +539,13 @@ export default function AgentLoansClient({ loans: initialLoans, agentName }: Pro
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label>Daily Installment *</Label>
-                <Input type="number" step="0.01" min="0" value={requestForm.daily_installment} onChange={e => setRequestForm(f => ({ ...f, daily_installment: e.target.value }))} />
+                <Label>Tenure (days) *</Label>
+                <Input type="number" min="1" step="1" value={requestForm.tenure} onChange={e => setRequestForm(f => ({ ...f, tenure: e.target.value }))} />
+                {requestForm.loan_amount && requestForm.tenure && parseInt(requestForm.tenure) > 0 && (
+                  <p className="text-xs text-gray-500">
+                    Daily: ₹{(parseFloat(requestForm.loan_amount) / parseInt(requestForm.tenure)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                )}
               </div>
               <div className="space-y-1">
                 <Label>Penalty Amount</Label>

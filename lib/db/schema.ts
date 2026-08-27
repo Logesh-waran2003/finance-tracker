@@ -378,6 +378,7 @@ export const loans = pgTable('loans', {
   interest_percentage: numeric('interest_percentage', { precision: 5, scale: 2 }).notNull(),
   interest_amount: numeric('interest_amount', { precision: 12, scale: 2 }).notNull(),
   disbursed_amount: numeric('disbursed_amount', { precision: 12, scale: 2 }).notNull(),
+  tenure: integer('tenure'), // number of days — daily_installment derived
   daily_installment: numeric('daily_installment', { precision: 12, scale: 2 }).notNull(),
   penalty_amount: numeric('penalty_amount', { precision: 12, scale: 2 }).notNull(),
   disbursement_date: date('disbursement_date').notNull(),
@@ -583,6 +584,7 @@ export const loanRequests = pgTable('loan_requests', {
   // loan terms
   loan_amount: numeric('loan_amount', { precision: 12, scale: 2 }).notNull(),
   interest_percentage: numeric('interest_percentage', { precision: 5, scale: 2 }).notNull().default('0'),
+  tenure: integer('tenure'), // number of days — daily_installment computed from this
   daily_installment: numeric('daily_installment', { precision: 12, scale: 2 }).notNull(),
   penalty_amount: numeric('penalty_amount', { precision: 12, scale: 2 }).notNull().default('0'),
   disbursement_date: date('disbursement_date').notNull(),

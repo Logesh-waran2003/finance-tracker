@@ -24,6 +24,7 @@ interface LoanRequestRow {
   loan_amount: string
   interest_percentage: string
   daily_installment: string
+  tenure: number | null
   penalty_amount: string
   disbursement_date: string
   notes: string | null
@@ -184,7 +185,7 @@ export default function AdminLoanRequestsClient({ initial, agents }: Props) {
                         <p className="text-xs text-gray-400">{req.new_customer_phone}{req.new_customer_area ? ` · ${req.new_customer_area}` : ''}</p>
                       )}
                       <div className="text-sm text-gray-600 space-y-0.5">
-                        <p>{fmt(req.loan_amount)} loan · {fmt(req.daily_installment)}/day · {parseFloat(req.interest_percentage)}% interest</p>
+                        <p>{fmt(req.loan_amount)} loan · {req.tenure ? `${req.tenure} days` : ''} · {fmt(req.daily_installment)}/day · {parseFloat(req.interest_percentage)}% interest</p>
                         {parseFloat(req.penalty_amount) > 0 && (
                           <p className="text-xs text-gray-400">Penalty: {fmt(req.penalty_amount)}</p>
                         )}

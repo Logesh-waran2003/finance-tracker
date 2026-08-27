@@ -70,7 +70,7 @@ export async function POST(request: Request) {
       assigned_agent_id,
       loan_amount,
       interest_percentage,
-      daily_installment,
+      tenure,
       penalty_amount,
       disbursement_date,
       notes,
@@ -78,8 +78,12 @@ export async function POST(request: Request) {
 
     if (!customer_id) return NextResponse.json({ error: 'customer_id required' }, { status: 400 })
     if (!assigned_agent_id) return NextResponse.json({ error: 'assigned_agent_id required' }, { status: 400 })
-    if (!loan_amount || !daily_installment || !disbursement_date)
-      return NextResponse.json({ error: 'loan_amount, daily_installment, disbursement_date required' }, { status: 400 })
+    if (!loan_amount || !tenure || !disbursement_date)
+      return NextResponse.json({ error: 'loan_amount, tenure, disbursement_date required' }, { status: 400 })
+    if (parseInt(tenure) <= 0)
+      return NextResponse.json({ error: 'tenure must be greater than 0' }, { status: 400 })
+
+    const computedDailyInstallment = parseFloat(loan_amount) / parseInt(tenure)
 
     const loan = await createLoan(db, {
       actorId: actor.id,
@@ -89,7 +93,7 @@ export async function POST(request: Request) {
       customerId: customer_id,
       loanAmount: parseFloat(loan_amount),
       interestPercentage: parseFloat(interest_percentage ?? '0'),
-      dailyInstallment: parseFloat(daily_installment),
+      dailyInstallment: computedDailyInstallment,
       penaltyAmount: parseFloat(penalty_amount ?? '0'),
       disbursementDate: disbursement_date,
       assignedAgentId: assigned_agent_id,
