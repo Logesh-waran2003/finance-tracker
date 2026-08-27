@@ -73,7 +73,7 @@ export async function GET(request: Request) {
   // Loan totals per customer (active/overdue loans only)
   const loanAgg = await db.select({
     customer_id: loans.customer_id,
-    total_loan_amount: sql<string>`coalesce(sum(${loans.principal_outstanding}), '0')`,
+    total_loan_amount: sql<string>`coalesce(sum(${loans.total_outstanding}), '0')`,
     total_loan_interest: sql<string>`coalesce(max(${loans.interest_percentage}), '0')`,
     active_loan_count: sql<string>`count(*)::text`,
   }).from(loans)
