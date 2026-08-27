@@ -52,7 +52,7 @@ export default function LoginPage() {
         <CardDescription>Collection &amp; Finance Tracker</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4" suppressHydrationWarning>
           {error && (
             <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3">
               {error}
