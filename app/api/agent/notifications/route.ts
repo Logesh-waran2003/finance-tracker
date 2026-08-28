@@ -21,7 +21,7 @@ export async function GET() {
     type: 'info' as const,
     title: row.title,
     message: row.body,
-    href: '/loans',
+    href: row.reference_type === 'loan_request' ? '/loans#loan-requests' : '/loans',
     dbNotification: true as const,
   }))
 

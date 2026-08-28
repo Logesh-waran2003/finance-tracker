@@ -457,7 +457,7 @@ export default function AgentLoansClient({ loans: initialLoans, agentName }: Pro
         </div>
 
         <div className="mt-8">
-          <h2 className="text-lg font-semibold mb-3">My Loan Requests</h2>
+          <h2 id="loan-requests" className="text-lg font-semibold mb-3">My Loan Requests</h2>
           {loadingRequests ? (
             <Card><CardContent className="py-6 text-center text-gray-400 text-sm">Loading...</CardContent></Card>
           ) : loanRequests.length === 0 ? (
