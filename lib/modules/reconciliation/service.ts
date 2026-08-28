@@ -3,14 +3,14 @@
  * Key invariant: cash_collected is ALWAYS calculated server-side from confirmed
  * CASH collections. Client-supplied totals are never trusted.
  */
-import { reconciliations, collections } from '@/lib/db/schema'
+import { reconciliations, collections, profiles, notifications, loanPayments } from '@/lib/db/schema'
 import { eq, and, sum, sql } from 'drizzle-orm'
 import { logAudit } from '@/lib/modules/audit/service'
 import { writeLedgerEntry } from '@/lib/modules/ledger/service'
 import { ServiceError } from '@/lib/modules/errors'
 
  
-type AnyDB = { insert: (...a: any[]) => any; select: (...a: any[]) => any; update: (...a: any[]) => any; transaction: (...a: any[]) => any }
+type AnyDB = { insert: (...a: any[]) => any; select: (...a: any[]) => any; update: (...a: any[]) => any; transaction: (...a: any[]) => any; execute: (...a: any[]) => any }
 
 export type CreateReconciliationParams = {
   agentId: string
@@ -36,8 +36,9 @@ export type VerifyReconciliationParams = {
  * Submits a daily reconciliation.
  *
  * - Rejects future dates
- * - Calculates cash_collected server-side (CONFIRMED + CASH + agent + date)
+ * - Calculates cash_collected server-side (CONFIRMED + CASH + agent + date) including loan payments
  * - Enforces one-per-agent-per-date via DB unique constraint (uq_reconciliations_agent_date)
+ * - Notifies all branch admins on submit
  */
 export async function createReconciliation(
   db: AnyDB,
@@ -48,7 +49,7 @@ export async function createReconciliation(
     throw new ServiceError('date cannot be in the future', 400)
   }
 
-  // Server-side cash total — never use client-supplied value
+  // Server-side cash total from freeform collections
   const [cashRow] = await (db as any)
     .select({ total: sum(collections.amount) })
     .from(collections)
@@ -60,11 +61,27 @@ export async function createReconciliation(
         sql`DATE(${collections.collected_at} AT TIME ZONE 'Asia/Kolkata') = ${params.date}::date`,
       ),
     )
-  const cashCollected = parseFloat((cashRow as any)?.total ?? '0')
 
-  return (db as any).transaction(async (tx: AnyDB) => {
+  // Server-side cash total from loan installment payments
+  const [loanCashRow] = await (db as any)
+    .select({ total: sum(loanPayments.amount) })
+    .from(loanPayments)
+    .where(
+      and(
+        eq(loanPayments.agent_id, params.agentId),
+        eq(loanPayments.payment_mode, 'CASH'),
+        eq(loanPayments.is_reversed, false),
+        sql`DATE(${loanPayments.created_at} AT TIME ZONE 'Asia/Kolkata') = ${params.date}::date`,
+      ),
+    )
+
+  const cashCollected =
+    parseFloat((cashRow as any)?.total ?? '0') +
+    parseFloat((loanCashRow as any)?.total ?? '0')
+
+  const record = await (db as any).transaction(async (tx: AnyDB) => {
     try {
-      const [record] = await (tx as any)
+      const [rec] = await (tx as any)
         .insert(reconciliations)
         .values({
           agent_id: params.agentId,
@@ -83,7 +100,7 @@ export async function createReconciliation(
         actor_email: params.actorEmail,
         action: 'CREATE',
         entity_type: 'reconciliation',
-        entity_id: record.id,
+        entity_id: rec.id,
         after_data: {
           date: params.date,
           cash_collected: cashCollected,
@@ -92,7 +109,7 @@ export async function createReconciliation(
         branch_id: params.branchId,
       })
 
-      return record
+      return rec
     } catch (err: any) {
       if (err?.code === '23505') {
         throw new ServiceError('Reconciliation already submitted for this date', 409)
@@ -100,11 +117,37 @@ export async function createReconciliation(
       throw err
     }
   })
+
+  // Fire-and-forget: notify all admins in branch
+  const adminWhere = params.branchId
+    ? and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true), eq(profiles.branch_id, params.branchId))
+    : and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true));
+
+  (db as any).select({ id: profiles.id })
+    .from(profiles)
+    .where(adminWhere)
+    .then((admins: any[]) => {
+      if (!admins.length) return
+      return (db as any).insert(notifications).values(
+        admins.map((a: any) => ({
+          recipient_id: a.id,
+          type: 'GENERAL',
+          title: 'Cash Handover Submitted',
+          body: `${params.actorName} submitted ₹${params.cashSubmitted.toLocaleString('en-IN')} cash handover for ${params.date}`,
+          reference_id: record.id,
+          reference_type: 'reconciliation',
+        }))
+      )
+    })
+    .catch(() => {})
+
+  return record
 }
 
 /**
  * Verifies or rejects a PENDING/SUBMITTED reconciliation.
  * Verification writes a RECONCILIATION ledger entry.
+ * Notifies the agent on verify/reject.
  */
 export async function verifyReconciliation(
   db: AnyDB,
@@ -141,8 +184,8 @@ export async function verifyReconciliation(
     updates.rejection_reason = params.notes
   }
 
-  return (db as any).transaction(async (tx: AnyDB) => {
-    const [updated] = await (tx as any)
+  const updated = await (db as any).transaction(async (tx: AnyDB) => {
+    const [upd] = await (tx as any)
       .update(reconciliations)
       .set(updates)
       .where(eq(reconciliations.id, params.reconciliationId))
@@ -156,7 +199,7 @@ export async function verifyReconciliation(
       entity_type: 'reconciliation',
       entity_id: params.reconciliationId,
       before_data: { status: recon.status },
-      after_data: { status: updated.status },
+      after_data: { status: upd.status },
       branch_id: params.adminBranchId,
     })
 
@@ -172,6 +215,20 @@ export async function verifyReconciliation(
       })
     }
 
-    return updated
+    return upd
   })
+
+  // Fire-and-forget: notify agent
+  ;(db as any).insert(notifications).values({
+    recipient_id: recon.agent_id,
+    type: 'GENERAL',
+    title: isVerification ? 'Cash Handover Verified' : 'Cash Handover Rejected',
+    body: isVerification
+      ? `Your ₹${parseFloat(recon.cash_submitted).toLocaleString('en-IN')} cash handover for ${recon.date} has been verified`
+      : `Your cash handover for ${recon.date} was rejected${params.notes ? `: ${params.notes}` : ''}`,
+    reference_id: params.reconciliationId,
+    reference_type: 'reconciliation',
+  }).catch(() => {})
+
+  return updated
 }

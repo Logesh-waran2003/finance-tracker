@@ -54,9 +54,8 @@ export function ReconciliationClient({ initial, todayCash, todaySubmitted }: {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         date: form.date,
-        cash_collected: parseFloat(form.cash_collected),
         cash_submitted: parseFloat(form.cash_submitted),
-        notes: form.notes || null,
+        notes: form.notes || undefined,
       }),
     })
     const data = await res.json()
