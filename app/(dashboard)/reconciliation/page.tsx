@@ -44,12 +44,13 @@ export default async function ReconciliationPage() {
         lte(loanPayments.created_at, new Date(today + 'T23:59:59+05:30')),
       )),
 
-    // Today's submitted reconciliations
+    // Today's submitted reconciliations (exclude REJECTED — those need resubmission)
     db.select({ total: sql<string>`coalesce(sum(${reconciliations.cash_submitted}), 0)` })
       .from(reconciliations)
       .where(and(
         eq(reconciliations.agent_id, userId),
         eq(reconciliations.date, today),
+        sql`${reconciliations.status} != 'REJECTED'`,
       )),
   ])
 
