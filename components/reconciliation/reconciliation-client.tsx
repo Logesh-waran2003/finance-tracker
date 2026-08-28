@@ -37,7 +37,7 @@ export function ReconciliationClient({ initial, todayCash, todaySubmitted }: {
   const [form, setForm] = useState({
     date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date()),
     cash_collected: String(todayCash),
-    cash_submitted: '',
+    cash_submitted: String(Math.max(0, todayCash - todaySubmitted)),
     notes: '',
   })
 
