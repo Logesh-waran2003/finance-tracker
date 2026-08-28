@@ -79,8 +79,40 @@ export async function createReconciliation(
     parseFloat((cashRow as any)?.total ?? '0') +
     parseFloat((loanCashRow as any)?.total ?? '0')
 
+  if (params.cashSubmitted > cashCollected + 0.01) {
+    throw new ServiceError(
+      `Cannot submit ₹${params.cashSubmitted} — only ₹${cashCollected.toFixed(2)} collected in cash today`,
+      400,
+    )
+  }
+
   const record = await (db as any).transaction(async (tx: AnyDB) => {
     try {
+      // If a PENDING record already exists for this date, update it instead of inserting
+      const existing = await (tx as any)
+        .select({ id: reconciliations.id, status: reconciliations.status })
+        .from(reconciliations)
+        .where(and(eq(reconciliations.agent_id, params.agentId), eq(reconciliations.date, params.date)))
+        .limit(1)
+        .then((r: any[]) => r[0])
+
+      if (existing) {
+        if (existing.status !== 'PENDING') {
+          throw new ServiceError('Reconciliation already submitted and cannot be changed', 409)
+        }
+        // Update the existing PENDING record
+        const [rec] = await (tx as any)
+          .update(reconciliations)
+          .set({
+            cash_collected: String(cashCollected),
+            cash_submitted: String(params.cashSubmitted),
+            notes: params.notes ?? null,
+            updated_at: new Date(),
+          })
+          .where(eq(reconciliations.id, existing.id))
+          .returning()
+        return rec
+      }
       const [rec] = await (tx as any)
         .insert(reconciliations)
         .values({
