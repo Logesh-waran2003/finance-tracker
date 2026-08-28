@@ -81,13 +81,16 @@ export function checkRateLimit(
 
 /**
  * Extract the client IP from a Next.js Request object.
- * Falls back to a safe default so rate limiting still works.
+ *
+ * This app runs without a reverse proxy (bun run dev / bun run start directly),
+ * so X-Forwarded-For and X-Real-IP headers are fully attacker-controlled and
+ * cannot be trusted. Next.js Request does not expose the raw TCP connection IP,
+ * so we return 'unknown' and let all same-machine requests share one rate-limit
+ * bucket — acceptable for dev/LAN deployments.
+ *
+ * If you add a trusted reverse proxy in the future, re-enable header parsing
+ * only after configuring the proxy's trusted-IP list.
  */
-export function getClientIp(request: Request): string {
-  const headers = request.headers
-  return (
-    headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    headers.get('x-real-ip') ??
-    'unknown'
-  )
+export function getClientIp(_request: Request): string {
+  return 'unknown'
 }

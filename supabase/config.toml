@@ -1,3 +1,9 @@
+# NOTE: These RLS policies are currently INERT. This app connects via plain Drizzle + postgres
+# directly as the superuser (see lib/db/index.ts, docker-compose.yml). auth.uid() is always NULL
+# and superusers bypass RLS unless FORCE ROW LEVEL SECURITY is set (it is not).
+# These policies only take effect if/when the app is migrated to Supabase Auth with per-request
+# roles and FORCE ROW LEVEL SECURITY added to each table.
+
 # For detailed configuration reference documentation, visit:
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the

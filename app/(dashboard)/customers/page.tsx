@@ -11,7 +11,7 @@ export default async function AgentCustomersPage() {
   if (!session?.user?.id) redirect('/login')
 
   const role = (session.user as any).role
-  if (role !== 'COLLECTION_AGENT' && role !== 'ADMIN') redirect('/dashboard')
+  if (role !== 'COLLECTION_AGENT') redirect('/dashboard')
 
   const agentId = session.user.id
 

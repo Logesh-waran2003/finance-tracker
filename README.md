@@ -198,11 +198,11 @@ For WiFi access replace localhost with your machine's local IP (e.g. 192.168.0.1
 
 ```bash
 bun install
-bun run db:push          # apply schema to DB
-bun run db:triggers      # apply DB triggers
-bun run seed             # create default users
+bun run db:setup         # apply schema + triggers + seed in sequence
 bun run dev              # start dev server on port 3001
 ```
+
+> **Note:** `db:setup` runs `db:push` + `db:triggers` + `seed` in sequence. Skipping `db:triggers` will silently break outstanding_amount recalculation, collection_number generation, and attendance hour tracking — all implemented as Postgres triggers.
 
 For WiFi hosting:
 

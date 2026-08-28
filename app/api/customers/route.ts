@@ -10,7 +10,7 @@ export async function GET() {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const role = (session.user as any).role
-  if (role !== 'COLLECTION_AGENT' && role !== 'ADMIN') {
+  if (role !== 'COLLECTION_AGENT') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

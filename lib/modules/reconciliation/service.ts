@@ -75,13 +75,18 @@ export async function createReconciliation(
       ),
     )
 
-  const cashCollected =
-    parseFloat((cashRow as any)?.total ?? '0') +
-    parseFloat((loanCashRow as any)?.total ?? '0')
+  const toCents = (v: string | number): number => Math.round(parseFloat(String(v)) * 100)
+  const fromCents = (c: number): string => (c / 100).toFixed(2)
 
-  if (params.cashSubmitted > cashCollected + 0.01) {
+  const cashCollectedCents =
+    toCents((cashRow as any)?.total ?? '0') +
+    toCents((loanCashRow as any)?.total ?? '0')
+  const cashCollected = cashCollectedCents / 100
+
+  const cashSubmittedCents = toCents(params.cashSubmitted)
+  if (cashSubmittedCents > cashCollectedCents) {
     throw new ServiceError(
-      `Cannot submit ₹${params.cashSubmitted} — only ₹${cashCollected.toFixed(2)} collected in cash today`,
+      `Cannot submit ₹${params.cashSubmitted} — only ₹${fromCents(cashCollectedCents)} collected in cash today`,
       400,
     )
   }
@@ -104,7 +109,7 @@ export async function createReconciliation(
         const [rec] = await (tx as any)
           .update(reconciliations)
           .set({
-            cash_collected: String(cashCollected),
+            cash_collected: fromCents(cashCollectedCents),
             cash_submitted: String(params.cashSubmitted),
             notes: params.notes ?? null,
             updated_at: new Date(),
@@ -119,7 +124,7 @@ export async function createReconciliation(
           agent_id: params.agentId,
           branch_id: params.branchId,
           date: params.date,
-          cash_collected: String(cashCollected),
+          cash_collected: fromCents(cashCollectedCents),
           cash_submitted: String(params.cashSubmitted),
           status: 'PENDING',
           notes: params.notes ?? null,

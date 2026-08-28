@@ -139,7 +139,7 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  const userOrRes = await requireRole(['COLLECTION_AGENT', 'ADMIN'])
+  const userOrRes = await requireRole(['COLLECTION_AGENT'])
   if (isResponse(userOrRes)) return userOrRes
   const actor = userOrRes
 
