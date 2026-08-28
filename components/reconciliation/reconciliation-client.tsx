@@ -33,6 +33,7 @@ export function ReconciliationClient({ initial, todayCash, todaySubmitted }: {
   todaySubmitted: number
 }) {
   const [rows, setRows] = useState<ReconRow[]>(initial)
+  const [submittedToday, setSubmittedToday] = useState(todaySubmitted)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date()),
@@ -41,7 +42,7 @@ export function ReconciliationClient({ initial, todayCash, todaySubmitted }: {
     notes: '',
   })
 
-  const pendingHandover = todayCash - todaySubmitted
+  const pendingHandover = Math.max(0, todayCash - submittedToday)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -60,9 +61,13 @@ export function ReconciliationClient({ initial, todayCash, todaySubmitted }: {
     })
     const data = await res.json()
     if (!res.ok) { toast.error(data.error ?? 'Failed to submit'); setSaving(false); return }
-    setRows(prev => [data, ...prev])
+    setRows(prev => {
+      const exists = prev.find(r => r.id === data.id)
+      return exists ? prev.map(r => r.id === data.id ? data : r) : [data, ...prev]
+    })
+    setSubmittedToday(prev => prev + parseFloat(form.cash_submitted))
     toast.success('Reconciliation submitted')
-    setForm(f => ({ ...f, cash_submitted: '', notes: '' }))
+    setForm(f => ({ ...f, cash_submitted: '0', notes: '' }))
     setSaving(false)
   }
 
