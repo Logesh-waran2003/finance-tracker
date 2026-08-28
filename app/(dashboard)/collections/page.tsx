@@ -51,7 +51,7 @@ export default async function CollectionsPage() {
         lp.amount,
         lp.payment_mode,
         'CONFIRMED'         AS status,
-        lp.collected_at,
+        lp.created_at       AS collected_at,
         l.loan_number       AS notes,
         NULL                AS rejected_reason,
         'loan'              AS source
