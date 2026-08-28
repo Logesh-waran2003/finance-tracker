@@ -404,7 +404,18 @@ export default function AgentLoansClient({ loans: initialLoans, agentName }: Pro
         </div>
 
         <div className="mt-8">
-          <h2 className="text-lg font-semibold mb-3">All My Loans</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold">All My Loans</h2>
+            <button
+              onClick={async () => {
+                const res = await fetch('/api/agent/loans')
+                if (res.ok) setLoans(await res.json())
+              }}
+              className="text-xs text-blue-600 hover:underline"
+            >
+              Refresh
+            </button>
+          </div>
           <Card>
             <Table>
               <TableHeader>

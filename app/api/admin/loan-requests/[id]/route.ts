@@ -134,16 +134,42 @@ export async function PATCH(
       .where(eq(loanRequests.id, id))
       .returning()
 
-    // Fire-and-forget: notify the requesting agent
+    // Fire-and-forget: notify the requesting agent with loan number
     db.insert(notifications)
       .values({
         recipient_id: loanReq.requested_by,
         type: 'GENERAL' as const,
         title: 'Loan Request Approved',
-        body: `Your loan request ${loanReq.request_number} has been approved`,
+        body: `Your loan request ${loanReq.request_number} has been approved — Loan ${loan.loan_number} is now active`,
         reference_id: updated.id,
         reference_type: 'loan_request',
       })
+      .catch(() => {})
+
+    // Fire-and-forget: notify all admins in the branch with loan number
+    db.select({ id: profiles.id })
+      .from(profiles)
+      .where(
+        and(
+          eq(profiles.role, 'ADMIN'),
+          eq(profiles.is_active, true),
+          ...(actor.branch_id ? [eq(profiles.branch_id, actor.branch_id)] : []),
+        )
+      )
+      .then(admins =>
+        admins.length > 0
+          ? db.insert(notifications).values(
+              admins.map(a => ({
+                recipient_id: a.id,
+                type: 'GENERAL' as const,
+                title: 'Loan Created',
+                body: `Loan ${loan.loan_number} created for request ${loanReq.request_number}`,
+                reference_id: loan.id,
+                reference_type: 'loan',
+              }))
+            )
+          : null
+      )
       .catch(() => {})
 
     return NextResponse.json({ ...updated, loan })
