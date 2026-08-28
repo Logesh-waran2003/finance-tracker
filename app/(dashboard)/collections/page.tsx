@@ -1,7 +1,7 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
-import { collections, customers, dues } from '@/lib/db/schema'
+import { collections, customers, dues, loans, loanPayments } from '@/lib/db/schema'
 import { eq, and, desc, sql, isNull } from 'drizzle-orm'
 import { CollectionForm } from '@/components/collections/collection-form'
 import type { Session } from 'next-auth'
@@ -15,7 +15,7 @@ export default async function CollectionsPage() {
 
   const userId = session.user.id
 
-  const [assignedCustomers, initialCollections, outstanding] = await Promise.all([
+  const [assignedCustomers, initialCollections, loanPaymentRows, outstanding, loanOutstanding] = await Promise.all([
     db.select({
       id: customers.id,
       customer_code: customers.customer_code,
@@ -41,6 +41,29 @@ export default async function CollectionsPage() {
       .orderBy(desc(collections.collected_at))
       .limit(50),
 
+    // Loan installment payments by this agent
+    db.execute(sql`
+      SELECT
+        lp.id,
+        lp.payment_number   AS collection_number,
+        c.full_name         AS customer_name,
+        lp.customer_id,
+        lp.amount,
+        lp.payment_mode,
+        'CONFIRMED'         AS status,
+        lp.collected_at,
+        l.loan_number       AS notes,
+        NULL                AS rejected_reason,
+        'loan'              AS source
+      FROM loan_payments lp
+      JOIN loans l ON l.id = lp.loan_id
+      JOIN customers c ON c.id = lp.customer_id
+      WHERE lp.agent_id = ${userId}
+        AND lp.is_reversed = false
+      ORDER BY lp.collected_at DESC
+      LIMIT 100
+    `),
+
     db.select({
       customer_id: dues.customer_id,
       total: sql<string>`coalesce(sum(${dues.outstanding_amount}), '0')`,
@@ -50,9 +73,35 @@ export default async function CollectionsPage() {
         isNull(dues.deleted_at)
       ))
       .groupBy(dues.customer_id),
+
+    db.select({
+      customer_id: loans.customer_id,
+      total: sql<string>`coalesce(sum(${loans.total_outstanding}), '0')`,
+    }).from(loans)
+      .where(sql`${loans.status} NOT IN ('COMPLETED', 'CANCELLED', 'DRAFT')`)
+      .groupBy(loans.customer_id),
   ])
 
   const outMap = new Map(outstanding.map(o => [o.customer_id, o.total ?? '0']))
+  const loanMap = new Map(loanOutstanding.map(o => [o.customer_id, o.total ?? '0']))
+
+  const mergedCollections = [
+    ...initialCollections.map(r => ({
+      ...r,
+      collection_number: r.collection_number ?? null,
+      collected_at: r.collected_at?.toISOString() ?? null,
+      source: 'freeform' as const,
+    })),
+    ...(loanPaymentRows as any[]).map(r => ({
+      ...r,
+      collected_at: r.collected_at ? new Date(r.collected_at).toISOString() : null,
+      source: 'loan' as const,
+    })),
+  ].sort((a, b) => {
+    if (!a.collected_at) return 1
+    if (!b.collected_at) return -1
+    return new Date(b.collected_at).getTime() - new Date(a.collected_at).getTime()
+  })
 
   return (
     <CollectionForm
@@ -62,14 +111,11 @@ export default async function CollectionsPage() {
           Math.max(0,
             parseFloat(outMap.get(c.id) ?? '0')
             + parseFloat(c.opening_balance as string ?? '0')
+            + parseFloat(loanMap.get(c.id) ?? '0')
           )
         ),
       }))}
-      initial={initialCollections.map(r => ({
-        ...r,
-        collection_number: r.collection_number ?? null,
-        collected_at: r.collected_at?.toISOString() ?? null,
-      }))}
+      initial={mergedCollections}
     />
   )
 }

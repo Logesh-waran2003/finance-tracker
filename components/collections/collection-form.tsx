@@ -22,6 +22,7 @@ interface CollectionRow {
   collected_at: string | null
   notes: string | null
   rejected_reason: string | null
+  source?: 'loan' | 'freeform'
 }
 
 const STATUS_COLOR: Record<string, string> = {
@@ -164,7 +165,10 @@ export function CollectionForm({ customers, initial }: { customers: Customer[]; 
                       <p className="font-medium text-sm">{r.customer_name ?? '—'}</p>
                       <p className="text-xs font-mono text-gray-400">{r.collection_number ?? '—'}</p>
                     </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status] ?? 'bg-gray-100'}`}>{r.status}</span>
+                    <div className="flex items-center gap-1">
+                      {r.source === 'loan' && <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">Loan</span>}
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status] ?? 'bg-gray-100'}`}>{r.status}</span>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium">₹{parseFloat(r.amount).toLocaleString()}</span>
@@ -172,12 +176,13 @@ export function CollectionForm({ customers, initial }: { customers: Customer[]; 
                   </div>
                   <div className="flex items-center justify-between">
                     <p className="text-xs text-gray-400">{fmtDateTime(r.collected_at)}</p>
-                    {r.status === 'PENDING' && (
+                    {r.status === 'PENDING' && r.source !== 'loan' && (
                       <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600 h-7 px-2 text-xs" onClick={() => cancelCollection(r.id)}>
                         <XCircle size={13} className="mr-1" />Cancel
                       </Button>
                     )}
                   </div>
+                  {r.notes && r.source === 'loan' && <p className="text-xs text-blue-500">Loan: {r.notes}</p>}
                   {r.rejected_reason && <p className="text-xs text-red-500">{r.rejected_reason}</p>}
                 </CardContent>
               </Card>
@@ -199,12 +204,16 @@ export function CollectionForm({ customers, initial }: { customers: Customer[]; 
                     <td className="px-4 py-2 font-medium">₹{parseFloat(r.amount).toLocaleString()}</td>
                     <td className="px-4 py-2 text-gray-600">{r.payment_mode}</td>
                     <td className="px-4 py-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status] ?? 'bg-gray-100'}`}>{r.status}</span>
+                      <div className="flex items-center gap-1">
+                        {r.source === 'loan' && <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">Loan</span>}
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status] ?? 'bg-gray-100'}`}>{r.status}</span>
+                      </div>
                       {r.rejected_reason && <p className="text-xs text-red-500 mt-0.5">{r.rejected_reason}</p>}
+                      {r.notes && r.source === 'loan' && <p className="text-xs text-blue-500 mt-0.5">Loan: {r.notes}</p>}
                     </td>
                     <td className="px-4 py-2 text-xs text-gray-500">{fmtDateTime(r.collected_at)}</td>
                     <td className="px-4 py-2">
-                      {r.status === 'PENDING' && (
+                      {r.status === 'PENDING' && r.source !== 'loan' && (
                         <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 text-xs" onClick={() => cancelCollection(r.id)}>Cancel</Button>
                       )}
                     </td>
