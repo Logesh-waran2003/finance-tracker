@@ -67,7 +67,7 @@ export function AdminCustomerTable({ initial, agents, branches }: {
   const [balanceErr, setBalanceErr] = useState('')
 
   const fetchCustomers = useCallback(async () => {
-    const res = await fetch('/api/admin/customers')
+    const res = await fetch('/api/admin/customers', { cache: 'no-store' })
     if (res.ok) setCustomers(await res.json())
   }, [])
 
