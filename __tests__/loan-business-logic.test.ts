@@ -599,7 +599,7 @@ describe('Payment reversal', () => {
     const { reversePayment } = await import('@/lib/modules/loans/payment-service')
 
     const payment = {
-      id: UUID, loan_id: UUID2, schedule_id: 'sched-1',
+      id: UUID, loan_id: UUID2, loan_schedule_id: 'sched-1',
       amount: '50.00', is_reversed: false,
     }
 

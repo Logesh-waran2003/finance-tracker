@@ -432,16 +432,22 @@ describe('createReconciliation — server-side cash_collected', () => {
 
     const today = new Date().toISOString().split('T')[0]
 
-    // DB returns 800 as the server-calculated total
+    // DB returns 800 from collections on first select call, 0 from loan_payments on second
     let insertedCashCollected: string | null = null
-    const record = { id: UUID, agent_id: UUID, date: today, cash_collected: '800', cash_submitted: '500', status: 'PENDING' }
+    const record = { id: UUID, agent_id: UUID, date: today, cash_collected: '800.00', cash_submitted: '500', status: 'PENDING' }
+    let selectCall = 0
 
     const db = {
-      select: () => selectChain([{ total: '800' }]),
+      select: () => {
+        const rows = selectCall === 0 ? [{ total: '800' }] : [{ total: '0' }]
+        selectCall++
+        return selectChain(rows)
+      },
+      insert: () => ({ values: () => Promise.resolve() }), // fire-and-forget notifications
       transaction: async (fn: Function) => fn({
+        select: () => selectChain([]), // upsert check — no existing record
         insert: () => ({
           values: (vals: any) => {
-            // Only capture the reconciliation insert (it has cash_collected)
             if (vals.cash_collected !== undefined) insertedCashCollected = vals.cash_collected
             return { returning: () => Promise.resolve([record]) }
           },
@@ -452,11 +458,10 @@ describe('createReconciliation — server-side cash_collected', () => {
     await createReconciliation(db, {
       agentId: UUID, branchId: null, actorName: 'A', actorEmail: 'a@b.com',
       date: today, cashSubmitted: 500,
-      // No cash_collected field — schema intentionally excludes it
     })
 
-    // Service must insert the server-calculated value (800), not the client-submitted one (500)
-    expect(insertedCashCollected!).toBe('800')
+    // Service must insert the server-calculated value (800.00), not the client-submitted one (500)
+    expect(insertedCashCollected!).toBe('800.00')
   })
 
   it('uses 0 as cash_collected when agent has no confirmed CASH collections', async () => {
@@ -466,11 +471,12 @@ describe('createReconciliation — server-side cash_collected', () => {
     let insertedCashCollected: string | null = null
 
     const db = {
-      select: () => selectChain([{ total: null }]), // null → 0
+      select: () => selectChain([{ total: null }]), // null → 0 from both queries
+      insert: () => ({ values: () => Promise.resolve() }), // fire-and-forget notifications
       transaction: async (fn: Function) => fn({
+        select: () => selectChain([]), // upsert check — no existing record
         insert: () => ({
           values: (vals: any) => {
-            // Only capture the reconciliation insert (it has cash_collected)
             if (vals.cash_collected !== undefined) insertedCashCollected = vals.cash_collected
             return { returning: () => Promise.resolve([{ id: UUID, date: today, status: 'PENDING' }]) }
           },
@@ -478,12 +484,13 @@ describe('createReconciliation — server-side cash_collected', () => {
       }),
     } as any
 
+    // cashSubmitted: 0 since collected is also 0 — overpayment guard allows equal amounts
     await createReconciliation(db, {
       agentId: UUID, branchId: null, actorName: 'A', actorEmail: 'a@b.com',
-      date: today, cashSubmitted: 0.01,
+      date: today, cashSubmitted: 0,
     })
 
-    expect(insertedCashCollected!).toBe('0')
+    expect(insertedCashCollected!).toBe('0.00')
   })
 
   it('throws 409 (ServiceError) on duplicate agent+date', async () => {
@@ -491,9 +498,16 @@ describe('createReconciliation — server-side cash_collected', () => {
     const { ServiceError } = await import('@/lib/modules/errors')
 
     const today = new Date().toISOString().split('T')[0]
+    let selectCall = 0
     const db = {
-      select: () => selectChain([{ total: '500' }]),
+      select: () => {
+        // First two selects: cash totals (500 + 0). tx.select returns existing PENDING record.
+        const rows = selectCall < 2 ? [{ total: '500' }] : []
+        selectCall++
+        return selectChain(rows)
+      },
       transaction: async (fn: Function) => fn({
+        select: () => selectChain([{ id: UUID, status: 'SUBMITTED' }]), // existing record, not PENDING
         insert: () => ({
           values: () => ({
             returning: () => { throw Object.assign(new Error('unique violation'), { code: '23505' }) },
