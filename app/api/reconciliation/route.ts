@@ -93,6 +93,7 @@ export async function POST(request: Request) {
     if (err instanceof ServiceError) {
       return NextResponse.json({ error: err.message }, { status: err.status })
     }
-    throw err
+    console.error('[POST /api/reconciliation]', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
