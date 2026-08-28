@@ -7,16 +7,16 @@ A full-stack loan and collections management platform for field collection busin
 - **Frontend**: Next.js 16 (App Router), React 19, Tailwind CSS, shadcn/ui
 - **Backend**: Next.js API routes (TypeScript)
 - **Database**: PostgreSQL via Drizzle ORM
-- **Auth**: NextAuth v5 (credentials)
+- **Auth**: NextAuth v5 (credentials), 8-hour session auto-logout
 - **Runtime**: Bun
-- **Testing**: Vitest + bun:test
+- **Testing**: Vitest + bun:test, Robot Framework (E2E)
 
 ## Roles
 
 | Role | Access |
 |------|--------|
-| ADMIN | Full access — loans, customers, employees, reports, collections, loan request approvals |
-| COLLECTION_AGENT | Own assigned loans, customers, collections; can submit loan requests |
+| ADMIN | Full access — loans, customers, employees, reports, collections, loan request approvals, reconciliation verify |
+| COLLECTION_AGENT | Own assigned loans, customers, collections; submit loan requests; cash reconciliation |
 | STAFF | Attendance and expenses only |
 
 ## Default Logins
@@ -45,7 +45,7 @@ The primary business module. Manages the full lifecycle of micro-finance loans w
 2. Admin reviews pending requests on /admin/loan-requests, approves or rejects
 3. On approval: new customer is created (if new), loan is created and assigned to agent automatically
 4. System generates all daily repayment schedules automatically
-5. Agent collects daily installments via their Loans page
+5. Agent collects daily installments via their Loans page — collected amounts appear in My Collections
 6. Admin can collect lump-sum cash payments via loan detail → Collect Cash
 7. Missed days auto-flagged by cron job, penalty generated (idempotent)
 
@@ -59,6 +59,8 @@ Penalty Outstanding   = Generated - Paid - Waived
 Total Outstanding     = Principal Outstanding + Penalty Outstanding
 ```
 
+**Loan amount is immutable** — set once on creation, never changes regardless of payments.
+
 ### Customer Outstanding Formula
 
 The "amount owed" shown for every customer is always calculated live from the DB:
@@ -71,12 +73,9 @@ Outstanding = Opening Balance + Active Dues + Active Loan Outstanding - Confirme
 - Active Loan Outstanding: total_outstanding across all active loans (principal + penalties)
 - Freeform Collections: confirmed cash collections with no linked due
 
-This formula is applied consistently in 5 places:
-1. Admin customers page (SSR)
-2. Agent customers page (SSR)
-3. Admin customers API (after mutations)
-4. Agent customers API (after mutations)
-5. Freeform collection cap guard (POST /api/collections) — agent cannot collect more than this
+Admin customer table shows both:
+- **Loan Amount** = original fixed loan amount (sum of all active loans — never decreases)
+- **Outstanding** = live remaining balance (decreases with every payment)
 
 ### Loan Request Workflow
 
@@ -97,7 +96,9 @@ Agents can request loans for customers without admin access to the loan creation
 
 **Notifications:**
 - Agent submits → admin bell shows "New Loan Request"
-- Admin approves → agent bell shows "Loan Request Approved"
+- Admin approves → agent bell shows "Loan Request Approved — Loan LOAN-XXXXXX is now active"
+- Admin approves → all branch admins notified with loan number
+- View button on notification → routes directly to relevant page
 
 ### Collections (Freeform)
 
@@ -108,11 +109,34 @@ General-purpose cash collection from customers against dues or freeform balances
 - Admin confirms or rejects with a reason
 - Confirmed collections reduce the customer's outstanding immediately
 
+**My Collections page** shows both:
+- Freeform collections (from collections table)
+- Loan installment payments (from loan_payments table) — tagged with blue "Loan" badge
+
+### Cash Reconciliation
+
+Daily cash handover workflow between agent and admin.
+
+**Flow:**
+1. Agent collects cash during the day (freeform collections + loan installments)
+2. Reconciliation page shows:
+   - **Confirmed Cash** = total CASH collected today (auto-calculated, read-only)
+   - **Already Submitted** = cash already handed over today (excludes rejected)
+   - **Pending Handover** = Confirmed Cash − Already Submitted
+3. Agent submits cash handover — Cash Collected field is locked (server-calculated), only Cash Submitted is editable
+4. Admin reviews and verifies or rejects
+5. If rejected, Pending Handover is restored — agent can resubmit
+6. Business rule: cannot submit more than confirmed cash collected
+
+**Notifications:**
+- Agent submits → branch admins notified
+- Admin verifies/rejects → agent notified
+
 ### Customer Management
 
 Customer profiles with GPS coordinates, assigned agent, branch, and opening balance.
 
-Opening balance can only be adjusted via the dedicated "₹" button (requires reason, fully audited). Regular customer edits never touch the balance.
+Opening balance can only be adjusted via the dedicated "₹" button (requires reason, fully audited). Regular customer edits never touch the balance. Balance deductions reflect immediately in the outstanding calculation.
 
 ### Employees
 
@@ -125,10 +149,6 @@ Daily check-in/check-out with GPS capture. Admins can view and correct attendanc
 ### Expenses
 
 Employee expense submissions with category, approval workflow, and receipt upload.
-
-### Reconciliation
-
-Daily cash reconciliation — agent submits cash collected vs cash submitted. Admin verifies.
 
 ### Reports
 
@@ -148,8 +168,8 @@ Admin dashboard with period-based analytics — toggle between Daily, Monthly, a
 
 Both admin and agent have a notification bell:
 
-- **Admin**: per-collection alerts ("John collected ₹500 from CustomerX"), plus live-computed aggregates (pending collections count, overdue dues, absent agents, pending reconciliations, pending expenses). Polled every 2 minutes.
-- **Agent**: loan request approval/rejection notifications. Polled every 2 minutes.
+- **Admin**: per-collection alerts, loan request submissions, cash handover notifications, plus live-computed aggregates. Polled every 2 minutes. View button routes to the relevant page.
+- **Agent**: loan request approval/rejection, cash handover verify/reject. Polled every 2 minutes.
 - Dismissing a notification marks it read in DB — won't reappear.
 
 ## Setup
@@ -187,10 +207,8 @@ bun run dev              # start dev server on port 3001
 For WiFi hosting:
 
 ```bash
-bun run dev -- --hostname 0.0.0.0 --port 3001
+NEXTAUTH_URL=http://192.168.0.109:3001 bun run dev -- --hostname 0.0.0.0 --port 3001
 ```
-
-Set `NEXTAUTH_URL` and `NEXT_PUBLIC_SITE_URL` to your WiFi IP when hosting on LAN.
 
 ### Manual DB migrations
 
@@ -299,23 +317,26 @@ app/
   (auth)/              # login
   (dashboard)/
     admin/
-      customers/       # admin customer list (outstanding = opening + dues + loans - freeform)
+      customers/       # admin customer list (loan_amount_total + loan_outstanding_total)
       loans/           # admin loan list + detail (schedule, payments, penalties)
       loan-requests/   # pending loan request approvals
       collections/     # confirm/reject agent collections
+      reconciliation/  # verify/reject cash handover
       ...
-    loans/             # agent loan collection page (today's schedules)
-    collections/       # agent freeform collections
-    customers/         # agent customer list (same outstanding formula)
+    loans/             # agent loan collection page (today's schedules + loan requests)
+    collections/       # agent freeform + loan installment collections merged
+    reconciliation/    # agent cash handover submission
+    customers/         # agent customer list
     dashboard/         # admin period-based analytics
   api/
     admin/
       dashboard/       # GET ?period=daily|monthly|yearly
       notifications/   # GET (aggregated + DB), PATCH (mark read)
-      loan-requests/   # GET (list), PATCH /[id] (approve/reject)
+      loan-requests/   # GET (list), PATCH /[id] (approve/reject + notifications)
       loans/           # CRUD + collect + bulk-collect + reverse + waive
       collections/     # confirm/reject
       customers/       # CRUD
+      reconciliation/  # GET (list), PATCH /[id] (verify/reject + notifications)
     agent/
       loan-requests/   # GET (own), POST (submit)
       notifications/   # GET (own), PATCH (mark read)
@@ -326,9 +347,9 @@ app/
 components/
   loans/               # admin + agent loan UI, loan request review
   customers/           # admin customer table + dialogs
-  collections/         # collection form (agent) + admin table
-  dashboard/           # self-fetching period dashboard
-  notification-bell/   # shared bell (admin + agent, different endpoints)
+  collections/         # collection form (agent) — freeform + loan payments merged
+  reconciliation/      # cash handover submit + history
+  notification-bell/   # shared bell (admin + agent, different endpoints + routing)
 
 lib/
   db/
@@ -337,6 +358,7 @@ lib/
   modules/
     loans/             # createLoan, updateLoanBalances, collectInstallment, reversePayment, waivePenalty
     collections/       # createCollection (with idempotency + SELECT FOR UPDATE)
+    reconciliation/    # createReconciliation (server-calc cash), verifyReconciliation
     audit/             # append-only audit log
     ledger/            # append-only financial ledger
   auth/                # requireAdmin, requireAgent, requireRole, requireCustomerAccess
@@ -351,6 +373,9 @@ lib/
 - Audit logs written atomically alongside every mutation
 - Loan balances (principal_outstanding, total_outstanding) recalculated from payment records after every collection/reversal/waiver via `updateLoanBalances()` — never stored as running totals
 - Customer outstanding is always computed at query time from source tables — never cached or pre-computed
+- Loan amount is immutable — fixed at creation, includes interest upfront
+- Cash reconciliation cash_collected is always server-calculated — never trusted from client
 - Notifications are fire-and-forget inserts — failure never blocks the main operation
 - DB client is a global singleton to prevent connection pool exhaustion on Next.js HMR reloads
 - Agent cannot collect more than customer's outstanding balance (enforced on both frontend and backend)
+- Rate limiter bypasses private network IPs (192.168.x.x, 10.x.x.x) for dev/test environments
