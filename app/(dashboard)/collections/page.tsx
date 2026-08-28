@@ -60,7 +60,7 @@ export default async function CollectionsPage() {
       JOIN customers c ON c.id = lp.customer_id
       WHERE lp.agent_id = ${userId}
         AND lp.is_reversed = false
-      ORDER BY lp.collected_at DESC
+      ORDER BY lp.created_at DESC
       LIMIT 100
     `),
 
