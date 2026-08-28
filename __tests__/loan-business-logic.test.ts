@@ -262,30 +262,41 @@ describe('Balance calculations', () => {
 // ── 4. Payment validation tests ────────────────────────────────────────────────
 
 describe('Payment validation rules', () => {
-  it('agent cannot collect on another agent\'s loan', async () => {
+  it('any agent can collect any active loan regardless of assignment', async () => {
     const { collectInstallment } = await import('@/lib/modules/loans/payment-service')
-    const { ServiceError } = await import('@/lib/modules/errors')
 
     const loan = {
       id: UUID, assigned_agent_id: UUID2, status: 'ACTIVE',
       principal_outstanding: '10000.00', loan_number: 'LOAN-001001',
+      customer_id: UUID,
     }
+    const schedule = { id: 'sched-1', loan_id: UUID, installment_amount: '50.00' }
 
     const db = {
-      transaction: async (fn: Function) => fn(makeTx([[loan]])),
+      transaction: async (fn: Function) => fn(makeTx([
+        [loan],           // 0: SELECT loan FOR UPDATE
+        [schedule],       // 1: SELECT schedule FOR UPDATE (no transactionReference → idempotency check skipped)
+        [],               // 2: duplicate guard
+        [{ payment_number: 'PAY-001001' }], // 3: last payment number
+        [],               // 4: UPDATE schedule PAID (execute, not insert)
+        // updateLoanBalances:
+        [{ id: UUID, loan_amount: '10000.00', status: 'ACTIVE' }], // 5: SELECT loan
+        [{ total: '50' }],  // 6: principal collected
+        [{ total: '0' }],   // 7: penalties generated
+        [{ total: '0' }],   // 8: penalties paid
+        [{ total: '0' }],   // 9: penalties waived
+        [],                 // 10: UPDATE loans
+      ])),
     } as any
 
-    try {
-      await collectInstallment(db, {
-        loanId: UUID, agentId: UUID, // UUID !== UUID2 (assigned agent)
+    // Should NOT throw — any agent can collect
+    await expect(
+      collectInstallment(db, {
+        loanId: UUID, agentId: UUID, // UUID !== UUID2 (assigned agent) — still allowed
         actorName: 'Agent', actorEmail: 'a@b.com',
         branchId: null, paymentMode: 'CASH', isAdmin: false,
-      })
-      expect(true).toBe(false)
-    } catch (e: any) {
-      expect(e instanceof ServiceError).toBe(true)
-      expect(e.status).toBe(403)
-    }
+      }),
+    ).resolves.toBeDefined()
   })
 
   it('duplicate payment for same schedule_id is rejected', async () => {
