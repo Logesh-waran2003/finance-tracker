@@ -229,28 +229,13 @@ export default function AdminLoanRequestsClient({ initial, agents }: Props) {
         <DialogContent className="max-w-sm">
           <DialogTitle>Approve Loan Request</DialogTitle>
           <DialogDescription>
-            Select the agent to assign this loan to.
+            Loan will be auto-assigned to the requesting agent. All agents will be able to collect.
           </DialogDescription>
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <Label>Assign to Agent *</Label>
-              <Select value={approveAgentId} onValueChange={v => setApproveAgentId(v ?? '')}>
-                <SelectTrigger><SelectValue placeholder="Select agent" /></SelectTrigger>
-                <SelectContent>
-                  {agents.map(a => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.full_name}{a.employee_code ? ` (${a.employee_code})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-2 pt-1">
-              <Button onClick={handleApprove} disabled={submittingApprove} className="flex-1">
-                {submittingApprove ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Approving...</> : 'Confirm Approve'}
-              </Button>
-              <Button variant="outline" onClick={() => setApprovingId(null)}>Cancel</Button>
-            </div>
+          <div className="flex gap-2 pt-1">
+            <Button onClick={handleApprove} disabled={submittingApprove} className="flex-1">
+              {submittingApprove ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Approving...</> : 'Confirm Approve'}
+            </Button>
+            <Button variant="outline" onClick={() => setApprovingId(null)}>Cancel</Button>
           </div>
         </DialogContent>
       </Dialog>

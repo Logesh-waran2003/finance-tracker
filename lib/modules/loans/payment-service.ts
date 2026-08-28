@@ -89,11 +89,7 @@ export async function collectInstallment(
 
     if (!loan) throw new ServiceError('Loan not found', 404)
 
-    // Agent must be the assigned agent, unless caller is an admin
-    if (!params.isAdmin && loan.assigned_agent_id !== params.agentId) {
-      throw new ServiceError('You are not assigned to this loan', 403)
-    }
-
+    // Agent must be authenticated; any agent can collect any active loan
     if (loan.status === 'COMPLETED') {
       throw new ServiceError('Loan is already completed', 400)
     }

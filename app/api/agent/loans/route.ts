@@ -29,8 +29,7 @@ export async function GET() {
     JOIN customers c ON c.id = l.customer_id
     LEFT JOIN loan_schedules s
       ON s.loan_id = l.id AND s.scheduled_date = ${today}
-    WHERE l.assigned_agent_id = ${actor.id}
-      AND l.deleted_at IS NULL
+    WHERE l.deleted_at IS NULL
       AND l.status NOT IN ('CANCELLED', 'COMPLETED')
     ORDER BY s.status NULLS LAST, c.full_name
     LIMIT 200

@@ -32,8 +32,7 @@ export default async function AgentLoansPage() {
     JOIN customers c ON c.id = l.customer_id
     LEFT JOIN loan_schedules s
       ON s.loan_id = l.id AND s.scheduled_date = ${today}
-    WHERE l.assigned_agent_id = ${agentId}
-      AND l.deleted_at IS NULL
+    WHERE l.deleted_at IS NULL
       AND l.status NOT IN ('CANCELLED', 'COMPLETED')
     ORDER BY s.status NULLS LAST, c.full_name
     LIMIT 200

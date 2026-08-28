@@ -68,13 +68,8 @@ export async function PATCH(
       return NextResponse.json(updated)
     }
 
-    // action === 'approve'
-    if (!agent_id) {
-      return NextResponse.json(
-        { error: 'agent_id is required for approval' },
-        { status: 400 },
-      )
-    }
+    // action === 'approve' — auto-assign to the requesting agent
+    const agent_id = loanReq.requested_by
 
     // If new customer, create them first
     let customerId = loanReq.customer_id
