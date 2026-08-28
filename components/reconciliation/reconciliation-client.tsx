@@ -90,8 +90,13 @@ export function ReconciliationClient({ initial, todayCash, todaySubmitted }: {
               </div>
               <div className="space-y-1">
                 <Label>Cash Collected (₹)</Label>
-                <Input type="number" min="0" step="0.01" value={form.cash_collected}
-                  onChange={e => setForm(f => ({ ...f, cash_collected: e.target.value }))} />
+                <Input
+                  type="number"
+                  value={form.cash_collected}
+                  readOnly
+                  className="bg-gray-50 cursor-not-allowed"
+                />
+                <p className="text-xs text-gray-400">Auto-calculated from today's confirmed cash collections</p>
               </div>
               <div className="space-y-1">
                 <Label>Cash Submitted (₹) *</Label>
