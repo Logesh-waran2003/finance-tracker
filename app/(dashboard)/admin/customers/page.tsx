@@ -44,8 +44,8 @@ export default async function AdminCustomersPage() {
 
     db.select({
       customer_id: loans.customer_id,
-      total_loan_amount: sql<string>`coalesce(sum(${loans.total_outstanding}), '0')`,
-      total_loan_interest: sql<string>`coalesce(max(${loans.interest_percentage}), '0')`,
+      loan_amount_total: sql<string>`coalesce(sum(${loans.loan_amount}), '0')`,
+      loan_outstanding_total: sql<string>`coalesce(sum(${loans.total_outstanding}), '0')`,
       active_loan_count: sql<string>`count(*)::text`,
     }).from(loans)
       .where(sql`${loans.status} NOT IN ('COMPLETED', 'CANCELLED', 'DRAFT')`)
@@ -73,12 +73,12 @@ export default async function AdminCustomersPage() {
       Math.max(0,
         parseFloat(c.opening_balance as string ?? '0')
         + parseFloat(outMap.get(c.id) ?? '0')
-        + parseFloat(loanMap.get(c.id)?.total_loan_amount ?? '0')
+        + parseFloat(loanMap.get(c.id)?.loan_outstanding_total ?? '0')
         - parseFloat(freeformMap.get(c.id) ?? '0')
       )
     ),
-    total_loan_amount: loanMap.get(c.id)?.total_loan_amount ?? '0',
-    total_loan_interest: loanMap.get(c.id)?.total_loan_interest ?? '0',
+    loan_amount_total: loanMap.get(c.id)?.loan_amount_total ?? '0',
+    loan_outstanding_total: loanMap.get(c.id)?.loan_outstanding_total ?? '0',
     active_loan_count: parseInt(loanMap.get(c.id)?.active_loan_count ?? '0'),
   }))
 

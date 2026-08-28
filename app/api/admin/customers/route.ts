@@ -73,8 +73,8 @@ export async function GET(request: Request) {
   // Loan totals per customer (active/overdue loans only)
   const loanAgg = await db.select({
     customer_id: loans.customer_id,
-    total_loan_amount: sql<string>`coalesce(sum(${loans.total_outstanding}), '0')`,
-    total_loan_interest: sql<string>`coalesce(max(${loans.interest_percentage}), '0')`,
+    loan_amount_total: sql<string>`coalesce(sum(${loans.loan_amount}), '0')`,
+    loan_outstanding_total: sql<string>`coalesce(sum(${loans.total_outstanding}), '0')`,
     active_loan_count: sql<string>`count(*)::text`,
   }).from(loans)
     .where(sql`${loans.status} NOT IN ('COMPLETED', 'CANCELLED', 'DRAFT')`)
@@ -90,12 +90,12 @@ export async function GET(request: Request) {
       Math.max(0,
         parseFloat(r.opening_balance as string ?? '0')
         + parseFloat(duesMap.get(r.id) ?? '0')
-        + parseFloat(loanMap.get(r.id)?.total_loan_amount ?? '0')
+        + parseFloat(loanMap.get(r.id)?.loan_outstanding_total ?? '0')
         - parseFloat(freeformMap.get(r.id) ?? '0')
       )
     ),
-    total_loan_amount: loanMap.get(r.id)?.total_loan_amount ?? '0',
-    total_loan_interest: loanMap.get(r.id)?.total_loan_interest ?? '0',
+    loan_amount_total: loanMap.get(r.id)?.loan_amount_total ?? '0',
+    loan_outstanding_total: loanMap.get(r.id)?.loan_outstanding_total ?? '0',
     active_loan_count: parseInt(loanMap.get(r.id)?.active_loan_count ?? '0'),
   }))
 

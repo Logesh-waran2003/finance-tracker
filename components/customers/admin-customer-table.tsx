@@ -22,8 +22,8 @@ interface Customer {
   opening_balance: string
   is_active: boolean | null
   outstanding_total: string
-  total_loan_amount: string
-  total_loan_interest: string
+  loan_amount_total: string
+  loan_outstanding_total: string
   active_loan_count: number
 }
 
@@ -239,8 +239,8 @@ export function AdminCustomerTable({ initial, agents, branches }: {
                     <td className="px-4 py-3 text-sm">
                       {c.active_loan_count > 0 ? (
                         <div>
-                          <span className="font-medium text-gray-800">₹{parseFloat(c.total_loan_amount).toLocaleString()}</span>
-                          <span className="text-xs text-gray-400 ml-1">(+₹{parseFloat(c.total_loan_interest).toLocaleString()} int.)</span>
+                          <span className="font-medium text-gray-800">₹{parseFloat(c.loan_amount_total).toLocaleString()}</span>
+                          <span className="text-xs text-gray-400 ml-1">(O/S ₹{parseFloat(c.loan_outstanding_total).toLocaleString()})</span>
                         </div>
                       ) : <span className="text-gray-300">—</span>}
                     </td>
