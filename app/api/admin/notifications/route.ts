@@ -90,7 +90,11 @@ export async function GET() {
     type: 'info' as const,
     title: row.title,
     message: row.body,
-    href: row.reference_type === 'loan_request' ? '/admin/loan-requests' : '/admin/collections',
+    href: row.reference_type === 'loan_request'
+        ? '/admin/loan-requests'
+        : row.reference_type === 'loan_payment'
+        ? '/admin/loans'
+        : '/admin/collections',
     dbNotification: true as const,
   }))
 
