@@ -343,7 +343,7 @@ export default function AgentLoansClient({ loans: initialLoans, agentName }: Pro
   function markCollected(id: string) {
     setLoans((prev) =>
       prev.map((l) =>
-        l.id === id ? { ...l, today_schedule_status: 'PAID' } : l
+        l.id === id ? { ...l, today_schedule_status: 'PAID', today_payment_status: 'PENDING' } : l
       )
     )
   }
@@ -357,14 +357,16 @@ export default function AgentLoansClient({ loans: initialLoans, agentName }: Pro
     .reduce((sum, l) => sum + parseFloat(l.today_installment_amount ?? '0'), 0)
 
   const todayCollected = loans
-    .filter((l) => l.today_schedule_status === 'PAID')
+    .filter((l) => l.today_payment_status === 'CONFIRMED')
     .reduce((sum, l) => sum + parseFloat(l.today_installment_amount ?? '0'), 0)
 
   const todayPendingCount = loans.filter(
-    (l) => l.today_schedule_status === 'PENDING'
+    (l) => l.today_schedule_status === 'PENDING' && !l.today_payment_status
   ).length
 
-  const pendingLoans = loans.filter((l) => l.today_schedule_status === 'PENDING')
+  const pendingLoans = loans.filter(
+    (l) => l.today_schedule_status === 'PENDING' && !l.today_payment_status
+  )
 
   return (
     <>
