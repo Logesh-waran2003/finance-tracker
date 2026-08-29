@@ -56,6 +56,7 @@ export function CollectionForm({ customers, initial }: { customers: Customer[]; 
   })
   const [gps, setGps] = useState<{ lat: number; lng: number; accuracy: number } | null>(null)
   const [gpsState, setGpsState] = useState<'idle' | 'acquiring' | 'ready' | 'denied'>('idle')
+  const [dateFilter, setDateFilter] = useState('')
 
   // Summary
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())
@@ -63,6 +64,11 @@ export function CollectionForm({ customers, initial }: { customers: Customer[]; 
   const todayTotal = todayRows.filter(r => ['CONFIRMED', 'PENDING'].includes(r.status)).reduce((s, r) => s + parseFloat(r.amount), 0)
   const pendingTotal = todayRows.filter(r => r.status === 'PENDING').reduce((s, r) => s + parseFloat(r.amount), 0)
   const cashPending = todayRows.filter(r => r.status === 'CONFIRMED' && r.payment_mode === 'CASH').reduce((s, r) => s + parseFloat(r.amount), 0)
+
+  // Date-filtered rows for the table
+  const filteredRows = dateFilter
+    ? rows.filter(r => r.collected_at && new Date(r.collected_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }) === dateFilter)
+    : rows
 
   async function loadDues(customerId: string) {
     setLoadingDues(true); setDues([])
@@ -153,11 +159,34 @@ export function CollectionForm({ customers, initial }: { customers: Customer[]; 
         <Card><CardContent className="p-3"><p className="text-xs text-gray-500">Cash to Hand Over</p><p className="font-semibold text-orange-600">₹{cashPending.toLocaleString()}</p></CardContent></Card>
       </div>
 
+      {/* Date filter */}
+      <div className="flex items-center gap-2">
+        <input
+          type="date"
+          value={dateFilter}
+          onChange={e => setDateFilter(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        {dateFilter && (
+          <button
+            onClick={() => setDateFilter('')}
+            className="text-xs text-gray-400 hover:text-gray-600 underline"
+          >
+            Clear
+          </button>
+        )}
+        {dateFilter && (
+          <span className="text-xs text-gray-500">
+            {filteredRows.length} record{filteredRows.length !== 1 ? 's' : ''}
+          </span>
+        )}
+      </div>
+
       <Card>
         <CardContent className="p-0">
           <div className="sm:hidden space-y-3 p-3">
-            {rows.length === 0 && <p className="text-center text-gray-400 py-6 text-sm">No collections yet</p>}
-            {rows.map(r => (
+            {filteredRows.length === 0 && <p className="text-center text-gray-400 py-6 text-sm">No collections{dateFilter ? ' for this date' : ' yet'}</p>}
+            {filteredRows.map(r => (
               <Card key={r.id}>
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-center justify-between">
@@ -196,8 +225,8 @@ export function CollectionForm({ customers, initial }: { customers: Customer[]; 
                 ))}</tr>
               </thead>
               <tbody className="divide-y">
-                {rows.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">No collections yet</td></tr>}
-                {rows.map(r => (
+                {filteredRows.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">No collections{dateFilter ? ' for this date' : ' yet'}</td></tr>}
+                {filteredRows.map(r => (
                   <tr key={r.id} className="hover:bg-gray-50">
                     <td className="px-4 py-2 text-xs text-gray-400">{r.collection_number ?? '—'}</td>
                     <td className="px-4 py-2 font-medium">{r.customer_name ?? '—'}</td>
