@@ -1,7 +1,7 @@
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { customers, dues, collections, profiles } from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, isNull } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import type { Session } from 'next-auth'
 import { EditDueDialog } from '@/components/customers/edit-due-dialog'
@@ -20,9 +20,19 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
   const customer = await db.select().from(customers).where(eq(customers.id, id)).limit(1).then(r => r[0])
   if (!customer) redirect('/customers')
 
-  // RBAC
-  if (role === 'COLLECTION_AGENT' && customer.assigned_agent_id !== session.user.id) {
-    redirect('/customers')
+  // RBAC — agent can view any customer they've collected from
+  if (role === 'COLLECTION_AGENT') {
+    const hasCollection = await db
+      .select({ id: collections.id })
+      .from(collections)
+      .where(and(
+        eq(collections.customer_id, id),
+        eq(collections.agent_id, session.user.id),
+        isNull(collections.deleted_at),
+      ))
+      .limit(1)
+      .then(r => r.length > 0)
+    if (!hasCollection) redirect('/customers')
   }
 
   const agent = customer.assigned_agent_id
