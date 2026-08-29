@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 import {
   Menu, LayoutDashboard, Clock, Receipt, CreditCard, Users,
   ArrowLeftRight, ShieldCheck, Building2, CalendarCheck,
-  FileBarChart2, Settings, LogOut, User, Banknote, ClipboardList,
+  FileBarChart2, Settings, LogOut, User, Banknote, ClipboardList, CheckSquare,
 } from 'lucide-react'
 import { NotificationBell } from '@/components/notification-bell'
 import { BottomNav } from '@/components/bottom-nav'
@@ -41,6 +41,7 @@ const adminNav: NavItem[] = [
   { label: 'Collections', href: '/admin/collections', icon: CreditCard },
   { label: 'Loans', href: '/admin/loans', icon: Banknote },
   { label: 'Loan Requests', href: '/admin/loan-requests', icon: ClipboardList },
+  { label: 'Collection Approval', href: '/admin/loans/collection-approval', icon: CheckSquare },
   { label: 'Customers', href: '/admin/customers', icon: Users },
   { label: 'Employees', href: '/admin/employees', icon: ShieldCheck },
   { label: 'Attendance', href: '/admin/attendance', icon: CalendarCheck },

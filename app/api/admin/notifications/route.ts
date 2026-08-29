@@ -93,7 +93,7 @@ export async function GET() {
     href: row.reference_type === 'loan_request'
         ? '/admin/loan-requests'
         : row.reference_type === 'loan_payment'
-        ? '/admin/loans'
+        ? '/admin/loans/collection-approval'
         : '/admin/collections',
     dbNotification: true as const,
   }))
