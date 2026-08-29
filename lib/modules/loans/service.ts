@@ -167,13 +167,15 @@ export async function createLoan(
     // Single batch insert — one round-trip for potentially hundreds of rows
     await (tx as any).insert(loanSchedules).values(schedules)
 
-    // --- assign agent ---
-    await (tx as any).insert(agentLoanAssignments).values({
-      loan_id: loan.id,
-      agent_id: params.assignedAgentId,
-      is_current: true,
-      assigned_at: new Date(),
-    })
+    // --- assign agent (only if one was provided) ---
+    if (params.assignedAgentId) {
+      await (tx as any).insert(agentLoanAssignments).values({
+        loan_id: loan.id,
+        agent_id: params.assignedAgentId,
+        is_current: true,
+        assigned_at: new Date(),
+      })
+    }
 
     // --- audit ---
     await logAudit(tx, {
