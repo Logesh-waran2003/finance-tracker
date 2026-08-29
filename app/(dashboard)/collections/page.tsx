@@ -50,10 +50,10 @@ export default async function CollectionsPage() {
         lp.customer_id,
         lp.amount,
         lp.payment_mode,
-        'CONFIRMED'         AS status,
+        lp.status           AS status,
         lp.created_at       AS collected_at,
         l.loan_number       AS notes,
-        NULL                AS rejected_reason,
+        lp.rejected_reason  AS rejected_reason,
         'loan'              AS source
       FROM loan_payments lp
       JOIN loans l ON l.id = lp.loan_id
