@@ -28,7 +28,7 @@ export default async function CollectionApprovalPage() {
       amount: loanPayments.amount,
       payment_mode: loanPayments.payment_mode,
       scheduled_date: loanPayments.scheduled_date,
-      collected_at: loanPayments.created_at,
+      collected_at: loanPayments.updated_at,
       loan_number: loans.loan_number,
       customer_name: customers.full_name,
       agent_name: profiles.full_name,
@@ -38,7 +38,7 @@ export default async function CollectionApprovalPage() {
     .innerJoin(customers, eq(customers.id, loanPayments.customer_id))
     .innerJoin(profiles, eq(profiles.id, loanPayments.agent_id))
     .where(and(...baseWhere))
-    .orderBy(loanPayments.collected_at)
+    .orderBy(loanPayments.updated_at)
     .limit(200)
 
   return <AdminCollectionApprovalClient initial={rows as any} />
