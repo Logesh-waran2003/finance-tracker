@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { loanPayments, loans, customers, profiles } from '@/lib/db/schema'
 import { eq, and, isNull } from 'drizzle-orm'
-import { sql } from 'drizzle-orm'
 import type { Session } from 'next-auth'
 import AdminCollectionApprovalClient from '@/components/loans/admin-collection-approval-client'
 
@@ -13,27 +12,35 @@ export default async function CollectionApprovalPage() {
 
   const branchId = (session.user as any).branch_id as string | null
 
-  const rows = await db.execute(sql`
-    SELECT
-      p.id,
-      p.payment_number,
-      p.amount,
-      p.payment_mode,
-      p.scheduled_date,
-      p.collected_at,
-      l.loan_number,
-      c.full_name  AS customer_name,
-      ag.full_name AS agent_name
-    FROM loan_payments p
-    JOIN loans l     ON l.id = p.loan_id
-    JOIN customers c ON c.id = p.customer_id
-    JOIN profiles ag ON ag.id = p.agent_id
-    WHERE p.status = 'PENDING'
-      AND p.is_reversed = false
-      ${branchId ? sql`AND l.branch_id = ${branchId}` : sql``}
-    ORDER BY p.collected_at ASC
-    LIMIT 200
-  `) as any[]
+  const baseWhere = [
+    eq(loanPayments.status, 'PENDING'),
+    eq(loanPayments.is_reversed, false),
+  ]
 
-  return <AdminCollectionApprovalClient initial={rows} />
+  if (branchId) {
+    baseWhere.push(eq(loans.branch_id, branchId))
+  }
+
+  const rows = await db
+    .select({
+      id: loanPayments.id,
+      payment_number: loanPayments.payment_number,
+      amount: loanPayments.amount,
+      payment_mode: loanPayments.payment_mode,
+      scheduled_date: loanPayments.scheduled_date,
+      collected_at: loanPayments.created_at,
+      loan_number: loans.loan_number,
+      customer_name: customers.full_name,
+      agent_name: profiles.full_name,
+    })
+    .from(loanPayments)
+    .innerJoin(loans, eq(loans.id, loanPayments.loan_id))
+    .innerJoin(customers, eq(customers.id, loanPayments.customer_id))
+    .innerJoin(profiles, eq(profiles.id, loanPayments.agent_id))
+    .where(and(...baseWhere))
+    .orderBy(loanPayments.collected_at)
+    .limit(200)
+
+  return <AdminCollectionApprovalClient initial={rows as any} />
 }
+
