@@ -130,12 +130,13 @@ export async function collectInstallment(
       if (existing) return existing as LoanPaymentRecord
     }
 
-    // Duplicate guard — no non-reversed payment for this schedule
+    // Duplicate guard — no non-reversed PENDING or CONFIRMED payment for this schedule
     const [duplicate] = await (tx as any).execute(
       sql`
         SELECT id FROM loan_payments
         WHERE loan_schedule_id = ${schedule.id}
           AND is_reversed = false
+          AND status IN ('PENDING', 'CONFIRMED')
         LIMIT 1
       `,
     ) as any[]
@@ -173,34 +174,14 @@ export async function collectInstallment(
         payment_mode: params.paymentMode,
         payment_reference: params.paymentReference ?? null,
         transaction_reference: params.transactionReference ?? null,
-        status: 'CONFIRMED',
+        status: 'PENDING',   // admin must confirm
         is_reversed: false,
         collected_at: new Date(),
       })
       .returning()
 
-    // Mark schedule PAID
-    await (tx as any).execute(
-      sql`
-        UPDATE loan_schedules
-        SET status = 'PAID', paid_at = NOW(), updated_at = NOW()
-        WHERE id = ${schedule.id}
-      `,
-    )
-
-    // Recalculate loan balances (handles COMPLETED detection)
-    await updateLoanBalances(tx, params.loanId)
-
-    // Ledger entry — 'collection' is the closest existing entity_type
-    await writeLedgerEntry(tx, {
-      entity_type: 'collection',
-      entity_id: payment.id,
-      entry_type: 'CREDIT',
-      amount: fromCents(amountCents),
-      actor_id: params.agentId,
-      branch_id: params.branchId,
-      notes: `Loan installment — ${loan.loan_number}`,
-    })
+    // Do NOT mark schedule PAID or update loan balances yet —
+    // that happens when admin confirms the payment.
 
     await logAudit(tx, {
       actor_id: params.agentId,
@@ -308,7 +289,124 @@ export async function reversePayment(
   })
 }
 
-// ── waivePenalty ──────────────────────────────────────────────────────────────
+// ── confirmLoanPayment ────────────────────────────────────────────────────────
+
+/**
+ * Admin confirms a PENDING loan payment.
+ * Marks schedule PAID, updates loan balances, writes ledger entry.
+ */
+export async function confirmLoanPayment(
+  db: AnyDB,
+  params: {
+    paymentId: string
+    confirmedBy: string
+    actorName: string
+    actorEmail: string
+    branchId: string | null
+  },
+): Promise<LoanPaymentRecord> {
+  return (db as any).transaction(async (tx: AnyDB) => {
+    const [payment] = await (tx as any).execute(
+      sql`SELECT * FROM loan_payments WHERE id = ${params.paymentId} FOR UPDATE`,
+    ) as any[]
+
+    if (!payment) throw new ServiceError('Payment not found', 404)
+    if (payment.status === 'CONFIRMED') throw new ServiceError('Payment already confirmed', 400)
+    if (payment.status === 'REJECTED') throw new ServiceError('Cannot confirm a rejected payment', 400)
+    if (payment.is_reversed) throw new ServiceError('Payment has been reversed', 400)
+
+    // Mark CONFIRMED
+    await (tx as any).execute(sql`
+      UPDATE loan_payments
+      SET status = 'CONFIRMED', confirmed_by = ${params.confirmedBy}, confirmed_at = NOW(), updated_at = NOW()
+      WHERE id = ${params.paymentId}
+    `)
+
+    // Mark schedule PAID
+    if (payment.loan_schedule_id) {
+      await (tx as any).execute(sql`
+        UPDATE loan_schedules
+        SET status = 'PAID', paid_at = NOW(), updated_at = NOW()
+        WHERE id = ${payment.loan_schedule_id}
+      `)
+    }
+
+    // Recalculate loan balances
+    await updateLoanBalances(tx, payment.loan_id)
+
+    // Ledger entry
+    await writeLedgerEntry(tx, {
+      entity_type: 'collection',
+      entity_id: params.paymentId,
+      entry_type: 'CREDIT',
+      amount: payment.amount,
+      actor_id: params.confirmedBy,
+      branch_id: params.branchId,
+      notes: `Loan payment confirmed`,
+    })
+
+    await logAudit(tx, {
+      actor_id: params.confirmedBy,
+      actor_name: params.actorName,
+      actor_email: params.actorEmail,
+      action: 'PAYMENT_CONFIRMED',
+      entity_type: 'loan_payment',
+      entity_id: params.paymentId,
+      after_data: { payment_id: params.paymentId, loan_id: payment.loan_id },
+      branch_id: params.branchId,
+    })
+
+    const [updated] = await (tx as any).execute(
+      sql`SELECT * FROM loan_payments WHERE id = ${params.paymentId}`,
+    ) as any[]
+    return updated as LoanPaymentRecord
+  })
+}
+
+// ── rejectLoanPayment ─────────────────────────────────────────────────────────
+
+/**
+ * Admin rejects a PENDING loan payment.
+ * Schedule remains PENDING so the agent can re-collect.
+ */
+export async function rejectLoanPayment(
+  db: AnyDB,
+  params: {
+    paymentId: string
+    reason: string
+    rejectedBy: string
+    actorName: string
+    actorEmail: string
+    branchId: string | null
+  },
+): Promise<void> {
+  return (db as any).transaction(async (tx: AnyDB) => {
+    const [payment] = await (tx as any).execute(
+      sql`SELECT * FROM loan_payments WHERE id = ${params.paymentId} FOR UPDATE`,
+    ) as any[]
+
+    if (!payment) throw new ServiceError('Payment not found', 404)
+    if (payment.status === 'CONFIRMED') throw new ServiceError('Cannot reject a confirmed payment — reverse it instead', 400)
+    if (payment.status === 'REJECTED') throw new ServiceError('Payment already rejected', 400)
+
+    await (tx as any).execute(sql`
+      UPDATE loan_payments
+      SET status = 'REJECTED', rejected_reason = ${params.reason}, updated_at = NOW()
+      WHERE id = ${params.paymentId}
+    `)
+
+    await logAudit(tx, {
+      actor_id: params.rejectedBy,
+      actor_name: params.actorName,
+      actor_email: params.actorEmail,
+      action: 'PAYMENT_REJECTED',
+      entity_type: 'loan_payment',
+      entity_id: params.paymentId,
+      after_data: { payment_id: params.paymentId, reason: params.reason },
+      branch_id: params.branchId,
+    })
+  })
+}
 
 /**
  * Waives part or all of a penalty. Updates loan balances after.

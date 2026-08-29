@@ -43,6 +43,8 @@ export default async function AdminLoanDetailPage({
         payment_date: loanPayments.payment_date,
         amount: loanPayments.amount,
         payment_mode: loanPayments.payment_mode,
+        status: loanPayments.status,
+        rejected_reason: loanPayments.rejected_reason,
         is_reversed: loanPayments.is_reversed,
         reversed_at: loanPayments.reversed_at,
         agent_name: profiles.full_name,

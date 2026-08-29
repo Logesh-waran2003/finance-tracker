@@ -61,6 +61,7 @@ interface AgentLoan {
   today_schedule_id: string | null
   today_schedule_status: string | null
   today_installment_amount: string | null
+  today_payment_status: string | null
 }
 
 interface LoanRequest {
@@ -108,21 +109,38 @@ interface Props {
   agentName: string
 }
 
-function TodayBadge({ status }: { status: string | null }) {
+function TodayBadge({ status, paymentStatus }: { status: string | null, paymentStatus: string | null }) {
   if (!status) return <span className="text-gray-400 text-sm">—</span>
   const s = status.toUpperCase()
-  if (s === 'PAID')
+  if (s === 'PAID') {
+    if (paymentStatus === 'PENDING') {
+      return (
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+          Awaiting Approval
+        </span>
+      )
+    }
     return (
       <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
         Collected
       </span>
     )
-  if (s === 'PENDING')
+  }
+  if (s === 'PENDING') {
+    // A payment may have been submitted (PENDING approval) even if schedule is still PENDING
+    if (paymentStatus === 'PENDING') {
+      return (
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+          Awaiting Approval
+        </span>
+      )
+    }
     return (
       <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
         Pending
       </span>
     )
+  }
   if (s === 'MISSED')
     return (
       <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
@@ -448,7 +466,7 @@ export default function AgentLoansClient({ loans: initialLoans, agentName }: Pro
                       </span>
                     </TableCell>
                     <TableCell>
-                      <TodayBadge status={loan.today_schedule_status} />
+                      <TodayBadge status={loan.today_schedule_status} paymentStatus={loan.today_payment_status} />
                     </TableCell>
                   </TableRow>
                 ))}

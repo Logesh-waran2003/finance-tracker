@@ -92,6 +92,8 @@ interface Payment {
   payment_date: string
   amount: string
   payment_mode: string
+  status: string
+  rejected_reason: string | null
   is_reversed: boolean
   reversed_at: string | null
   agent_name: string | null
@@ -170,6 +172,12 @@ export function AdminLoanDetailClient({
   const [reassignAgentId, setReassignAgentId] = useState('')
   const [reassignLoading, setReassignLoading] = useState(false)
 
+  // Approve/reject payment state
+  const [approvePaymentId, setApprovePaymentId] = useState<string | null>(null)
+  const [rejectPaymentId, setRejectPaymentId] = useState<string | null>(null)
+  const [rejectPaymentReason, setRejectPaymentReason] = useState('')
+  const [paymentActionLoading, setPaymentActionLoading] = useState(false)
+
   function openReverse(paymentId: string) {
     setReversePaymentId(paymentId)
     setReverseReason('')
@@ -181,6 +189,46 @@ export function AdminLoanDetailClient({
     setWaiveAmount('')
     setWaiveReason('')
     setWaiveOpen(true)
+  }
+
+  async function handleConfirmPayment() {
+    if (!approvePaymentId) return
+    setPaymentActionLoading(true)
+    try {
+      const res = await fetch(`/api/admin/loans/payments/${approvePaymentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'confirm' }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error ?? 'Failed to confirm payment'); return }
+      toast.success('Payment confirmed')
+      setPayments(prev => prev.map(p => p.id === approvePaymentId ? { ...p, status: 'CONFIRMED' } : p))
+      setApprovePaymentId(null)
+    } catch { toast.error('Network error') }
+    finally { setPaymentActionLoading(false) }
+  }
+
+  async function handleRejectPayment() {
+    if (!rejectPaymentId || !rejectPaymentReason.trim()) {
+      toast.error('Reason is required')
+      return
+    }
+    setPaymentActionLoading(true)
+    try {
+      const res = await fetch(`/api/admin/loans/payments/${rejectPaymentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reject', reason: rejectPaymentReason }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error ?? 'Failed to reject payment'); return }
+      toast.success('Payment rejected')
+      setPayments(prev => prev.map(p => p.id === rejectPaymentId ? { ...p, status: 'REJECTED', rejected_reason: rejectPaymentReason } : p))
+      setRejectPaymentId(null)
+      setRejectPaymentReason('')
+    } catch { toast.error('Network error') }
+    finally { setPaymentActionLoading(false) }
   }
 
   async function handleReverse() {
@@ -433,17 +481,27 @@ export function AdminLoanDetailClient({
                         <TableCell>{row.agent_name ?? '—'}</TableCell>
                         <TableCell>
                           {row.is_reversed ? (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                              Reversed
-                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Reversed</span>
+                          ) : row.status === 'PENDING' ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">Pending Approval</span>
+                          ) : row.status === 'REJECTED' ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700" title={row.rejected_reason ?? ''}>Rejected</span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                              Active
-                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Confirmed</span>
                           )}
                         </TableCell>
                         <TableCell>
-                          {!row.is_reversed && (
+                          {!row.is_reversed && row.status === 'PENDING' && (
+                            <div className="flex gap-1">
+                              <Button size="sm" className="h-7 px-2 text-xs" onClick={() => setApprovePaymentId(row.id)}>
+                                Confirm
+                              </Button>
+                              <Button size="sm" variant="outline" className="h-7 px-2 text-xs text-red-600 border-red-200 hover:bg-red-50" onClick={() => { setRejectPaymentId(row.id); setRejectPaymentReason('') }}>
+                                Reject
+                              </Button>
+                            </div>
+                          )}
+                          {!row.is_reversed && row.status === 'CONFIRMED' && (
                             <Button
                               variant="destructive"
                               size="sm"
@@ -661,6 +719,54 @@ export function AdminLoanDetailClient({
             >
               {waiveLoading ? 'Processing...' : 'Confirm Waiver'}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Payment Dialog */}
+      <Dialog open={!!approvePaymentId} onOpenChange={open => { if (!open) setApprovePaymentId(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Confirm Payment</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600 mt-1">
+            Confirming this payment will mark the schedule as paid and update the loan balance.
+          </p>
+          <div className="flex gap-2 mt-4">
+            <Button className="flex-1" onClick={handleConfirmPayment} disabled={paymentActionLoading}>
+              {paymentActionLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Confirming...</> : 'Confirm Payment'}
+            </Button>
+            <Button variant="outline" onClick={() => setApprovePaymentId(null)}>Cancel</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Payment Dialog */}
+      <Dialog open={!!rejectPaymentId} onOpenChange={open => { if (!open) { setRejectPaymentId(null); setRejectPaymentReason('') } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Reject Payment</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <p className="text-sm text-gray-600">
+              The schedule will remain open so the agent can re-collect.
+            </p>
+            <div className="space-y-1">
+              <Label>Reason *</Label>
+              <Textarea
+                rows={3}
+                placeholder="Why is this payment being rejected?"
+                value={rejectPaymentReason}
+                onChange={e => setRejectPaymentReason(e.target.value)}
+                className="resize-none"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="destructive" className="flex-1" onClick={handleRejectPayment} disabled={paymentActionLoading}>
+                {paymentActionLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Rejecting...</> : 'Reject Payment'}
+              </Button>
+              <Button variant="outline" onClick={() => { setRejectPaymentId(null); setRejectPaymentReason('') }}>Cancel</Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

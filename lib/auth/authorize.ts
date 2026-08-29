@@ -59,6 +59,11 @@ export async function requireRole(
   return user
 }
 
+/** Requires ADMIN role only. */
+export async function requireAdmin(): Promise<AuthorizedUser | NextResponse> {
+  return requireRole(['ADMIN'])
+}
+
 /** Requires COLLECTION_AGENT or ADMIN role. */
 export async function requireAgent(): Promise<AuthorizedUser | NextResponse> {
   return requireRole(['ADMIN', 'COLLECTION_AGENT'])
@@ -85,11 +90,6 @@ export function withErrorHandler<T extends unknown[]>(
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
   }
-}
-
-/** Requires ADMIN role. */
-export async function requireAdmin(): Promise<AuthorizedUser | NextResponse> {
-  return requireRole(['ADMIN'])
 }
 
 /** Type guard — true when the value is a Response/NextResponse (i.e. authorization failed). */

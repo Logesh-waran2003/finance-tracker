@@ -11,7 +11,7 @@ export async function GET() {
 
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())
 
-  // Fetch loans assigned to this agent
+  // Fetch all active loans + today's schedule + today's payment status
   const rows = await db.execute(sql`
     SELECT
       l.id,
@@ -24,11 +24,16 @@ export async function GET() {
       l.status,
       s.id                  AS today_schedule_id,
       s.status              AS today_schedule_status,
-      s.installment_amount  AS today_installment_amount
+      s.installment_amount  AS today_installment_amount,
+      p.status              AS today_payment_status
     FROM loans l
     JOIN customers c ON c.id = l.customer_id
     LEFT JOIN loan_schedules s
       ON s.loan_id = l.id AND s.scheduled_date = ${today}
+    LEFT JOIN loan_payments p
+      ON p.loan_schedule_id = s.id
+      AND p.is_reversed = false
+      AND p.status IN ('PENDING', 'CONFIRMED')
     WHERE l.deleted_at IS NULL
       AND l.status NOT IN ('CANCELLED', 'COMPLETED')
     ORDER BY s.status NULLS LAST, c.full_name
