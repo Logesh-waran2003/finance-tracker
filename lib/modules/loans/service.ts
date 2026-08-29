@@ -304,7 +304,7 @@ export async function getLoanWithDetails(
         p.full_name  AS assigned_agent_name
       FROM loans l
       JOIN customers c ON c.id = l.customer_id
-      JOIN profiles  p ON p.id = l.assigned_agent_id
+      LEFT JOIN profiles  p ON p.id = l.assigned_agent_id
       WHERE l.id = ${loanId}
       LIMIT 1
     `,

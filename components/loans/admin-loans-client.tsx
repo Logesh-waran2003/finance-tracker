@@ -178,7 +178,14 @@ export function AdminLoansClient({ loans: initialLoans, customers, agents }: Pro
         return
       }
       toast.success('Loan created')
-      setLoans(prev => [data, ...prev])
+      // Enrich with customer_name and agent_name for immediate list display
+      const selectedCustomer = customers.find(c => c.id === form.customer_id)
+      const selectedAgent = agents.find(a => a.id === form.agent_id)
+      setLoans(prev => [{
+        ...data,
+        customer_name: selectedCustomer?.full_name ?? null,
+        assigned_agent_name: selectedAgent?.full_name ?? null,
+      }, ...prev])
       handleClose()
     } catch {
       toast.error('Network error')
