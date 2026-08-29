@@ -77,7 +77,6 @@ export async function POST(request: Request) {
     } = body
 
     if (!customer_id) return NextResponse.json({ error: 'customer_id required' }, { status: 400 })
-    if (!assigned_agent_id) return NextResponse.json({ error: 'assigned_agent_id required' }, { status: 400 })
     if (!loan_amount || !tenure || !disbursement_date)
       return NextResponse.json({ error: 'loan_amount, tenure, disbursement_date required' }, { status: 400 })
     if (parseInt(tenure) <= 0)
