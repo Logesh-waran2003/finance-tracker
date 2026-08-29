@@ -27,10 +27,7 @@ export async function GET() {
     is_active: customers.is_active,
     assigned_agent_id: customers.assigned_agent_id,
   }).from(customers)
-    .where(and(
-      eq(customers.assigned_agent_id, agentId),
-      eq(customers.is_active, true)
-    ))
+    .where(eq(customers.is_active, true))
 
   const [duesAgg, freeformAgg, loanAgg] = await Promise.all([
     db.select({
