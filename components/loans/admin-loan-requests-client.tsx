@@ -5,7 +5,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -70,7 +69,6 @@ export default function AdminLoanRequestsClient({ initial, agents }: Props) {
 
   // Approve dialog state
   const [approvingId, setApprovingId] = useState<string | null>(null)
-  const [approveAgentId, setApproveAgentId] = useState('')
   const [submittingApprove, setSubmittingApprove] = useState(false)
 
   // Reject dialog state
@@ -83,13 +81,12 @@ export default function AdminLoanRequestsClient({ initial, agents }: Props) {
   const filtered = filter === 'ALL' ? requests : requests.filter(r => r.status === filter)
 
   async function handleApprove() {
-    if (!approveAgentId) { toast.error('Select an agent to assign'); return }
     setSubmittingApprove(true)
     try {
       const res = await fetch(`/api/admin/loan-requests/${approvingId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'approve', agent_id: approveAgentId }),
+        body: JSON.stringify({ action: 'approve' }),
       })
       const data = await res.json()
       if (!res.ok) { toast.error(data.error ?? 'Failed to approve'); return }
@@ -98,7 +95,6 @@ export default function AdminLoanRequestsClient({ initial, agents }: Props) {
         r.id === approvingId ? { ...r, status: 'APPROVED', created_loan_id: data.loan_id ?? r.created_loan_id } : r
       ))
       setApprovingId(null)
-      setApproveAgentId('')
     } catch { toast.error('Network error') }
     finally { setSubmittingApprove(false) }
   }
@@ -133,20 +129,21 @@ export default function AdminLoanRequestsClient({ initial, agents }: Props) {
 
   return (
     <>
-      <div className="p-6 space-y-6">
+      <div className="px-4 py-5 sm:p-6 space-y-4 sm:space-y-6">
+        {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold">Loan Requests</h1>
-          <p className="text-gray-500">Review and action agent-submitted loan requests</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Loan Requests</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Review and action agent-submitted loan requests</p>
         </div>
 
-        {/* Filter tabs */}
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
+        {/* Filter tabs — full width on mobile, fit on desktop */}
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-full sm:w-fit overflow-x-auto">
           {tabs.map(t => (
             <button
               key={t.key}
               onClick={() => setFilter(t.key)}
               className={cn(
-                'px-3 py-1.5 text-sm rounded-md font-medium transition-colors',
+                'flex-1 sm:flex-none px-3 py-2 text-xs sm:text-sm rounded-md font-medium transition-colors whitespace-nowrap',
                 filter === t.key
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
@@ -160,7 +157,7 @@ export default function AdminLoanRequestsClient({ initial, agents }: Props) {
         {/* Requests list */}
         {filtered.length === 0 ? (
           <Card>
-            <CardContent className="py-10 text-center text-gray-400">
+            <CardContent className="py-10 text-center text-gray-400 text-sm">
               No {filter !== 'ALL' ? filter.toLowerCase() : ''} loan requests
             </CardContent>
           </Card>
@@ -168,48 +165,89 @@ export default function AdminLoanRequestsClient({ initial, agents }: Props) {
           <div className="space-y-3">
             {filtered.map(req => (
               <Card key={req.id}>
-                <CardContent className="p-4 space-y-2">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs text-gray-400">{req.request_number}</span>
-                        <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', STATUS_STYLE[req.status])}>
-                          {req.status}
-                        </span>
-                      </div>
-                      <p className="font-semibold">{req.customer_name ?? req.new_customer_name ?? '—'}</p>
-                      {req.customer_code && (
-                        <p className="text-xs text-gray-400">{req.customer_code}</p>
-                      )}
-                      {req.new_customer_phone && (
-                        <p className="text-xs text-gray-400">{req.new_customer_phone}{req.new_customer_area ? ` · ${req.new_customer_area}` : ''}</p>
-                      )}
-                      <div className="text-sm text-gray-600 space-y-0.5">
-                        <p>{fmt(req.loan_amount)} loan · {req.tenure ? `${req.tenure} days` : ''} · {fmt(req.daily_installment)}/day · {parseFloat(req.interest_percentage)}% interest</p>
-                        {parseFloat(req.penalty_amount) > 0 && (
-                          <p className="text-xs text-gray-400">Penalty: {fmt(req.penalty_amount)}</p>
-                        )}
-                        <p className="text-xs text-gray-400">Disburse: {fmtDate(req.disbursement_date)}</p>
-                      </div>
-                      {req.notes && <p className="text-xs text-gray-500 italic">{req.notes}</p>}
-                      {req.rejection_reason && (
-                        <p className="text-xs text-red-500">Rejected: {req.rejection_reason}</p>
-                      )}
-                      <p className="text-xs text-gray-400">By {req.agent_name ?? '—'} · {fmtDate(req.created_at)}</p>
+                <CardContent className="p-4 space-y-3">
+                  {/* Top row: request number + status badge */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs text-gray-400">{req.request_number}</span>
+                    <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', STATUS_STYLE[req.status])}>
+                      {req.status}
+                    </span>
+                  </div>
+
+                  {/* Customer name */}
+                  <p className="font-semibold text-base leading-tight">
+                    {req.customer_name ?? req.new_customer_name ?? '—'}
+                  </p>
+
+                  {/* Customer meta */}
+                  {req.customer_code && (
+                    <p className="text-xs text-gray-400">{req.customer_code}</p>
+                  )}
+                  {req.new_customer_phone && (
+                    <p className="text-xs text-gray-400">
+                      {req.new_customer_phone}{req.new_customer_area ? ` · ${req.new_customer_area}` : ''}
+                    </p>
+                  )}
+
+                  {/* Loan details grid — 2 cols on mobile */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                    <div>
+                      <span className="text-xs text-gray-400 block">Amount</span>
+                      <span className="font-medium">{fmt(req.loan_amount)}</span>
                     </div>
+                    <div>
+                      <span className="text-xs text-gray-400 block">Daily</span>
+                      <span className="font-medium">{fmt(req.daily_installment)}/day</span>
+                    </div>
+                    {req.tenure && (
+                      <div>
+                        <span className="text-xs text-gray-400 block">Tenure</span>
+                        <span>{req.tenure} days</span>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-xs text-gray-400 block">Interest</span>
+                      <span>{parseFloat(req.interest_percentage)}%</span>
+                    </div>
+                    {parseFloat(req.penalty_amount) > 0 && (
+                      <div>
+                        <span className="text-xs text-gray-400 block">Penalty</span>
+                        <span>{fmt(req.penalty_amount)}</span>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-xs text-gray-400 block">Disburse</span>
+                      <span>{fmtDate(req.disbursement_date)}</span>
+                    </div>
+                  </div>
+
+                  {/* Notes / rejection */}
+                  {req.notes && (
+                    <p className="text-xs text-gray-500 italic">{req.notes}</p>
+                  )}
+                  {req.rejection_reason && (
+                    <p className="text-xs text-red-500">Rejected: {req.rejection_reason}</p>
+                  )}
+
+                  {/* Footer: agent + date, and action buttons */}
+                  <div className="flex items-center justify-between gap-3 pt-1 border-t border-gray-100">
+                    <p className="text-xs text-gray-400 min-w-0 truncate">
+                      By {req.agent_name ?? '—'} · {fmtDate(req.created_at)}
+                    </p>
 
                     {req.status === 'PENDING' && (
-                      <div className="flex flex-col gap-2 shrink-0">
+                      <div className="flex gap-2 shrink-0">
                         <Button
                           size="sm"
-                          onClick={() => { setApprovingId(req.id); setApproveAgentId('') }}
+                          className="h-8 px-3 text-xs"
+                          onClick={() => setApprovingId(req.id)}
                         >
                           Approve
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-red-600 border-red-200 hover:bg-red-50"
+                          className="h-8 px-3 text-xs text-red-600 border-red-200 hover:bg-red-50"
                           onClick={() => { setRejectingId(req.id); setRejectReason('') }}
                         >
                           Reject
@@ -226,47 +264,56 @@ export default function AdminLoanRequestsClient({ initial, agents }: Props) {
 
       {/* Approve dialog */}
       <Dialog open={!!approvingId} onOpenChange={open => { if (!open) setApprovingId(null) }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-sm rounded-xl">
           <DialogTitle>Approve Loan Request</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm">
             Loan will be auto-assigned to the requesting agent. All agents will be able to collect.
           </DialogDescription>
-          <div className="flex gap-2 pt-1">
-            <Button onClick={handleApprove} disabled={submittingApprove} className="flex-1">
-              {submittingApprove ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Approving...</> : 'Confirm Approve'}
+          <div className="flex flex-col-reverse sm:flex-row gap-2 pt-1">
+            <Button variant="outline" className="flex-1" onClick={() => setApprovingId(null)}>
+              Cancel
             </Button>
-            <Button variant="outline" onClick={() => setApprovingId(null)}>Cancel</Button>
+            <Button onClick={handleApprove} disabled={submittingApprove} className="flex-1">
+              {submittingApprove
+                ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Approving...</>
+                : 'Confirm Approve'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Reject dialog */}
       <Dialog open={!!rejectingId} onOpenChange={open => { if (!open) setRejectingId(null) }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-sm rounded-xl">
           <DialogTitle>Reject Loan Request</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm">
             Provide a reason for rejecting this loan request.
           </DialogDescription>
           <div className="space-y-3">
-            <div className="space-y-1">
-              <Label>Rejection Reason *</Label>
+            <div className="space-y-1.5">
+              <Label className="text-sm">Rejection Reason *</Label>
               <Textarea
                 value={rejectReason}
                 onChange={e => setRejectReason(e.target.value)}
                 placeholder="Explain why this request is being rejected..."
                 rows={3}
+                className="text-sm resize-none"
               />
             </div>
-            <div className="flex gap-2 pt-1">
+            <div className="flex flex-col-reverse sm:flex-row gap-2 pt-1">
+              <Button variant="outline" className="flex-1" onClick={() => setRejectingId(null)}>
+                Cancel
+              </Button>
               <Button
                 onClick={handleReject}
                 disabled={submittingReject}
                 variant="destructive"
                 className="flex-1"
               >
-                {submittingReject ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Rejecting...</> : 'Confirm Reject'}
+                {submittingReject
+                  ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Rejecting...</>
+                  : 'Confirm Reject'}
               </Button>
-              <Button variant="outline" onClick={() => setRejectingId(null)}>Cancel</Button>
             </div>
           </div>
         </DialogContent>
