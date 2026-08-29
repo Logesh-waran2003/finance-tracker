@@ -52,7 +52,7 @@ export type CreateLoanParams = {
   dailyInstallment: number
   penaltyAmount: number
   disbursementDate: string // YYYY-MM-DD
-  assignedAgentId: string
+  assignedAgentId: string | null
   notes?: string
 }
 
