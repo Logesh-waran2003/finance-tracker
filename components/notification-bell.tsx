@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Bell, AlertCircle, Info, AlertTriangle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -33,6 +33,7 @@ const DOT_MAP: Record<string, string> = {
 }
 
 export function NotificationBell({ userRole }: { userRole?: 'ADMIN' | 'COLLECTION_AGENT' }) {
+  const router = useRouter()
   const endpoint = userRole === 'COLLECTION_AGENT' ? '/api/agent/notifications' : '/api/admin/notifications'
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -114,13 +115,12 @@ export function NotificationBell({ userRole }: { userRole?: 'ADMIN' | 'COLLECTIO
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold">{n.title}</p>
                       <p className="text-xs mt-0.5 opacity-90">{n.message}</p>
-                      <Link
-                        href={n.href}
+                      <button
                         className="text-xs underline mt-1 inline-block opacity-80 hover:opacity-100"
-                        onClick={() => setOpen(false)}
+                        onClick={() => { setOpen(false); router.push(n.href) }}
                       >
                         View →
-                      </Link>
+                      </button>
                     </div>
                     <button
                       className="shrink-0 opacity-40 hover:opacity-70 transition-opacity"
