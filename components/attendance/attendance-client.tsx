@@ -88,7 +88,7 @@ export function AttendanceClient({ today, todayRecord: initial, history: initial
           setGpsState('denied')
           resolve(null)
         },
-        { timeout: 8000, maximumAge: 30000 }
+        { timeout: 15000, maximumAge: 0, enableHighAccuracy: true }
       )
     })
   }, [])

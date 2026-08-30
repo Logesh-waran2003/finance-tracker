@@ -29,6 +29,7 @@ export default async function AdminAttendancePage() {
       notes: attendance.notes,
       check_in_gps_lat: attendance.check_in_gps_lat,
       check_in_gps_lng: attendance.check_in_gps_lng,
+      check_in_gps_accuracy: attendance.check_in_gps_accuracy,
       corrected_by: attendance.corrected_by,
       corrected_at: attendance.corrected_at,
     }).from(attendance)

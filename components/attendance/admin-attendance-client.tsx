@@ -22,6 +22,7 @@ interface AttendanceRow {
   notes: string | null
   check_in_gps_lat: string | null
   check_in_gps_lng: string | null
+  check_in_gps_accuracy: string | null
   corrected_by: string | null
   corrected_at: Date | string | null
 }
@@ -195,7 +196,9 @@ export function AdminAttendanceClient({ initial, employees }: {
                     <div><p className="text-xs text-gray-500">Check-out</p><p className="font-medium text-xs">{fmtTime(r.check_out_at)}</p></div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500">{r.total_hours ? `${r.total_hours}h` : '—'} {r.check_in_gps_lat ? '📍' : ''}</span>
+                    <span className="text-xs text-gray-500">{r.total_hours ? `${r.total_hours}h` : '—'} {r.check_in_gps_lat ? (
+                      <a href={`https://maps.google.com/?q=${r.check_in_gps_lat},${r.check_in_gps_lng}`} target="_blank" rel="noopener noreferrer" className="text-blue-600">📍</a>
+                    ) : ''}</span>
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openCorrect(r)}><Pencil size={14} /></Button>
                   </div>
                 </CardContent>
@@ -229,7 +232,25 @@ export function AdminAttendanceClient({ initial, employees }: {
                       </span>
                       {r.corrected_by && <span className="ml-1 text-xs text-yellow-600">✎</span>}
                     </td>
-                    <td className="px-4 py-2 text-xs text-gray-500">{r.check_in_gps_lat ? '📍' : '—'}</td>
+                    <td className="px-4 py-2 text-xs text-gray-500">
+                      {r.check_in_gps_lat && r.check_in_gps_lng ? (
+                        <div className="space-y-0.5">
+                          <a
+                            href={`https://maps.google.com/?q=${r.check_in_gps_lat},${r.check_in_gps_lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline flex items-center gap-1"
+                          >
+                            📍 View Map
+                          </a>
+                          {r.check_in_gps_accuracy && (
+                            <span className={parseFloat(r.check_in_gps_accuracy) > 100 ? 'text-orange-500' : 'text-gray-400'}>
+                              ±{Math.round(parseFloat(r.check_in_gps_accuracy))}m
+                            </span>
+                          )}
+                        </div>
+                      ) : '—'}
+                    </td>
                     <td className="px-4 py-2">
                       <Button variant="ghost" size="sm" onClick={() => openCorrect(r)}><Pencil size={14} /></Button>
                     </td>
