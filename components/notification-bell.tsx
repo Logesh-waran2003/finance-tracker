@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { Bell, AlertCircle, Info, AlertTriangle, CheckSquare, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -28,17 +28,29 @@ const COLOR_MAP: Record<string, string> = {
   approval: 'text-orange-700 bg-orange-50 border-orange-300',
 }
 
-function NotifRow({ n, origIdx, dismissed, setDismissed, endpoint, router, setOpen }: {
+function NotifRow({ n, origIdx, dismissed, setDismissed, endpoint, router, pathname, setOpen }: {
   n: Notification
   origIdx: number
   dismissed: Set<number>
   setDismissed: React.Dispatch<React.SetStateAction<Set<number>>>
   endpoint: string
   router: ReturnType<typeof useRouter>
+  pathname: string
   setOpen: (v: boolean) => void
 }) {
   const Icon = ICON_MAP[n.type] ?? Info
   const color = COLOR_MAP[n.type] ?? COLOR_MAP.info
+
+  function handleView() {
+    setOpen(false)
+    const hrefPath = n.href.split('#')[0]
+    if (pathname === hrefPath) {
+      router.refresh()
+    } else {
+      router.push(n.href)
+    }
+  }
+
   return (
     <div className={`flex items-start gap-3 px-4 py-3 border-b last:border-0 border-l-4 ${color}`}>
       <Icon size={15} className="shrink-0 mt-0.5" />
@@ -47,7 +59,7 @@ function NotifRow({ n, origIdx, dismissed, setDismissed, endpoint, router, setOp
         <p className="text-xs mt-0.5 opacity-90">{n.message}</p>
         <button
           className="text-xs underline mt-1 inline-block opacity-80 hover:opacity-100"
-          onClick={() => { setOpen(false); router.push(n.href) }}
+          onClick={handleView}
         >
           View →
         </button>
@@ -73,6 +85,7 @@ function NotifRow({ n, origIdx, dismissed, setDismissed, endpoint, router, setOp
 
 export function NotificationBell({ userRole }: { userRole?: 'ADMIN' | 'COLLECTION_AGENT' }) {
   const router = useRouter()
+  const pathname = usePathname()
   const endpoint = userRole === 'COLLECTION_AGENT' ? '/api/agent/notifications' : '/api/admin/notifications'
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -151,7 +164,7 @@ export function NotificationBell({ userRole }: { userRole?: 'ADMIN' | 'COLLECTIO
                   </div>
                   {actionItems.map(n => {
                     const origIdx = notifications.indexOf(n)
-                    return <NotifRow key={origIdx} n={n} origIdx={origIdx} dismissed={dismissed} setDismissed={setDismissed} endpoint={endpoint} router={router} setOpen={setOpen} />
+                    return <NotifRow key={origIdx} n={n} origIdx={origIdx} dismissed={dismissed} setDismissed={setDismissed} endpoint={endpoint} router={router} pathname={pathname} setOpen={setOpen} />
                   })}
                 </>
               )}
@@ -163,7 +176,7 @@ export function NotificationBell({ userRole }: { userRole?: 'ADMIN' | 'COLLECTIO
                   </div>
                   {updateItems.map(n => {
                     const origIdx = notifications.indexOf(n)
-                    return <NotifRow key={origIdx} n={n} origIdx={origIdx} dismissed={dismissed} setDismissed={setDismissed} endpoint={endpoint} router={router} setOpen={setOpen} />
+                    return <NotifRow key={origIdx} n={n} origIdx={origIdx} dismissed={dismissed} setDismissed={setDismissed} endpoint={endpoint} router={router} pathname={pathname} setOpen={setOpen} />
                   })}
                 </>
               )}
