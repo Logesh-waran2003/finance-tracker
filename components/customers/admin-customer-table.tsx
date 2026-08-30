@@ -323,7 +323,11 @@ export function AdminCustomerTable({ initial, agents, branches }: {
               <div className="space-y-1">
                 <Label>Assigned Agent</Label>
                 <Select value={form.assigned_agent_id || '_none'} onValueChange={(v: string | null) => setForm(f => ({ ...f, assigned_agent_id: !v || v === '_none' ? '' : v }))}>
-                  <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue>
+                      {form.assigned_agent_id ? (agents.find(a => a.id === form.assigned_agent_id)?.full_name ?? 'Unknown') : 'None'}
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="_none">None</SelectItem>
                     {agents.map(a => <SelectItem key={a.id} value={a.id}>{a.full_name}</SelectItem>)}
@@ -333,7 +337,11 @@ export function AdminCustomerTable({ initial, agents, branches }: {
               <div className="space-y-1">
                 <Label>Branch</Label>
                 <Select value={form.branch_id || '_none'} onValueChange={(v: string | null) => setForm(f => ({ ...f, branch_id: !v || v === '_none' ? '' : v }))}>
-                  <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue>
+                      {form.branch_id ? (branches.find(b => b.id === form.branch_id)?.name ?? 'Unknown') : 'None'}
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="_none">None</SelectItem>
                     {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
