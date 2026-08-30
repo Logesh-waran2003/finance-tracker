@@ -15,8 +15,8 @@ A full-stack loan and collections management platform for field collection busin
 
 | Role | Access |
 |------|--------|
-| ADMIN | Full access — loans, customers, employees, reports, collections, loan request approvals, reconciliation verify |
-| COLLECTION_AGENT | Own assigned loans, customers, collections; submit loan requests; cash reconciliation |
+| ADMIN | Full access — loans, customers, employees, reports, collections, loan request approvals, settlement verify |
+| COLLECTION_AGENT | All active loans (any branch), customers, collections; submit loan requests; cash settlement |
 | STAFF | Attendance and expenses only |
 
 ## Default Logins
@@ -43,9 +43,9 @@ The primary business module. Manages the full lifecycle of micro-finance loans w
 **Flow:**
 1. Agent submits loan request via their Loans page (existing or new customer)
 2. Admin reviews pending requests on /admin/loan-requests, approves or rejects
-3. On approval: new customer is created (if new), loan is created and assigned to agent automatically
+3. On approval: new customer is created (if new), loan is created and auto-assigned to requesting agent
 4. System generates all daily repayment schedules automatically
-5. Agent collects daily installments via their Loans page — collected amounts appear in My Collections
+5. Any agent can collect daily installments via the Loans page — collected amounts appear in My Collections
 6. Admin can collect lump-sum cash payments via loan detail → Collect Cash
 7. Missed days auto-flagged by cron job, penalty generated (idempotent)
 
@@ -83,7 +83,7 @@ Agents can request loans for customers without admin access to the loan creation
 
 **Agent side:**
 - "Request Loan" button on the Loans page
-- Toggle between existing customer or new customer (enter name/phone/area)
+- Toggle between existing customer (any active customer) or new customer (enter name/phone/area)
 - Enter loan amount, interest %, tenure (days), penalty, disbursement date
 - Daily installment auto-computed from loan amount / tenure with live preview
 - Submitted requests show PENDING/APPROVED/REJECTED status in "My Loan Requests" section
@@ -91,7 +91,7 @@ Agents can request loans for customers without admin access to the loan creation
 **Admin side:**
 - /admin/loan-requests page — filter by All/Pending/Approved/Rejected
 - Each pending request shows full loan terms and customer details
-- Approve: pick an agent to assign, system creates customer (if new) + loan automatically
+- Approve: system auto-assigns loan to the requesting agent, creates customer (if new) + loan
 - Reject: enter a reason, agent is notified
 
 **Notifications:**
@@ -112,21 +112,22 @@ General-purpose cash collection from customers against dues or freeform balances
 **My Collections page** shows both:
 - Freeform collections (from collections table)
 - Loan installment payments (from loan_payments table) — tagged with blue "Loan" badge
+- Real status shown (PENDING/CONFIRMED/REJECTED) — not hardcoded
+- Date filter to view collections by day
 
-### Cash Reconciliation
+### Cash Settlement
 
-Daily cash handover workflow between agent and admin.
+Daily cash handover workflow between agent and admin (formerly Cash Reconciliation).
 
 **Flow:**
 1. Agent collects cash during the day (freeform collections + loan installments)
-2. Reconciliation page shows:
+2. Settlement page shows:
    - **Confirmed Cash** = total CASH collected today (auto-calculated, read-only)
    - **Already Submitted** = cash already handed over today (excludes rejected)
    - **Pending Handover** = Confirmed Cash − Already Submitted
 3. Agent submits cash handover — Cash Collected field is locked (server-calculated), only Cash Submitted is editable
 4. Admin reviews and verifies or rejects
 5. If rejected, Pending Handover is restored — agent can resubmit
-6. Business rule: cannot submit more than confirmed cash collected
 
 **Notifications:**
 - Agent submits → branch admins notified
@@ -136,7 +137,19 @@ Daily cash handover workflow between agent and admin.
 
 Customer profiles with GPS coordinates, assigned agent, branch, and opening balance.
 
-Opening balance can only be adjusted via the dedicated "₹" button (requires reason, fully audited). Regular customer edits never touch the balance. Balance deductions reflect immediately in the outstanding calculation.
+- Address field generates a live Google Maps link for location verification
+- Opening balance can only be adjusted via the dedicated "₹" button (requires reason, fully audited)
+- Regular customer edits never touch the balance
+- Balance deductions reflect immediately in the outstanding calculation
+- Customer detail page shows loans section with outstanding per loan
+
+### My Customers (Agent)
+
+Shows every customer the agent has submitted a loan request for.
+
+- Two date filters: Requested Date and Disbursement Date (independent)
+- View button opens customer detail page (allowed if agent collected from or requested loan for them)
+- Customer detail shows dues, active loans, total outstanding
 
 ### Employees
 
@@ -144,11 +157,26 @@ Staff management with branch assignment, role control, and attendance tracking.
 
 ### Attendance
 
-Daily check-in/check-out with GPS capture. Admins can view and correct attendance records.
+Daily check-in/check-out with GPS capture.
 
-### Expenses
+**Anti-spoofing measures:**
+- `enableHighAccuracy: true` — forces GPS chip, not cell tower
+- `maximumAge: 0` — no cached location
+- Server rejects check-in if no GPS provided
+- Server rejects if accuracy > 200m (cell tower / WiFi triangulation)
+- Location denied → dialog with browser-specific step-by-step instructions to enable
 
-Employee expense submissions with category, approval workflow, and receipt upload.
+**Admin view:**
+- GPS column shows "📍 View Map" link — opens exact check-in location in Google Maps
+- Accuracy shown in meters (orange if > 100m)
+- Admin clicking "My Attendance" redirects directly to the admin view (no personal check-in)
+
+**Dashboard attendance report:**
+- Today's agent attendance table on admin dashboard: name, status badge, check-in time, map link
+
+### Office Expenses
+
+Employee expense submissions with category, approval workflow, and receipt upload (formerly My Expenses / Expenses Admin).
 
 ### Reports
 
@@ -163,6 +191,7 @@ Admin dashboard with period-based analytics — toggle between Daily, Monthly, a
 - **Payment mode breakdown**: Bar chart by payment method for the selected period
 - **Outstanding aging**: Buckets by overdue age — current, 1–30 days, 31–60 days, 60+ days
 - **Recent activity**: Last 10 audit log entries
+- **Today's Agent Attendance**: table of all active agents with status, check-in time, and GPS map link
 
 ### Notifications
 
@@ -171,6 +200,15 @@ Both admin and agent have a notification bell:
 - **Admin**: per-collection alerts, loan request submissions, cash handover notifications, plus live-computed aggregates. Polled every 2 minutes. View button routes to the relevant page.
 - **Agent**: loan request approval/rejection, cash handover verify/reject. Polled every 2 minutes.
 - Dismissing a notification marks it read in DB — won't reappear.
+
+### Branch Management
+
+Admin can create and edit branches via Settings → Branches.
+
+- Each branch shows a Google Maps link built from address + city
+- Edit button opens a dialog with all fields editable
+- Office GPS location can be set per branch: enter lat/lng manually or use "Use my current location" button
+- Location denied → dialog with browser-specific instructions to enable
 
 ## Setup
 
@@ -243,6 +281,8 @@ CREATE TABLE IF NOT EXISTS loan_requests (
   updated_at timestamptz DEFAULT now()
 );
 ALTER TABLE loans ADD COLUMN IF NOT EXISTS tenure integer;
+ALTER TABLE branches ADD COLUMN IF NOT EXISTS office_lat numeric(10,7);
+ALTER TABLE branches ADD COLUMN IF NOT EXISTS office_lng numeric(10,7);
 "
 ```
 
@@ -281,7 +321,7 @@ bun test               # run all tests
 bun test --watch       # watch mode
 ```
 
-166 tests across 5 files covering financial calculations, business rules, service logic, security hardening, and API validation.
+169 tests across 6 files covering financial calculations, business rules, service logic, security hardening, and API validation.
 
 ### E2E tests (Robot Framework)
 
@@ -321,26 +361,34 @@ app/
       loans/           # admin loan list + detail (schedule, payments, penalties)
       loan-requests/   # pending loan request approvals
       collections/     # confirm/reject agent collections
-      reconciliation/  # verify/reject cash handover
+      reconciliation/  # verify/reject cash handover (Settlement)
+      attendance/      # view all agent attendance + GPS map links
+      settings/        # company settings + branch management
       ...
     loans/             # agent loan collection page (today's schedules + loan requests)
-    collections/       # agent freeform + loan installment collections merged
-    reconciliation/    # agent cash handover submission
-    customers/         # agent customer list
+    collections/       # agent freeform + loan installment collections merged (date filter)
+    reconciliation/    # agent cash settlement submission
+    customers/         # agent customer list (loan-requested customers + date filters)
+    attendance/        # agent check-in/check-out (GPS required, anti-spoofing)
+    expenses/          # office expense submission
     dashboard/         # admin period-based analytics
   api/
     admin/
-      dashboard/       # GET ?period=daily|monthly|yearly
+      dashboard/       # GET ?period=daily|monthly|yearly (includes agent attendance)
       notifications/   # GET (aggregated + DB), PATCH (mark read)
       loan-requests/   # GET (list), PATCH /[id] (approve/reject + notifications)
       loans/           # CRUD + collect + bulk-collect + reverse + waive
       collections/     # confirm/reject
       customers/       # CRUD
       reconciliation/  # GET (list), PATCH /[id] (verify/reject + notifications)
+      branches/        # CRUD + office GPS
     agent/
       loan-requests/   # GET (own), POST (submit)
       notifications/   # GET (own), PATCH (mark read)
-      loans/           # GET (assigned), /[id]/collect (collect installment)
+      loans/           # GET (all active), /[id]/collect (collect installment)
+    attendance/
+      checkin/         # POST — GPS required, accuracy ≤ 200m enforced
+      checkout/        # POST
     cron/
       mark-missed/     # POST — marks overdue schedules, generates penalties
 
@@ -350,6 +398,13 @@ components/
   collections/         # collection form (agent) — freeform + loan payments merged
   reconciliation/      # cash handover submit + history
   notification-bell/   # shared bell (admin + agent, different endpoints + routing)
+  attendance/          # agent check-in/check-out + admin attendance view
+  expenses/            # office expense form (agent + admin)
+  dashboard/           # admin analytics client
+  admin/               # branches panel, company settings
+  ui/
+    gmaps-link.tsx           # reusable Google Maps link from address text
+    location-denied-dialog/  # browser-specific GPS enable instructions
 
 lib/
   db/
@@ -379,3 +434,5 @@ lib/
 - DB client is a global singleton to prevent connection pool exhaustion on Next.js HMR reloads
 - Agent cannot collect more than customer's outstanding balance (enforced on both frontend and backend)
 - Rate limiter bypasses private network IPs (192.168.x.x, 10.x.x.x) for dev/test environments
+- Any agent can collect any active loan — no per-agent assignment restriction
+- GPS accuracy > 200m rejected on server — blocks cell tower check-ins
