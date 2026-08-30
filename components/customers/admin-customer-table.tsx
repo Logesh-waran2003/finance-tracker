@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Loader2, Plus, Pencil, Search, UserX, UserCheck } from 'lucide-react'
+import { GMapsLink } from '@/components/ui/gmaps-link'
 
 interface Customer {
   id: string
@@ -287,7 +288,11 @@ export function AdminCustomerTable({ initial, agents, branches }: {
             <div className="space-y-1"><Label>Phone</Label><Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></div>
             <div className="space-y-1"><Label>Area</Label><Input value={form.area} onChange={e => setForm(f => ({ ...f, area: e.target.value }))} /></div>
             <div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} /></div>
-            <div className="space-y-1"><Label>Address</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></div>
+            <div className="space-y-1 sm:col-span-2">
+              <Label>Address</Label>
+              <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
+              <GMapsLink query={[form.address, form.area, form.city].filter(Boolean).join(', ')} />
+            </div>
             {!editing && (
               <div className="space-y-1"><Label>Opening Balance (Starting Debt)</Label><Input type="number" min="0" step="0.01" value={form.opening_balance} onChange={e => setForm(f => ({ ...f, opening_balance: e.target.value }))} /><p className="text-xs text-gray-400">Initial debt before any collections. Cannot be changed after creation.</p></div>
             )}

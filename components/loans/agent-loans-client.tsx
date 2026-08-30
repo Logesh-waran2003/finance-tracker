@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
+import { GMapsLink } from '@/components/ui/gmaps-link'
 import {
   Table,
   TableBody,
@@ -555,6 +556,7 @@ export default function AgentLoansClient({ loans: initialLoans, agentName }: Pro
                 <div className="space-y-1">
                   <Label>Area</Label>
                   <Input value={requestForm.new_customer_area} onChange={e => setRequestForm(f => ({ ...f, new_customer_area: e.target.value }))} placeholder="Area / locality" />
+                  <GMapsLink query={requestForm.new_customer_area} />
                 </div>
               </>
             )}
