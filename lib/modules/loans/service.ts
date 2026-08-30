@@ -52,6 +52,7 @@ export type CreateLoanParams = {
   dailyInstallment: number
   penaltyAmount: number
   disbursementDate: string // YYYY-MM-DD
+  repaymentStartDate?: string // YYYY-MM-DD — defaults to disbursementDate + 1
   assignedAgentId: string | null
   notes?: string
 }
@@ -106,7 +107,7 @@ export async function createLoan(
     const dailyCents = toCents(params.dailyInstallment)
     const penaltyCents = toCents(params.penaltyAmount)
 
-    const repaymentStartDate = addDays(params.disbursementDate, 1)
+    const repaymentStartDate = params.repaymentStartDate ?? addDays(params.disbursementDate, 1)
 
     // --- insert loan ---
     const [loan] = await (tx as any)

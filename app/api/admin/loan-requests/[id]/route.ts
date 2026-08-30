@@ -101,13 +101,9 @@ export async function PATCH(
       customerId = newCustomer.id
     }
 
-    // Always use yesterday as disbursement_date so first installment = today
-    // (repaymentStartDate = disbursementDate + 1 in service)
-    const yesterdayIST = (() => {
-      const d = new Date(Date.now() + 330 * 60_000) // shift to IST
-      d.setUTCDate(d.getUTCDate() - 1)
-      return d.toISOString().slice(0, 10)
-    })()
+    // Disbursement date = original requested date (stored as-is)
+    // Repayment starts today regardless of when admin approved
+    const todayIST = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())
 
     // Create the loan
     const loan = await createLoan(db, {
@@ -120,7 +116,8 @@ export async function PATCH(
       interestPercentage: parseFloat(loanReq.interest_percentage),
       dailyInstallment: parseFloat(loanReq.daily_installment),
       penaltyAmount: parseFloat(loanReq.penalty_amount),
-      disbursementDate: yesterdayIST,
+      disbursementDate: loanReq.disbursement_date,
+      repaymentStartDate: todayIST,
       assignedAgentId: agent_id,
       notes: loanReq.notes ?? undefined,
     })
