@@ -90,7 +90,7 @@ export function ExpensesClient({ initial, categories }: { initial: ExpenseRow[];
   return (
     <div className="space-y-4 max-w-3xl">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-xl font-semibold">My Expenses</h1>
+        <h1 className="text-xl font-semibold">Office Expenses</h1>
         <Button size="sm" onClick={openDialog}><Plus size={16} className="mr-1" />Add Expense</Button>
       </div>
 

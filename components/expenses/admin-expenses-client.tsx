@@ -115,7 +115,7 @@ export function AdminExpensesClient({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-xl font-semibold">Expenses (Admin)</h1>
+        <h1 className="text-xl font-semibold">Office Expenses</h1>
         <Button variant="outline" size="sm" onClick={exportCSV}>
           <Download size={14} className="mr-1" />Export CSV
         </Button>

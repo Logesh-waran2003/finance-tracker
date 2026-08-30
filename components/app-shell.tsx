@@ -27,7 +27,7 @@ interface NavItem {
 const commonNav: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'My Attendance', href: '/attendance', icon: Clock },
-  { label: 'My Expenses', href: '/expenses', icon: Receipt },
+  { label: 'Office Expenses', href: '/expenses', icon: Receipt },
 ]
 
 const agentNav: NavItem[] = [
