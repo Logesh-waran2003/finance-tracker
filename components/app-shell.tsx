@@ -34,7 +34,7 @@ const agentNav: NavItem[] = [
   { label: 'My Collections', href: '/collections', icon: CreditCard },
   { label: 'My Customers', href: '/customers', icon: Users },
   { label: 'Loans', href: '/loans', icon: Banknote },
-  { label: 'Cash Reconciliation', href: '/reconciliation', icon: ArrowLeftRight },
+  { label: 'Cash Settlement', href: '/reconciliation', icon: ArrowLeftRight },
 ]
 
 const adminNav: NavItem[] = [
@@ -45,7 +45,7 @@ const adminNav: NavItem[] = [
   { label: 'Customers', href: '/admin/customers', icon: Users },
   { label: 'Employees', href: '/admin/employees', icon: ShieldCheck },
   { label: 'Attendance', href: '/admin/attendance', icon: CalendarCheck },
-  { label: 'Reconciliation', href: '/admin/reconciliation', icon: ArrowLeftRight },
+  { label: 'Settlement', href: '/admin/reconciliation', icon: ArrowLeftRight },
   { label: 'Reports', href: '/admin/reports', icon: FileBarChart2 },
   { label: 'Settings', href: '/admin/settings', icon: Settings },
 ]

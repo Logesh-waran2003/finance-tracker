@@ -73,7 +73,7 @@ export function ReconciliationClient({ initial, todayCash, todaySubmitted }: {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <h1 className="text-xl font-semibold">Cash Reconciliation</h1>
+      <h1 className="text-xl font-semibold">Cash Settlement</h1>
 
       {/* Today's summary */}
       <div className="grid grid-cols-3 gap-3">

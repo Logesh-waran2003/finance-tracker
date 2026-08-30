@@ -114,7 +114,7 @@ export function AdminReconciliationClient({ initial, agents }: { initial: ReconR
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-xl font-semibold">Reconciliation (Admin)</h1>
+        <h1 className="text-xl font-semibold">Settlement</h1>
         <Button variant="outline" size="sm" onClick={exportCSV}><Download size={14} className="mr-1" />CSV</Button>
       </div>
 
