@@ -2,7 +2,8 @@
 
 import { useState, useCallback } from 'react'
 import { format } from 'date-fns'
-import { MapPin, Loader2, Clock, CheckCircle2, XCircle } from 'lucide-react'
+import { Loader2, Clock, CheckCircle2, XCircle, MapPin } from 'lucide-react'
+import { LocationDeniedDialog } from '@/components/ui/location-denied-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -72,6 +73,7 @@ export function AttendanceClient({ today, todayRecord: initial, history: initial
   const [gpsState, setGpsState] = useState<GpsState>('idle')
   const [gps, setGps] = useState<{ lat: number; lng: number; accuracy: number } | null>(null)
   const [loading, setLoading] = useState<'checkin' | 'checkout' | null>(null)
+  const [showLocationDenied, setShowLocationDenied] = useState(false)
 
   const acquireGps = useCallback((): Promise<{ lat: number; lng: number; accuracy: number } | null> => {
     return new Promise(resolve => {
@@ -86,9 +88,7 @@ export function AttendanceClient({ today, todayRecord: initial, history: initial
         },
         () => {
           setGpsState('denied')
-          toast.error('Location access is off. Enable it in your browser: Settings → Privacy & Security → Location → Allow', {
-            duration: 6000,
-          })
+          setShowLocationDenied(true)
           resolve(null)
         },
         { timeout: 15000, maximumAge: 0, enableHighAccuracy: true }
@@ -284,6 +284,7 @@ export function AttendanceClient({ today, todayRecord: initial, history: initial
           </CardContent>
         </Card>
       </div>
+      <LocationDeniedDialog open={showLocationDenied} onClose={() => setShowLocationDenied(false)} />
     </div>
   )
 }

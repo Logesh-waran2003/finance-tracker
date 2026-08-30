@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Pencil, Loader2, MapPin, Navigation } from 'lucide-react'
 import { GMapsLink } from '@/components/ui/gmaps-link'
+import { LocationDeniedDialog } from '@/components/ui/location-denied-dialog'
 
 interface Branch {
   id: string
@@ -70,6 +71,7 @@ export function BranchesPanel({ initialBranches }: Props) {
   const [editSaving, setEditSaving] = useState(false)
   const [editForm, setEditForm] = useState<EditForm>(emptyEditForm)
   const [gpsState, setGpsState] = useState<'idle' | 'acquiring' | 'done' | 'denied'>('idle')
+  const [showLocationDenied, setShowLocationDenied] = useState(false)
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -144,9 +146,7 @@ export function BranchesPanel({ initialBranches }: Props) {
       },
       () => {
         setGpsState('denied')
-        toast.error('Location access is off. Enable it in your browser: Settings → Privacy & Security → Location → Allow', {
-          duration: 6000,
-        })
+        setShowLocationDenied(true)
       },
       { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
     )
@@ -424,6 +424,7 @@ export function BranchesPanel({ initialBranches }: Props) {
           </form>
         </CardContent>
       </Card>
+      <LocationDeniedDialog open={showLocationDenied} onClose={() => setShowLocationDenied(false)} />
     </div>
   )
 }
