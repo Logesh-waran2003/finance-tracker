@@ -79,6 +79,27 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Block if another PENDING collection exists for this customer within 150 minutes
+    const lockWindowMs = 150 * 60 * 1000
+    const lockSince = new Date(Date.now() - lockWindowMs).toISOString()
+    const [pendingCheck] = await db
+      .select({ id: collections.id, agent_id: collections.agent_id })
+      .from(collections)
+      .where(and(
+        eq(collections.customer_id, customer_id),
+        eq(collections.status, 'PENDING'),
+        sql`${collections.created_at} >= ${lockSince}::timestamptz`,
+        isNull(collections.deleted_at),
+      ))
+      .limit(1)
+
+    if (pendingCheck && pendingCheck.agent_id !== actor.id) {
+      return NextResponse.json(
+        { error: 'This customer already has a pending collection from another agent. Please wait for it to be approved or rejected (up to 150 minutes).' },
+        { status: 409 }
+      )
+    }
+
     const result = await createCollection(db, {
       agentId: actor.id,
       branchId: actor.branch_id,

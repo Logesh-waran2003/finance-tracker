@@ -2,7 +2,7 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { collections, customers, dues, loans, loanPayments } from '@/lib/db/schema'
-import { eq, and, desc, sql, isNull } from 'drizzle-orm'
+import { eq, and, desc, sql, isNull, inArray, ne } from 'drizzle-orm'
 import { CollectionForm } from '@/components/collections/collection-form'
 import type { Session } from 'next-auth'
 
@@ -14,6 +14,19 @@ export default async function CollectionsPage() {
   if (role !== 'COLLECTION_AGENT' && role !== 'ADMIN') redirect('/dashboard')
 
   const userId = session.user.id
+
+  // Customer IDs locked by another agent's PENDING collection within last 150 minutes
+  const lockSince = new Date(Date.now() - 150 * 60 * 1000).toISOString()
+  const lockedRows = await db
+    .select({ customer_id: collections.customer_id })
+    .from(collections)
+    .where(and(
+      eq(collections.status, 'PENDING'),
+      ne(collections.agent_id, userId),
+      sql`${collections.created_at} >= ${lockSince}::timestamptz`,
+      isNull(collections.deleted_at),
+    ))
+  const lockedCustomerIds = new Set(lockedRows.map(r => r.customer_id))
 
   const [assignedCustomers, initialCollections, loanPaymentRows, outstanding, loanOutstanding] = await Promise.all([
     db.select({
@@ -103,9 +116,12 @@ export default async function CollectionsPage() {
     return new Date(b.collected_at).getTime() - new Date(a.collected_at).getTime()
   })
 
+  // Filter out locked customers from the collection form dropdown
+  const availableCustomers = assignedCustomers.filter(c => !lockedCustomerIds.has(c.id))
+
   return (
     <CollectionForm
-      customers={assignedCustomers.map(c => ({
+      customers={availableCustomers.map(c => ({
         ...c,
         outstanding_total: String(
           Math.max(0,
