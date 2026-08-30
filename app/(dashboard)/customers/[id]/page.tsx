@@ -1,6 +1,6 @@
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import { customers, dues, collections, profiles } from '@/lib/db/schema'
+import { customers, dues, collections, profiles, loanRequests } from '@/lib/db/schema'
 import { eq, and, isNull } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import type { Session } from 'next-auth'
@@ -20,19 +20,30 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
   const customer = await db.select().from(customers).where(eq(customers.id, id)).limit(1).then(r => r[0])
   if (!customer) redirect('/customers')
 
-  // RBAC — agent can view any customer they've collected from
+  // RBAC — agent can view any customer they've collected from OR requested a loan for
   if (role === 'COLLECTION_AGENT') {
-    const hasCollection = await db
-      .select({ id: collections.id })
-      .from(collections)
-      .where(and(
-        eq(collections.customer_id, id),
-        eq(collections.agent_id, session.user.id),
-        isNull(collections.deleted_at),
-      ))
-      .limit(1)
-      .then(r => r.length > 0)
-    if (!hasCollection) redirect('/customers')
+    const [hasCollection, hasLoanRequest] = await Promise.all([
+      db
+        .select({ id: collections.id })
+        .from(collections)
+        .where(and(
+          eq(collections.customer_id, id),
+          eq(collections.agent_id, session.user.id),
+          isNull(collections.deleted_at),
+        ))
+        .limit(1)
+        .then(r => r.length > 0),
+      db
+        .select({ id: loanRequests.id })
+        .from(loanRequests)
+        .where(and(
+          eq(loanRequests.customer_id, id),
+          eq(loanRequests.requested_by, session.user.id),
+        ))
+        .limit(1)
+        .then(r => r.length > 0),
+    ])
+    if (!hasCollection && !hasLoanRequest) redirect('/customers')
   }
 
   const agent = customer.assigned_agent_id
