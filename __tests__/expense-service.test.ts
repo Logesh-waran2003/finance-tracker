@@ -59,7 +59,7 @@ describe('createExpense — category exists', () => {
       select: () => selectChain([{ id: UUID2 }]), // category found
       insert: () => {
         insertCallCount++
-        return { values: () => ({ returning: () => Promise.resolve([STUB_EXPENSE]) }) }
+        const chain: any = { returning: () => Promise.resolve([STUB_EXPENSE]) }; chain.onConflictDoNothing = () => chain; return { values: () => chain }
       },
     } as any
 

@@ -752,7 +752,9 @@ describe('createExpense', () => {
       insert: () => ({
         values: (vals: any) => {
           if (!insertValues) insertValues = vals
-          return { returning: () => Promise.resolve([{ id: UUID, status: 'PENDING' }]) }
+          const chain: any = { returning: () => Promise.resolve([{ id: UUID, status: 'PENDING' }]) }
+          chain.onConflictDoNothing = () => chain
+          return chain
         },
       }),
     } as any
