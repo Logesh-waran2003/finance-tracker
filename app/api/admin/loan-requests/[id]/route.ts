@@ -101,6 +101,10 @@ export async function PATCH(
       customerId = newCustomer.id
     }
 
+    // If disbursement_date is in the past (late approval), use today so installments start tomorrow
+    const todayIST = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())
+    const effectiveDisbursementDate = loanReq.disbursement_date < todayIST ? todayIST : loanReq.disbursement_date
+
     // Create the loan
     const loan = await createLoan(db, {
       actorId: actor.id,
@@ -112,7 +116,7 @@ export async function PATCH(
       interestPercentage: parseFloat(loanReq.interest_percentage),
       dailyInstallment: parseFloat(loanReq.daily_installment),
       penaltyAmount: parseFloat(loanReq.penalty_amount),
-      disbursementDate: loanReq.disbursement_date,
+      disbursementDate: effectiveDisbursementDate,
       assignedAgentId: agent_id,
       notes: loanReq.notes ?? undefined,
     })
