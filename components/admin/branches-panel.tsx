@@ -11,6 +11,8 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { Pencil, Loader2 } from 'lucide-react'
 import { GMapsLink } from '@/components/ui/gmaps-link'
 
 interface Branch {
@@ -45,6 +47,11 @@ export function BranchesPanel({ initialBranches }: Props) {
   const [branches, setBranches] = useState<Branch[]>(initialBranches)
   const [adding, setAdding] = useState(false)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [editingBranch, setEditingBranch] = useState<Branch | null>(null)
+  const [editSaving, setEditSaving] = useState(false)
+  const [editForm, setEditForm] = useState<Omit<FormValues, never>>({
+    name: '', code: '', address: '', city: '', state: '', phone: '', email: '',
+  })
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -88,6 +95,48 @@ export function BranchesPanel({ initialBranches }: Props) {
     }
   }
 
+  function openEdit(branch: Branch) {
+    setEditingBranch(branch)
+    setEditForm({
+      name: branch.name,
+      code: branch.code,
+      address: branch.address ?? '',
+      city: branch.city ?? '',
+      state: branch.state ?? '',
+      phone: branch.phone ?? '',
+      email: branch.email ?? '',
+    })
+  }
+
+  async function saveEdit() {
+    if (!editingBranch) return
+    setEditSaving(true)
+    try {
+      const res = await fetch(`/api/admin/branches/${editingBranch.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editForm.name,
+          code: editForm.code,
+          address: editForm.address || null,
+          city: editForm.city || null,
+          state: editForm.state || null,
+          phone: editForm.phone || null,
+          email: editForm.email || null,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error ?? 'Failed'); return }
+      setBranches(prev => prev.map(b => b.id === editingBranch.id ? data : b))
+      toast.success('Branch updated')
+      setEditingBranch(null)
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -123,6 +172,14 @@ export function BranchesPanel({ initialBranches }: Props) {
                       <Button
                         variant="ghost"
                         size="sm"
+                        className="h-7 w-7 p-0"
+                        onClick={() => openEdit(branch)}
+                      >
+                        <Pencil size={13} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         disabled={togglingId === branch.id}
                         onClick={() => toggleActive(branch)}
                         className="text-xs h-7"
@@ -140,6 +197,56 @@ export function BranchesPanel({ initialBranches }: Props) {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingBranch} onOpenChange={open => { if (!open) setEditingBranch(null) }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogTitle className="font-semibold">Edit Branch — {editingBranch?.name}</DialogTitle>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Branch Name *</Label>
+                <Input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Code *</Label>
+                <Input value={editForm.code} onChange={e => setEditForm(f => ({ ...f, code: e.target.value }))} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Address</Label>
+              <Input value={editForm.address} onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} />
+              <GMapsLink query={[editForm.address, editForm.city, editForm.state].filter(Boolean).join(', ')} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>City</Label>
+                <Input value={editForm.city} onChange={e => setEditForm(f => ({ ...f, city: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>State</Label>
+                <Input value={editForm.state} onChange={e => setEditForm(f => ({ ...f, state: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Phone</Label>
+                <Input type="tel" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Email</Label>
+                <Input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} />
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button className="flex-1" onClick={saveEdit} disabled={editSaving}>
+              {editSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Changes'}
+            </Button>
+            <Button variant="outline" onClick={() => setEditingBranch(null)}>Cancel</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Separator />
 
