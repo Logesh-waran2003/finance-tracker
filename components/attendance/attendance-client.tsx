@@ -86,6 +86,9 @@ export function AttendanceClient({ today, todayRecord: initial, history: initial
         },
         () => {
           setGpsState('denied')
+          toast.error('Location access is off. Enable it in your browser: Settings → Privacy & Security → Location → Allow', {
+            duration: 6000,
+          })
           resolve(null)
         },
         { timeout: 15000, maximumAge: 0, enableHighAccuracy: true }

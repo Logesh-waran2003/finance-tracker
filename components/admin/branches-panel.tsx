@@ -144,7 +144,9 @@ export function BranchesPanel({ initialBranches }: Props) {
       },
       () => {
         setGpsState('denied')
-        toast.error('Location permission denied or unavailable')
+        toast.error('Location access is off. Enable it in your browser: Settings → Privacy & Security → Location → Allow', {
+          duration: 6000,
+        })
       },
       { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
     )
