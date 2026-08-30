@@ -139,7 +139,7 @@ export function NotificationBell({ userRole }: { userRole?: 'ADMIN' | 'COLLECTIO
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
 
-          <div className="absolute right-0 top-10 z-40 w-80 rounded-xl border bg-white shadow-lg overflow-hidden">
+          <div className="absolute right-0 top-10 z-40 w-[calc(100vw-1rem)] max-w-sm rounded-xl border bg-white shadow-lg overflow-hidden sm:w-80">
             <div className="flex items-center justify-between px-4 py-3 border-b">
               <p className="text-sm font-semibold">Notifications</p>
               <div className="flex items-center gap-2">
