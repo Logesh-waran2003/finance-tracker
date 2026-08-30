@@ -279,45 +279,75 @@ export function AdminCustomerTable({ initial, agents, branches }: {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogTitle className="font-semibold text-lg">{editing ? 'Edit Customer' : 'Add Customer'}</DialogTitle>
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-lg max-h-[90vh] overflow-y-auto rounded-xl p-4">
+          <DialogTitle className="font-semibold text-base">{editing ? 'Edit Customer' : 'Add Customer'}</DialogTitle>
           {err && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{err}</p>}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1 sm:col-span-2"><Label>Full Name *</Label><Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} /></div>
-            <div className="space-y-1"><Label>Customer Code</Label><Input value={form.customer_code} onChange={e => setForm(f => ({ ...f, customer_code: e.target.value }))} placeholder="Auto-generated if blank" /></div>
-            <div className="space-y-1"><Label>Phone</Label><Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></div>
-            <div className="space-y-1"><Label>Area</Label><Input value={form.area} onChange={e => setForm(f => ({ ...f, area: e.target.value }))} /></div>
-            <div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} /></div>
-            <div className="space-y-1 sm:col-span-2">
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Full Name *</Label>
+              <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Customer Code</Label>
+                <Input value={form.customer_code} onChange={e => setForm(f => ({ ...f, customer_code: e.target.value }))} placeholder="Auto-generated" />
+              </div>
+              <div className="space-y-1">
+                <Label>Phone</Label>
+                <Input type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Area</Label>
+                <Input value={form.area} onChange={e => setForm(f => ({ ...f, area: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label>City</Label>
+                <Input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} />
+              </div>
+            </div>
+            <div className="space-y-1">
               <Label>Address</Label>
               <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
               <GMapsLink query={[form.address, form.area, form.city].filter(Boolean).join(', ')} />
             </div>
             {!editing && (
-              <div className="space-y-1"><Label>Opening Balance (Starting Debt)</Label><Input type="number" min="0" step="0.01" value={form.opening_balance} onChange={e => setForm(f => ({ ...f, opening_balance: e.target.value }))} /><p className="text-xs text-gray-400">Initial debt before any collections. Cannot be changed after creation.</p></div>
+              <div className="space-y-1">
+                <Label>Opening Balance (Starting Debt)</Label>
+                <Input type="number" min="0" step="0.01" value={form.opening_balance} onChange={e => setForm(f => ({ ...f, opening_balance: e.target.value }))} />
+                <p className="text-xs text-gray-400">Initial debt before any collections. Cannot be changed after creation.</p>
+              </div>
             )}
-            <div className="space-y-1"><Label>Assigned Agent</Label>
-              <Select value={form.assigned_agent_id || '_none'} onValueChange={(v: string | null) => setForm(f => ({ ...f, assigned_agent_id: !v || v === '_none' ? '' : v }))}>
-                <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_none">None</SelectItem>
-                  {agents.map(a => <SelectItem key={a.id} value={a.id}>{a.full_name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Assigned Agent</Label>
+                <Select value={form.assigned_agent_id || '_none'} onValueChange={(v: string | null) => setForm(f => ({ ...f, assigned_agent_id: !v || v === '_none' ? '' : v }))}>
+                  <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">None</SelectItem>
+                    {agents.map(a => <SelectItem key={a.id} value={a.id}>{a.full_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Branch</Label>
+                <Select value={form.branch_id || '_none'} onValueChange={(v: string | null) => setForm(f => ({ ...f, branch_id: !v || v === '_none' ? '' : v }))}>
+                  <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">None</SelectItem>
+                    {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-1"><Label>Branch</Label>
-              <Select value={form.branch_id || '_none'} onValueChange={(v: string | null) => setForm(f => ({ ...f, branch_id: !v || v === '_none' ? '' : v }))}>
-                <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_none">None</SelectItem>
-                  {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div className="space-y-1">
+              <Label>Notes</Label>
+              <Input value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
             </div>
-            <div className="space-y-1 sm:col-span-2"><Label>Notes</Label><Input value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></div>
           </div>
-          <div className="flex gap-2 pt-2">
-            <Button onClick={save} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? 'Save Changes' : 'Add Customer'}</Button>
+          <div className="flex gap-2 pt-3">
+            <Button className="flex-1" onClick={save} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? 'Save Changes' : 'Add Customer'}</Button>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
           </div>
         </DialogContent>
