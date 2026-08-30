@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { profiles } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { AppShell } from '@/components/app-shell'
+import { IdleLogout } from '@/components/idle-logout'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -20,6 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <AppShell userRole={profile.role} userName={profile.full_name}>
+      <IdleLogout />
       {children}
     </AppShell>
   )
