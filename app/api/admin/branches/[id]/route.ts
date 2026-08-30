@@ -22,7 +22,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const data = parsed.data
 
   const updates: Record<string, unknown> = { updated_at: new Date() }
-  const fields = ['name', 'address', 'city', 'state', 'phone', 'email', 'is_active'] as const
+  const fields = ['name', 'address', 'city', 'state', 'phone', 'email', 'is_active', 'office_lat', 'office_lng'] as const
   for (const key of fields) {
     if (data[key] !== undefined) updates[key] = data[key]
   }

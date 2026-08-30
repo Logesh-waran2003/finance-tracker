@@ -42,6 +42,8 @@ export const branches = pgTable('branches', {
   state: text('state'),
   phone: text('phone'),
   email: text('email'),
+  office_lat: numeric('office_lat', { precision: 10, scale: 7 }),
+  office_lng: numeric('office_lng', { precision: 10, scale: 7 }),
   is_active: boolean('is_active').default(true),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),

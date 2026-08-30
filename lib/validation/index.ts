@@ -183,6 +183,8 @@ export const createBranchSchema = z.object({
   state: z.string().max(100).optional().nullable(),
   phone: z.string().max(20).optional().nullable(),
   email: z.string().email().max(200).optional().nullable(),
+  office_lat: z.number().min(-90).max(90).optional().nullable(),
+  office_lng: z.number().min(-180).max(180).optional().nullable(),
 })
 
 export const updateBranchSchema = z.object({
@@ -194,6 +196,8 @@ export const updateBranchSchema = z.object({
   phone: z.string().max(20).optional().nullable(),
   email: z.string().email().max(200).optional().nullable(),
   is_active: z.boolean().optional(),
+  office_lat: z.number().min(-90).max(90).optional().nullable(),
+  office_lng: z.number().min(-180).max(180).optional().nullable(),
 })
 
 // ── Settings ──────────────────────────────────────────────────────────────────

@@ -213,6 +213,25 @@ export async function GET(request: Request) {
   const expected = n(expectedRow[0]?.t)
   const collected = n(collectedRow[0]?.t)
 
+  // Per-agent attendance for today
+  const agentAttendanceRows = await db
+    .select({
+      id: attendance.id,
+      agent_name: profiles.full_name,
+      employee_code: profiles.employee_code,
+      status: attendance.status,
+      check_in_at: attendance.check_in_at,
+      check_in_gps_lat: attendance.check_in_gps_lat,
+      check_in_gps_lng: attendance.check_in_gps_lng,
+    })
+    .from(profiles)
+    .leftJoin(
+      attendance,
+      and(eq(attendance.employee_id, profiles.id), eq(attendance.date, today))
+    )
+    .where(and(eq(profiles.role, 'COLLECTION_AGENT'), eq(profiles.is_active, true)))
+    .orderBy(profiles.full_name)
+
   return NextResponse.json({
     kpi: {
       total_expected: expected,
@@ -248,6 +267,14 @@ export async function GET(request: Request) {
       overdue31_60: n(aging31_60Row[0]?.t),
       overdue60plus: n(aging60Row[0]?.t),
     },
+    agentAttendance: agentAttendanceRows.map(r => ({
+      agent_name: r.agent_name,
+      employee_code: r.employee_code,
+      status: r.status ?? null,
+      check_in_at: r.check_in_at?.toISOString() ?? null,
+      check_in_gps_lat: r.check_in_gps_lat,
+      check_in_gps_lng: r.check_in_gps_lng,
+    })),
     period,
   })
 }

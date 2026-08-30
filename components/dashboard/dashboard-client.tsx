@@ -50,6 +50,15 @@ interface AgingData {
   overdue60plus: number
 }
 
+interface AgentAttendanceRow {
+  agent_name: string | null
+  employee_code: string | null
+  status: string | null
+  check_in_at: string | null
+  check_in_gps_lat: string | null
+  check_in_gps_lng: string | null
+}
+
 interface DashboardClientProps {
   kpi: KPIData
   attendance: AttendanceData
@@ -57,6 +66,7 @@ interface DashboardClientProps {
   paymentModes: PaymentModePoint[]
   recentActivity: ActivityItem[]
   aging: AgingData
+  agentAttendance: AgentAttendanceRow[]
   period: 'daily' | 'monthly' | 'yearly'
 }
 
@@ -116,7 +126,7 @@ export default function DashboardClient() {
     </div>
   )
 
-  const { kpi, attendance, collectionTrend, paymentModes, recentActivity, aging } = data
+  const { kpi, attendance, collectionTrend, paymentModes, recentActivity, aging, agentAttendance } = data
 
   const collectionPct = kpi.collection_percent
   const pctColor =
@@ -359,6 +369,72 @@ export default function DashboardClient() {
           </CardContent>
         </Card>
       </div>
+      {/* Row 4 — Today's Agent Attendance */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">Today's Agent Attendance</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {agentAttendance.length === 0 ? (
+            <p className="text-sm text-muted-foreground px-4 py-6">No agents found</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    {['Agent', 'Status', 'Check-in', 'Location'].map(h => (
+                      <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {agentAttendance.map((r, i) => {
+                    const statusColor: Record<string, string> = {
+                      PRESENT: 'bg-green-100 text-green-700',
+                      LATE: 'bg-yellow-100 text-yellow-700',
+                      HALF_DAY: 'bg-orange-100 text-orange-700',
+                      ABSENT: 'bg-red-100 text-red-600',
+                      LEAVE: 'bg-blue-100 text-blue-700',
+                      WEEK_OFF: 'bg-gray-100 text-gray-600',
+                    }
+                    const status = r.status ?? 'ABSENT'
+                    return (
+                      <tr key={i} className="hover:bg-gray-50">
+                        <td className="px-4 py-2">
+                          <p className="font-medium">{r.agent_name ?? '—'}</p>
+                          {r.employee_code && <p className="text-xs text-gray-400">{r.employee_code}</p>}
+                        </td>
+                        <td className="px-4 py-2">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor[status] ?? 'bg-gray-100 text-gray-600'}`}>
+                            {status.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 text-xs text-gray-500">
+                          {r.check_in_at
+                            ? new Date(r.check_in_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })
+                            : '—'}
+                        </td>
+                        <td className="px-4 py-2 text-xs">
+                          {r.check_in_gps_lat && r.check_in_gps_lng ? (
+                            <a
+                              href={`https://maps.google.com/?q=${r.check_in_gps_lat},${r.check_in_gps_lng}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline"
+                            >
+                              📍 View
+                            </a>
+                          ) : '—'}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
