@@ -164,7 +164,7 @@ export function ExpensesClient({ initial, categories }: { initial: ExpenseRow[];
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-md rounded-xl p-4">
           <DialogTitle className="font-semibold">Add Expense</DialogTitle>
           <div className="space-y-3">
             <div className="space-y-1">
@@ -177,7 +177,7 @@ export function ExpensesClient({ initial, categories }: { initial: ExpenseRow[];
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label>Amount (₹) *</Label>
-                <Input type="number" min="0.01" step="0.01" value={form.amount}
+                <Input type="number" inputMode="decimal" min="0.01" step="0.01" value={form.amount}
                   onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
               </div>
               <div className="space-y-1">
@@ -198,7 +198,7 @@ export function ExpensesClient({ initial, categories }: { initial: ExpenseRow[];
               <Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="What was this expense for?" />
             </div>
           </div>
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-3">
             <Button onClick={handleSubmit} disabled={saving} className="flex-1">
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Submit
             </Button>
