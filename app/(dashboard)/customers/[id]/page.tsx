@@ -1,7 +1,7 @@
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
-import { customers, dues, collections, profiles, loanRequests } from '@/lib/db/schema'
-import { eq, and, isNull } from 'drizzle-orm'
+import { customers, dues, collections, profiles, loanRequests, loans } from '@/lib/db/schema'
+import { eq, and, isNull, sql } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import type { Session } from 'next-auth'
 import { EditDueDialog } from '@/components/customers/edit-due-dialog'
@@ -50,20 +50,37 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
     ? await db.select({ full_name: profiles.full_name }).from(profiles).where(eq(profiles.id, customer.assigned_agent_id)).limit(1).then(r => r[0])
     : null
 
-  const [duesList, collectionsList] = await Promise.all([
+  const [duesList, collectionsList, loansList] = await Promise.all([
     db.select().from(dues).where(eq(dues.customer_id, id)).orderBy(dues.created_at),
     db.select().from(collections).where(eq(collections.customer_id, id)).orderBy(collections.collected_at),
+    db.select({
+      id: loans.id,
+      loan_number: loans.loan_number,
+      loan_amount: loans.loan_amount,
+      total_outstanding: loans.total_outstanding,
+      principal_outstanding: loans.principal_outstanding,
+      daily_installment: loans.daily_installment,
+      status: loans.status,
+      disbursement_date: loans.disbursement_date,
+    }).from(loans)
+      .where(and(eq(loans.customer_id, id), isNull(loans.deleted_at)))
+      .orderBy(sql`${loans.created_at} DESC`),
   ])
 
   const confirmedFreeform = collectionsList
     .filter(c => c.status === 'CONFIRMED' && !c.due_id && !c.deleted_at)
     .reduce((sum, c) => sum + parseFloat(c.amount as string), 0)
 
+  const loanOutstanding = loansList
+    .filter(l => !['COMPLETED', 'CANCELLED', 'DRAFT'].includes(l.status))
+    .reduce((sum, l) => sum + parseFloat(l.total_outstanding as string), 0)
+
   const totalOutstanding = Math.max(0,
     parseFloat(customer.opening_balance as string ?? '0')
     + duesList
         .filter(d => d.status !== 'PAID' && d.status !== 'CANCELLED')
         .reduce((sum, d) => sum + parseFloat(d.outstanding_amount as string), 0)
+    + loanOutstanding
     - confirmedFreeform
   )
 
@@ -120,6 +137,64 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
         <p className="text-sm text-orange-800 font-medium">Total Outstanding</p>
         <p className="text-xl font-bold text-orange-700">₹{totalOutstanding.toLocaleString()}</p>
       </div>
+
+      {/* Active Loans */}
+      {loansList.length > 0 && (
+        <div>
+          <h2 className="text-base font-semibold mb-2">Loans</h2>
+          <div className="sm:hidden space-y-3">
+            {loansList.map(l => (
+              <div key={l.id} className="bg-white rounded-xl border p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="font-mono text-sm text-gray-500">{l.loan_number}</p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    l.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
+                    l.status === 'OVERDUE' ? 'bg-red-100 text-red-700' :
+                    l.status === 'COMPLETED' ? 'bg-blue-100 text-blue-700' :
+                    'bg-gray-100 text-gray-500'
+                  }`}>{l.status}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <div><p className="text-xs text-gray-500">Amount</p><p className="font-medium">₹{parseFloat(l.loan_amount as string).toLocaleString()}</p></div>
+                  <div><p className="text-xs text-gray-500">Outstanding</p><p className="font-medium text-orange-600">₹{parseFloat(l.total_outstanding as string).toLocaleString()}</p></div>
+                  <div><p className="text-xs text-gray-500">Daily</p><p className="font-medium">₹{parseFloat(l.daily_installment as string).toLocaleString()}</p></div>
+                </div>
+                <p className="text-xs text-gray-400">Disbursed: {l.disbursement_date ?? '—'}</p>
+              </div>
+            ))}
+          </div>
+          <div className="hidden sm:block bg-white rounded-xl border overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  {['Loan #', 'Amount', 'Outstanding', 'Daily', 'Disburse Date', 'Status'].map(h => (
+                    <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {loansList.map(l => (
+                  <tr key={l.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-2 font-mono text-gray-600">{l.loan_number}</td>
+                    <td className="px-4 py-2 font-medium">₹{parseFloat(l.loan_amount as string).toLocaleString()}</td>
+                    <td className="px-4 py-2 text-orange-600 font-medium">₹{parseFloat(l.total_outstanding as string).toLocaleString()}</td>
+                    <td className="px-4 py-2 text-gray-500">₹{parseFloat(l.daily_installment as string).toLocaleString()}</td>
+                    <td className="px-4 py-2 text-gray-500">{l.disbursement_date ?? '—'}</td>
+                    <td className="px-4 py-2">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        l.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
+                        l.status === 'OVERDUE' ? 'bg-red-100 text-red-700' :
+                        l.status === 'COMPLETED' ? 'bg-blue-100 text-blue-700' :
+                        'bg-gray-100 text-gray-500'
+                      }`}>{l.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Dues table */}
       <div>
