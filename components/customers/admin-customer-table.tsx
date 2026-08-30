@@ -236,7 +236,7 @@ export function AdminCustomerTable({ initial, agents, branches }: {
                     <td className="px-4 py-3 font-medium">{c.full_name}</td>
                     <td className="px-4 py-3 text-gray-600">{c.phone ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-600">{c.area ?? c.city ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-600">{c.agent_name ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-600 max-w-[120px] truncate">{c.agent_name ?? '—'}</td>
                     <td className="px-4 py-3 text-sm">
                       {c.active_loan_count > 0 ? (
                         <div>
