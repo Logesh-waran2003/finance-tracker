@@ -84,10 +84,10 @@ export async function GET() {
   const presentIds = new Set(presentToday.map(r => r.eid))
   const absentToday = allAgents.filter(a => !presentIds.has(a.id))
 
-  // Map individual DB notifications (prepended before aggregate alerts)
+  // Map individual DB notifications
   const individual = dbNotifications.map(row => ({
     id: row.id,
-    type: 'info' as const,
+    type: (row.reference_type === 'loan_request' || row.reference_type === 'loan_payment') ? 'approval' as const : 'info' as const,
     title: row.title,
     message: row.body,
     href: row.reference_type === 'loan_request'
@@ -102,7 +102,7 @@ export async function GET() {
 
   if ((pendingCollections?.count ?? 0) > 0) {
     alerts.push({
-      type: 'warning',
+      type: 'approval',
       title: 'Pending Collections',
       message: `${pendingCollections?.count} collection${(pendingCollections?.count ?? 0) !== 1 ? 's' : ''} pending confirmation — ₹${parseFloat(pendingCollections?.total ?? '0').toLocaleString('en-IN')} total`,
       href: '/admin/collections',
@@ -120,7 +120,7 @@ export async function GET() {
 
   if (absentToday.length > 0) {
     alerts.push({
-      type: 'info',
+      type: 'warning',
       title: 'Agents Not Checked In',
       message: `${absentToday.length} agent${absentToday.length !== 1 ? 's have' : ' has'} not checked in today: ${absentToday.map(a => a.full_name).slice(0, 3).join(', ')}${absentToday.length > 3 ? ` +${absentToday.length - 3} more` : ''}`,
       href: '/admin/attendance',
@@ -129,8 +129,8 @@ export async function GET() {
 
   if (pendingReconciliation > 0) {
     alerts.push({
-      type: 'warning',
-      title: 'Cash Reconciliation',
+      type: 'approval',
+      title: 'Cash Settlement',
       message: `${pendingReconciliation} submission${pendingReconciliation !== 1 ? 's' : ''} waiting for verification`,
       href: '/admin/reconciliation',
     })
@@ -138,7 +138,7 @@ export async function GET() {
 
   if (pendingExpenseCount > 0) {
     alerts.push({
-      type: 'info',
+      type: 'approval',
       title: 'Expense Claims',
       message: `${pendingExpenseCount} expense claim${pendingExpenseCount !== 1 ? 's' : ''} pending approval`,
       href: '/admin/expenses',

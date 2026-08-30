@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bell, AlertCircle, Info, AlertTriangle, X } from 'lucide-react'
+import { Bell, AlertCircle, Info, AlertTriangle, CheckSquare, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface Notification {
@@ -15,21 +15,60 @@ interface Notification {
 }
 
 const ICON_MAP: Record<string, React.ElementType> = {
-  error: AlertCircle,
-  warning: AlertTriangle,
-  info: Info,
+  error:    AlertCircle,
+  warning:  AlertTriangle,
+  info:     Info,
+  approval: CheckSquare,
 }
 
 const COLOR_MAP: Record<string, string> = {
-  error: 'text-red-600 bg-red-50 border-red-100',
-  warning: 'text-yellow-700 bg-yellow-50 border-yellow-100',
-  info: 'text-blue-700 bg-blue-50 border-blue-100',
+  error:    'text-red-700 bg-red-50 border-red-300',
+  warning:  'text-yellow-700 bg-yellow-50 border-yellow-300',
+  info:     'text-blue-700 bg-blue-50 border-blue-300',
+  approval: 'text-orange-700 bg-orange-50 border-orange-300',
 }
 
-const DOT_MAP: Record<string, string> = {
-  error: 'bg-red-500',
-  warning: 'bg-yellow-500',
-  info: 'bg-blue-500',
+function NotifRow({ n, origIdx, dismissed, setDismissed, endpoint, router, setOpen }: {
+  n: Notification
+  origIdx: number
+  dismissed: Set<number>
+  setDismissed: React.Dispatch<React.SetStateAction<Set<number>>>
+  endpoint: string
+  router: ReturnType<typeof useRouter>
+  setOpen: (v: boolean) => void
+}) {
+  const Icon = ICON_MAP[n.type] ?? Info
+  const color = COLOR_MAP[n.type] ?? COLOR_MAP.info
+  return (
+    <div className={`flex items-start gap-3 px-4 py-3 border-b last:border-0 border-l-4 ${color}`}>
+      <Icon size={15} className="shrink-0 mt-0.5" />
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-semibold">{n.title}</p>
+        <p className="text-xs mt-0.5 opacity-90">{n.message}</p>
+        <button
+          className="text-xs underline mt-1 inline-block opacity-80 hover:opacity-100"
+          onClick={() => { setOpen(false); router.push(n.href) }}
+        >
+          View →
+        </button>
+      </div>
+      <button
+        className="shrink-0 opacity-40 hover:opacity-70 transition-opacity"
+        onClick={async () => {
+          setDismissed(prev => new Set([...prev, origIdx]))
+          if (n.dbNotification && n.id) {
+            await fetch(endpoint, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: n.id }),
+            }).catch(() => {})
+          }
+        }}
+      >
+        <X size={12} />
+      </button>
+    </div>
+  )
 }
 
 export function NotificationBell({ userRole }: { userRole?: 'ADMIN' | 'COLLECTION_AGENT' }) {
@@ -57,13 +96,15 @@ export function NotificationBell({ userRole }: { userRole?: 'ADMIN' | 'COLLECTIO
 
   useEffect(() => {
     fetchNotifications()
-    // Poll every 2 minutes
     const interval = setInterval(fetchNotifications, 2 * 60 * 1000)
     return () => clearInterval(interval)
   }, [])
 
   const visible = notifications.filter((_, i) => !dismissed.has(i))
   const visibleCount = visible.length
+
+  const actionItems = visible.filter(n => n.type === 'approval')
+  const updateItems = visible.filter(n => n.type !== 'approval')
 
   return (
     <div className="relative">
@@ -83,10 +124,8 @@ export function NotificationBell({ userRole }: { userRole?: 'ADMIN' | 'COLLECTIO
 
       {open && (
         <>
-          {/* Backdrop */}
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
 
-          {/* Panel */}
           <div className="absolute right-0 top-10 z-40 w-80 rounded-xl border bg-white shadow-lg overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b">
               <p className="text-sm font-semibold">Notifications</p>
@@ -104,42 +143,30 @@ export function NotificationBell({ userRole }: { userRole?: 'ADMIN' | 'COLLECTIO
                   All clear — no pending alerts
                 </div>
               )}
-              {notifications.map((n, i) => {
-                if (dismissed.has(i)) return null
-                const Icon = ICON_MAP[n.type] ?? Info
-                const color = COLOR_MAP[n.type] ?? COLOR_MAP.info
-                const dot = DOT_MAP[n.type] ?? DOT_MAP.info
-                return (
-                  <div key={i} className={`flex items-start gap-3 px-4 py-3 border-b last:border-0 ${color} border-l-4`}>
-                    <Icon size={15} className="shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold">{n.title}</p>
-                      <p className="text-xs mt-0.5 opacity-90">{n.message}</p>
-                      <button
-                        className="text-xs underline mt-1 inline-block opacity-80 hover:opacity-100"
-                        onClick={() => { setOpen(false); router.push(n.href) }}
-                      >
-                        View →
-                      </button>
-                    </div>
-                    <button
-                      className="shrink-0 opacity-40 hover:opacity-70 transition-opacity"
-                      onClick={async () => {
-                        setDismissed(prev => new Set([...prev, i]))
-                        if (n.dbNotification && n.id) {
-                          await fetch(endpoint, {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ id: n.id }),
-                          }).catch(() => {})
-                        }
-                      }}
-                    >
-                      <X size={12} />
-                    </button>
+
+              {actionItems.length > 0 && (
+                <>
+                  <div className="px-4 py-1.5 bg-orange-50 border-b">
+                    <p className="text-[10px] font-semibold text-orange-600 uppercase tracking-wide">Needs Action</p>
                   </div>
-                )
-              })}
+                  {actionItems.map(n => {
+                    const origIdx = notifications.indexOf(n)
+                    return <NotifRow key={origIdx} n={n} origIdx={origIdx} dismissed={dismissed} setDismissed={setDismissed} endpoint={endpoint} router={router} setOpen={setOpen} />
+                  })}
+                </>
+              )}
+
+              {updateItems.length > 0 && (
+                <>
+                  <div className={`px-4 py-1.5 border-b ${actionItems.length > 0 ? 'border-t bg-gray-50' : 'bg-gray-50'}`}>
+                    <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Updates</p>
+                  </div>
+                  {updateItems.map(n => {
+                    const origIdx = notifications.indexOf(n)
+                    return <NotifRow key={origIdx} n={n} origIdx={origIdx} dismissed={dismissed} setDismissed={setDismissed} endpoint={endpoint} router={router} setOpen={setOpen} />
+                  })}
+                </>
+              )}
             </div>
 
             <div className="px-4 py-2 border-t bg-gray-50">
