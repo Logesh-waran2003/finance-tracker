@@ -26,6 +26,11 @@ export default async function AttendancePage() {
   const session = await auth()
   if (!session?.user?.id) redirect('/login')
 
+  const role = (session.user as any).role
+
+  // Admin has no personal attendance — redirect to admin attendance view
+  if (role === 'ADMIN') redirect('/admin/attendance')
+
   const now = new Date()
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now)
 
