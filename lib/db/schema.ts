@@ -250,6 +250,7 @@ export const expenses = pgTable('expenses', {
   approved_by: uuid('approved_by').references(() => profiles.id),
   approved_at: timestamp('approved_at', { withTimezone: true }),
   rejection_reason: text('rejection_reason'),
+  idempotency_key: text('idempotency_key').unique(),
   deleted_at: timestamp('deleted_at', { withTimezone: true }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),

@@ -99,6 +99,7 @@ export const createExpenseSchema = z.object({
   payment_mode: paymentModeSchema.optional(),
   description: z.string().max(500).trim().optional().default(''),
   expense_date: dateStringSchema,
+  idempotency_key: z.string().min(1).max(255).optional(),
 })
 
 export const adminExpenseActionSchema = z.object({

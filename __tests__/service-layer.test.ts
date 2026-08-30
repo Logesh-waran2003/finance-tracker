@@ -726,7 +726,9 @@ describe('createExpense', () => {
       insert: () => ({
         values: (vals: any) => {
           if (!insertValues) insertValues = vals // capture first insert (expense)
-          return { returning: () => Promise.resolve([newExpense]) }
+          const chain: any = { returning: () => Promise.resolve([newExpense]) }
+          chain.onConflictDoNothing = () => chain
+          return chain
         },
       }),
     } as any

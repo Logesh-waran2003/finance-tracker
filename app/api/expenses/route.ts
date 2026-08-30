@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   const parsed = await parseBody(request, createExpenseSchema)
   if (!parsed.ok) return parsed.response
 
-  const { category_id, amount, payment_mode, description, expense_date } = parsed.data
+  const { category_id, amount, payment_mode, description, expense_date, idempotency_key } = parsed.data
 
   try {
     const expense = await createExpense(db, {
@@ -61,6 +61,7 @@ export async function POST(request: Request) {
       paymentMode: payment_mode,
       description,
       expenseDate: expense_date,
+      idempotencyKey: idempotency_key,
     })
     return NextResponse.json(expense, { status: 201 })
   } catch (err) {

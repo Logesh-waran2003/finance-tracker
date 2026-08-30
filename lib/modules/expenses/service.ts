@@ -8,7 +8,7 @@ import { logAudit } from '@/lib/modules/audit/service'
 import { writeLedgerEntry } from '@/lib/modules/ledger/service'
 import { ServiceError } from '@/lib/modules/errors'
 
- 
+
 type AnyDB = { insert: (...a: any[]) => any; select: (...a: any[]) => any; update: (...a: any[]) => any; transaction: (...a: any[]) => any }
 
 export type CreateExpenseParams = {
@@ -21,6 +21,7 @@ export type CreateExpenseParams = {
   paymentMode?: 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CHEQUE' | 'OTHER'
   description: string
   expenseDate: string
+  idempotencyKey?: string
 }
 
 export type ApproveExpenseParams = {
@@ -36,6 +37,7 @@ export type ApproveExpenseParams = {
 /**
  * Creates a new expense in PENDING status.
  * Verifies the category exists server-side.
+ * Idempotency: if idempotency_key already exists, returns the existing record.
  */
 export async function createExpense(
   db: AnyDB,
@@ -50,19 +52,43 @@ export async function createExpense(
     .then((r: any[]) => r[0])
   if (!cat) throw new ServiceError('Expense category not found', 404)
 
-  const [expense] = await (db as any)
-    .insert(expenses)
-    .values({
-      category_id: params.categoryId,
-      employee_id: params.userId,
-      branch_id: params.branchId,
-      amount: String(params.amount),
-      payment_mode: params.paymentMode ?? 'CASH',
-      description: params.description,
-      expense_date: params.expenseDate,
-      status: 'PENDING',
-    })
-    .returning()
+  const values = {
+    category_id: params.categoryId,
+    employee_id: params.userId,
+    branch_id: params.branchId,
+    amount: String(params.amount),
+    payment_mode: params.paymentMode ?? 'CASH',
+    description: params.description,
+    expense_date: params.expenseDate,
+    status: 'PENDING' as const,
+    idempotency_key: params.idempotencyKey ?? null,
+  }
+
+  let expense: typeof expenses.$inferSelect
+
+  if (params.idempotencyKey) {
+    // Idempotent path — ON CONFLICT DO NOTHING on the unique key
+    const insertResult = await (db as any)
+      .insert(expenses)
+      .values(values)
+      .onConflictDoNothing({ target: expenses.idempotency_key })
+      .returning()
+
+    if (!insertResult || insertResult.length === 0) {
+      const existing = await (db as any)
+        .select()
+        .from(expenses)
+        .where(eq(expenses.idempotency_key, params.idempotencyKey))
+        .limit(1)
+        .then((r: any[]) => r[0])
+      return existing
+    }
+    expense = insertResult[0]
+  } else {
+    // No idempotency key — plain insert
+    const [row] = await (db as any).insert(expenses).values(values).returning()
+    expense = row
+  }
 
   await logAudit(db, {
     actor_id: params.userId,

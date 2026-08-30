@@ -8,6 +8,7 @@ import { eq, and, sum, sql } from 'drizzle-orm'
 import { logAudit } from '@/lib/modules/audit/service'
 import { writeLedgerEntry } from '@/lib/modules/ledger/service'
 import { ServiceError } from '@/lib/modules/errors'
+import { toCents, fromCents } from '@/lib/utils/money'
 
  
 type AnyDB = { insert: (...a: any[]) => any; select: (...a: any[]) => any; update: (...a: any[]) => any; transaction: (...a: any[]) => any; execute: (...a: any[]) => any }
@@ -74,9 +75,6 @@ export async function createReconciliation(
         sql`DATE(${loanPayments.created_at} AT TIME ZONE 'Asia/Kolkata') = ${params.date}::date`,
       ),
     )
-
-  const toCents = (v: string | number): number => Math.round(parseFloat(String(v)) * 100)
-  const fromCents = (c: number): string => (c / 100).toFixed(2)
 
   const cashCollectedCents =
     toCents((cashRow as any)?.total ?? '0') +

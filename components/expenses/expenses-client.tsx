@@ -31,6 +31,10 @@ const STATUS_COLOR: Record<string, string> = {
 
 const PAYMENT_MODES = ['CASH', 'UPI', 'BANK_TRANSFER', 'CHEQUE', 'OTHER']
 
+function generateKey() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+}
+
 export function ExpensesClient({ initial, categories }: { initial: ExpenseRow[]; categories: Category[] }) {
   const [rows, setRows] = useState<ExpenseRow[]>(initial)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -64,7 +68,7 @@ export function ExpensesClient({ initial, categories }: { initial: ExpenseRow[];
     const res = await fetch('/api/expenses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, amount: parseFloat(form.amount) }),
+      body: JSON.stringify({ ...form, amount: parseFloat(form.amount), idempotency_key: generateKey() }),
     })
     const data = await res.json()
     if (!res.ok) { toast.error(data.error ?? 'Failed to submit'); setSaving(false); return }

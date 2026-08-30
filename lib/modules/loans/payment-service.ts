@@ -8,6 +8,7 @@ import { logAudit } from '@/lib/modules/audit/service'
 import { writeLedgerEntry } from '@/lib/modules/ledger/service'
 import { ServiceError } from '@/lib/modules/errors'
 import { updateLoanBalances } from '@/lib/modules/loans/service'
+import { toCents, fromCents } from '@/lib/utils/money'
 
 // Accepts both db and a tx from db.transaction()
 type AnyDB = {
@@ -20,13 +21,6 @@ type AnyDB = {
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
-
-/** Convert decimal string/number to integer cents */
-const toCents = (v: string | number): number =>
-  Math.round(parseFloat(String(v)) * 100)
-
-/** Convert integer cents to 2dp decimal string */
-const fromCents = (c: number): string => (c / 100).toFixed(2)
 
 /** Today's date string (YYYY-MM-DD) in Asia/Kolkata timezone */
 function todayIST(): string {

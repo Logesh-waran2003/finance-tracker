@@ -1,7 +1,7 @@
 import { db } from '@/lib/db'
-import { dues, customers, auditLogs } from '@/lib/db/schema'
+import { dues, customers, auditLogs, collections } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq, and, isNull } from 'drizzle-orm'
+import { eq, and, isNull, sql } from 'drizzle-orm'
 import { withErrorHandler, requireAdmin, isResponse } from '@/lib/auth/authorize'
 import { parseBody, updateDueSchema } from '@/lib/validation'
 
@@ -54,7 +54,6 @@ export const PATCH = withErrorHandler(async (
   }
 
   const updates: Record<string, unknown> = { updated_at: new Date() }
-  if (data.amount !== undefined) updates.amount = String(data.amount)
   if (data.invoice_number !== undefined) updates.invoice_number = data.invoice_number
   if (data.reference !== undefined) updates.reference = data.reference
   if (data.due_date !== undefined) updates.due_date = data.due_date
@@ -65,18 +64,39 @@ export const PATCH = withErrorHandler(async (
     if (data.status === 'CANCELLED') updates.outstanding_amount = '0'
   }
 
-  const [updated] = await db.update(dues).set(updates).where(eq(dues.id, id)).returning()
+  const updated = await db.transaction(async (tx) => {
+    if (data.amount !== undefined) {
+      updates.amount = String(data.amount)
 
-  await db.insert(auditLogs).values({
-    actor_id: actor.id,
-    actor_name: actor.name,
-    actor_email: actor.email,
-    action: 'UPDATE',
-    entity_type: 'due',
-    entity_id: id,
-    before_data: { status: before.due.status, outstanding_amount: before.due.outstanding_amount },
-    after_data: { status: updated.status, outstanding_amount: updated.outstanding_amount },
-    branch_id: actor.branch_id,
+      // Recompute outstanding_amount = max(new_amount - confirmed_paid, 0)
+      const [paid] = await tx.select({
+        total: sql<string>`coalesce(sum(${collections.amount}), '0')`
+      }).from(collections)
+        .where(and(
+          eq(collections.due_id, id),
+          eq(collections.status, 'CONFIRMED'),
+          isNull(collections.deleted_at)
+        ))
+      const paidCents = Math.round(parseFloat(paid?.total ?? '0') * 100)
+      const newAmountCents = Math.round(data.amount * 100)
+      updates.outstanding_amount = String(Math.max(0, newAmountCents - paidCents) / 100)
+    }
+
+    const [upd] = await tx.update(dues).set(updates).where(eq(dues.id, id)).returning()
+
+    await tx.insert(auditLogs).values({
+      actor_id: actor.id,
+      actor_name: actor.name,
+      actor_email: actor.email,
+      action: 'UPDATE',
+      entity_type: 'due',
+      entity_id: id,
+      before_data: { status: before.due.status, outstanding_amount: before.due.outstanding_amount },
+      after_data: { status: upd.status, outstanding_amount: upd.outstanding_amount },
+      branch_id: actor.branch_id,
+    })
+
+    return upd
   })
 
   return NextResponse.json(updated)

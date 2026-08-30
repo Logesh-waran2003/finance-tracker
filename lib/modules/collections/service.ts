@@ -7,6 +7,7 @@ import { collections } from '@/lib/db/schema'
 import { eq, sql } from 'drizzle-orm'
 import { logAudit } from '@/lib/modules/audit/service'
 import { ServiceError } from '@/lib/modules/errors'
+import { toCents } from '@/lib/utils/money'
 
 // Accepts both db and a tx from db.transaction()
  
@@ -61,11 +62,6 @@ export async function createCollection(
         throw new ServiceError(`Cannot collect on a ${due.status} due`, 400)
       }
       // Decimal-safe money comparison — convert to integer cents, no float arithmetic
-      const toCents = (val: string | number): number => {
-        const str = typeof val === 'number' ? val.toFixed(2) : (val ?? '0')
-        const [whole, frac = '00'] = str.split('.')
-        return parseInt(whole, 10) * 100 + parseInt(frac.padEnd(2, '0').slice(0, 2), 10)
-      }
       const outstandingCents = toCents(due.outstanding_amount ?? '0')
       const amountCents = toCents(params.amount)
       if (amountCents > outstandingCents) {

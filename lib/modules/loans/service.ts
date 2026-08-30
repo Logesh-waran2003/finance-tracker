@@ -12,6 +12,7 @@ import {
 import { eq, desc, sql, and, inArray } from 'drizzle-orm'
 import { logAudit } from '@/lib/modules/audit/service'
 import { ServiceError } from '@/lib/modules/errors'
+import { toCents, fromCents } from '@/lib/utils/money'
 
 // Accepts both db and a tx from db.transaction()
 type AnyDB = {
@@ -24,13 +25,6 @@ type AnyDB = {
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
-
-/** Convert decimal string/number to integer cents, no float arithmetic */
-const toCents = (v: string | number): number =>
-  Math.round(parseFloat(String(v)) * 100)
-
-/** Convert integer cents back to decimal string (2dp) */
-const fromCents = (c: number): string => (c / 100).toFixed(2)
 
 /** Add N calendar days to a YYYY-MM-DD string — pure date arithmetic, no libs */
 function addDays(dateStr: string, days: number): string {
