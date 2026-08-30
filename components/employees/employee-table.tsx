@@ -252,42 +252,82 @@ export function EmployeeTable({ initial, branches }: { initial: Employee[]; bran
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogTitle className="font-semibold text-lg">{editing ? 'Edit Employee' : 'Add Employee'}</DialogTitle>
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-lg max-h-[90vh] overflow-y-auto rounded-xl p-4">
+          <DialogTitle className="font-semibold text-base">{editing ? 'Edit Employee' : 'Add Employee'}</DialogTitle>
           {err && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{err}</p>}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1 sm:col-span-2"><Label>Full Name *</Label><Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} /></div>
-              <div className="space-y-1"><Label>Email *</Label><Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></div>
-              <div className="space-y-1"><Label>{editing ? 'New Password (leave blank to keep)' : 'Password *'}</Label><Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} minLength={editing ? 0 : 8} /></div>
-              <div className="space-y-1"><Label>Role</Label>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Full Name *</Label>
+              <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Email *</Label>
+                <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label>{editing ? 'New Password' : 'Password *'}</Label>
+                <Input type="password" placeholder={editing ? 'Leave blank to keep' : ''} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} minLength={editing ? 0 : 8} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Role</Label>
                 <Select value={form.role} onValueChange={v => setForm(f => ({ ...f, role: v || f.role }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{roleOptions.map(r => <SelectItem key={r} value={r}>{r.replace('_', ' ')}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1"><Label>Branch</Label>
+              <div className="space-y-1">
+                <Label>Branch</Label>
                 <Select value={form.branch_id || '_none'} onValueChange={v => setForm(f => ({ ...f, branch_id: (v || '') === '_none' ? '' : (v || '') }))}>
-                  <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue>
+                      {form.branch_id ? (branches.find(b => b.id === form.branch_id)?.name ?? 'Unknown') : 'None'}
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="_none">None</SelectItem>
                     {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1"><Label>Employee Code</Label><Input value={form.employee_code} onChange={e => setForm(f => ({ ...f, employee_code: e.target.value }))} /></div>
-              <div className="space-y-1"><Label>Phone</Label><Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></div>
-              <div className="space-y-1"><Label>Department</Label><Input value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} /></div>
-              <div className="space-y-1"><Label>Designation</Label><Input value={form.designation} onChange={e => setForm(f => ({ ...f, designation: e.target.value }))} /></div>
-              <div className="space-y-1"><Label>Joining Date</Label><Input type="date" value={form.joining_date} onChange={e => setForm(f => ({ ...f, joining_date: e.target.value }))} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Employee Code</Label>
+                <Input value={form.employee_code} onChange={e => setForm(f => ({ ...f, employee_code: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label>Phone</Label>
+                <Input type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Department</Label>
+                <Input value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label>Designation</Label>
+                <Input value={form.designation} onChange={e => setForm(f => ({ ...f, designation: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 items-end">
+              <div className="space-y-1">
+                <Label>Joining Date</Label>
+                <Input type="date" value={form.joining_date} onChange={e => setForm(f => ({ ...f, joining_date: e.target.value }))} />
+              </div>
               {editing && (
-                <div className="space-y-1 flex items-center gap-2 pt-6">
+                <div className="flex items-center gap-2 pb-1">
                   <input type="checkbox" id="is_active" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} />
                   <Label htmlFor="is_active">Active</Label>
                 </div>
               )}
+            </div>
           </div>
-          <div className="flex gap-2 pt-2">
-            <Button onClick={save} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? 'Save Changes' : 'Add Employee'}</Button>
+          <div className="flex gap-2 pt-3">
+            <Button className="flex-1" onClick={save} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? 'Save Changes' : 'Add Employee'}</Button>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
           </div>
         </DialogContent>
