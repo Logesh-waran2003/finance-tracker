@@ -43,7 +43,7 @@ The primary business module. Manages the full lifecycle of micro-finance loans w
 **Flow:**
 1. Agent submits loan request via their Loans page (existing or new customer)
 2. Admin reviews pending requests on /admin/loan-requests, approves or rejects
-3. On approval: new customer is created (if new), loan is created and auto-assigned to requesting agent
+3. On approval: new customer is created (if new), loan is created with the original disbursement date, repayment starts from today (the approval date) regardless of when agent submitted
 4. System generates all daily repayment schedules automatically
 5. Any agent can collect daily installments via the Loans page — collected amounts appear in My Collections
 6. Admin can collect lump-sum cash payments via loan detail → Collect Cash
@@ -60,6 +60,10 @@ Total Outstanding     = Principal Outstanding + Penalty Outstanding
 ```
 
 **Loan amount is immutable** — set once on creation, never changes regardless of payments.
+
+**Disbursement date vs repayment start:**
+- `disbursement_date` — the date the agent originally requested (stored for reference)
+- `repayment_start_date` — always set to today (the approval date), so first installment is due the same day regardless of late approvals
 
 ### Customer Outstanding Formula
 
@@ -95,10 +99,10 @@ Agents can request loans for customers without admin access to the loan creation
 - Reject: enter a reason, agent is notified
 
 **Notifications:**
-- Agent submits → admin bell shows "New Loan Request"
+- Agent submits → admin bell shows "New Loan Request" (orange — Needs Action)
 - Admin approves → agent bell shows "Loan Request Approved — Loan LOAN-XXXXXX is now active"
 - Admin approves → all branch admins notified with loan number
-- View button on notification → routes directly to relevant page
+- View button on notification → routes directly to relevant page; if already on that page, refreshes it
 
 ### Collections (Freeform)
 
@@ -130,7 +134,7 @@ Daily cash handover workflow between agent and admin (formerly Cash Reconciliati
 5. If rejected, Pending Handover is restored — agent can resubmit
 
 **Notifications:**
-- Agent submits → branch admins notified
+- Agent submits → branch admins notified (orange — Needs Action)
 - Admin verifies/rejects → agent notified
 
 ### Customer Management
@@ -153,7 +157,7 @@ Shows every customer the agent has submitted a loan request for.
 
 ### Employees
 
-Staff management with branch assignment, role control, and attendance tracking.
+Staff management with branch assignment, role control, and attendance tracking. Add/Edit dialog is mobile-first.
 
 ### Attendance
 
@@ -176,7 +180,7 @@ Daily check-in/check-out with GPS capture.
 
 ### Office Expenses
 
-Employee expense submissions with category, approval workflow, and receipt upload (formerly My Expenses / Expenses Admin).
+Employee expense submissions with category, approval workflow, and receipt upload. Add Expense dialog is mobile-first.
 
 ### Reports
 
@@ -195,11 +199,13 @@ Admin dashboard with period-based analytics — toggle between Daily, Monthly, a
 
 ### Notifications
 
-Both admin and agent have a notification bell:
+Both admin and agent have a notification bell. Mobile-friendly panel (full viewport width on small screens).
 
-- **Admin**: per-collection alerts, loan request submissions, cash handover notifications, plus live-computed aggregates. Polled every 2 minutes. View button routes to the relevant page.
-- **Agent**: loan request approval/rejection, cash handover verify/reject. Polled every 2 minutes.
-- Dismissing a notification marks it read in DB — won't reappear.
+Two sections:
+- **Needs Action** (orange) — Pending Collections, Cash Settlement approvals, Expense Claims, new Loan Requests, new Loan Payments
+- **Updates** (red/yellow/blue by type) — Overdue Dues, Agents Not Checked In, info notifications
+
+Clicking View refreshes the page if already on the target, navigates if not. Polled every 2 minutes.
 
 ### Branch Management
 
@@ -250,13 +256,13 @@ NEXTAUTH_URL=http://192.168.0.109:3001 bun run dev -- --hostname 0.0.0.0 --port 
 
 ### Manual DB migrations
 
-Two additional migrations must be applied after `db:push`:
+Apply these after `db:push`:
 
 ```bash
 # Loan collection module (schedules, payments, penalties, agent assignments)
 psql $DATABASE_URL -f lib/db/migrations/0003_daily_loan_collection.sql
 
-# Loan requests table (agent → admin approval workflow)
+# Loan requests + branch office GPS columns
 psql $DATABASE_URL -c "
 CREATE TYPE loan_request_status AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 CREATE TABLE IF NOT EXISTS loan_requests (
@@ -397,21 +403,21 @@ components/
   customers/           # admin customer table + dialogs
   collections/         # collection form (agent) — freeform + loan payments merged
   reconciliation/      # cash handover submit + history
-  notification-bell/   # shared bell (admin + agent, different endpoints + routing)
+  notification-bell/   # shared bell (admin + agent) — colour-coded, mobile-friendly
   attendance/          # agent check-in/check-out + admin attendance view
   expenses/            # office expense form (agent + admin)
   dashboard/           # admin analytics client
   admin/               # branches panel, company settings
   ui/
-    gmaps-link.tsx           # reusable Google Maps link from address text
-    location-denied-dialog/  # browser-specific GPS enable instructions
+    gmaps-link.tsx              # reusable Google Maps link from address text
+    location-denied-dialog.tsx  # browser-specific GPS enable instructions
 
 lib/
   db/
     schema.ts          # full Drizzle schema (all tables + enums + relations)
     index.ts           # singleton postgres client (prevents HMR pool exhaustion)
   modules/
-    loans/             # createLoan, updateLoanBalances, collectInstallment, reversePayment, waivePenalty
+    loans/             # createLoan (optional repaymentStartDate), updateLoanBalances, collectInstallment, reversePayment, waivePenalty
     collections/       # createCollection (with idempotency + SELECT FOR UPDATE)
     reconciliation/    # createReconciliation (server-calc cash), verifyReconciliation
     audit/             # append-only audit log
@@ -436,3 +442,4 @@ lib/
 - Rate limiter bypasses private network IPs (192.168.x.x, 10.x.x.x) for dev/test environments
 - Any agent can collect any active loan — no per-agent assignment restriction
 - GPS accuracy > 200m rejected on server — blocks cell tower check-ins
+- Loan repayment always starts on approval date — original disbursement_date preserved for reference only
