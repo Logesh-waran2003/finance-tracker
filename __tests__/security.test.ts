@@ -71,7 +71,7 @@ describe('lib/validation — createCollectionSchema', () => {
     const result = createCollectionSchema.safeParse({
       customer_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
       amount: 0,
-      payment_mode: 'CASH',
+      idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH',
     })
     expect(result.success).toBe(false)
   })
@@ -81,7 +81,7 @@ describe('lib/validation — createCollectionSchema', () => {
     const result = createCollectionSchema.safeParse({
       customer_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
       amount: -100,
-      payment_mode: 'CASH',
+      idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH',
     })
     expect(result.success).toBe(false)
   })
@@ -91,7 +91,7 @@ describe('lib/validation — createCollectionSchema', () => {
     const result = createCollectionSchema.safeParse({
       customer_id: 'not-a-uuid',
       amount: 100,
-      payment_mode: 'CASH',
+      idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH',
     })
     expect(result.success).toBe(false)
   })
@@ -101,7 +101,7 @@ describe('lib/validation — createCollectionSchema', () => {
     const result = createCollectionSchema.safeParse({
       customer_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
       amount: 500,
-      payment_mode: 'CASH',
+      idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH',
     })
     expect(result.success).toBe(true)
   })
@@ -111,7 +111,7 @@ describe('lib/validation — createCollectionSchema', () => {
     const result = createCollectionSchema.safeParse({
       customer_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
       amount: 100,
-      payment_mode: 'CASH',
+      idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH',
       gps_lat: 91,
       gps_lng: 80,
     })
@@ -123,7 +123,7 @@ describe('lib/validation — createCollectionSchema', () => {
     const result = createCollectionSchema.safeParse({
       customer_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
       amount: 100,
-      payment_mode: 'CASH',
+      idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH',
       gps_lat: 13.0,
       gps_lng: -181,
     })
@@ -226,7 +226,7 @@ describe('lib/validation — parseBody', () => {
     const { parseBody, createCollectionSchema } = await import('@/lib/validation')
     const badRequest = new Request('http://localhost/api/test', {
       method: 'POST',
-      body: JSON.stringify({ customer_id: 'not-uuid', amount: -1, payment_mode: 'CASH' }),
+      body: JSON.stringify({ customer_id: 'not-uuid', amount: -1, idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH' }),
       headers: { 'Content-Type': 'application/json' },
     })
     const result = await parseBody(badRequest, createCollectionSchema)
@@ -240,7 +240,7 @@ describe('lib/validation — parseBody', () => {
       body: JSON.stringify({
         customer_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
         amount: 250,
-        payment_mode: 'UPI',
+        idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'UPI',
       }),
       headers: { 'Content-Type': 'application/json' },
     })
@@ -257,7 +257,7 @@ describe('lib/validation — expense schema', () => {
       category_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
       amount: 0,
       description: 'Travel',
-      expense_date: '2026-08-01',
+      idempotency_key: '11111111-2222-3333-4444-555555555555', expense_date: '2026-08-01',
     })
     expect(result.success).toBe(false)
   })
@@ -268,7 +268,7 @@ describe('lib/validation — expense schema', () => {
       category_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
       amount: 100,
       description: '',
-      expense_date: '2026-08-01',
+      idempotency_key: '11111111-2222-3333-4444-555555555555', expense_date: '2026-08-01',
     })
     expect(result.success).toBe(true)
   })
@@ -279,7 +279,7 @@ describe('lib/validation — expense schema', () => {
       category_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
       amount: 150,
       description: 'Auto fare',
-      expense_date: '2026-08-01',
+      idempotency_key: '11111111-2222-3333-4444-555555555555', expense_date: '2026-08-01',
     })
     expect(result.success).toBe(true)
   })

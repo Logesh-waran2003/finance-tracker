@@ -31,13 +31,12 @@ const STATUS_COLOR: Record<string, string> = {
 
 const PAYMENT_MODES = ['CASH', 'UPI', 'BANK_TRANSFER', 'CHEQUE', 'OTHER']
 
-function generateKey() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-}
-
 export function ExpensesClient({ initial, categories }: { initial: ExpenseRow[]; categories: Category[] }) {
   const [rows, setRows] = useState<ExpenseRow[]>(initial)
   const [dialogOpen, setDialogOpen] = useState(false)
+  // One key per dialog open, not per tap — a retry after a timeout must reuse
+  // it or the server records the expense twice. Same contract as collections.
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID())
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     category_id: '',
@@ -55,6 +54,7 @@ export function ExpensesClient({ initial, categories }: { initial: ExpenseRow[];
       description: '',
       expense_date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date()),
     })
+    setIdempotencyKey(crypto.randomUUID())  // new expense => new key
     setDialogOpen(true)
   }
 
@@ -68,7 +68,7 @@ export function ExpensesClient({ initial, categories }: { initial: ExpenseRow[];
     const res = await fetch('/api/expenses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, amount: parseFloat(form.amount), idempotency_key: generateKey() }),
+      body: JSON.stringify({ ...form, amount: parseFloat(form.amount), idempotency_key: idempotencyKey }),
     })
     const data = await res.json()
     if (!res.ok) { toast.error(data.error ?? 'Failed to submit'); setSaving(false); return }

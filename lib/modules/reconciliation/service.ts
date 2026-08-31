@@ -41,12 +41,24 @@ export type VerifyReconciliationParams = {
  * - Enforces one-per-agent-per-date via DB unique constraint (uq_reconciliations_agent_date)
  * - Notifies all branch admins on submit
  */
+/**
+ * The current date in IST as YYYY-MM-DD.
+ *
+ * Do NOT use `new Date().toISOString().split('T')[0]` for this. That is the UTC
+ * date, and India is UTC+5:30 — so between 00:00 and 05:30 IST it returns
+ * YESTERDAY. An agent reconciling early in the morning saw the wrong day's
+ * cash position and could not submit at all, because their real "today" looked
+ * like a future date and was rejected below.
+ */
+export function istToday(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())
+}
+
 export async function createReconciliation(
   db: AnyDB,
   params: CreateReconciliationParams,
 ): Promise<typeof reconciliations.$inferSelect> {
-  const today = new Date().toISOString().split('T')[0]
-  if (params.date > today) {
+  if (params.date > istToday()) {
     throw new ServiceError('date cannot be in the future', 400)
   }
 

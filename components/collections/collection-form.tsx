@@ -39,13 +39,20 @@ function fmtDateTime(ts: string | null) {
   return new Date(ts).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
-function generateKey() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-}
+type GpsFix = { lat: number; lng: number; accuracy: number }
 
 export function CollectionForm({ customers, initial }: { customers: Customer[]; initial: CollectionRow[] }) {
   const [rows, setRows] = useState<CollectionRow[]>(initial)
   const [dialogOpen, setDialogOpen] = useState(false)
+  /**
+   * One key per dialog open, deliberately NOT per submit.
+   *
+   * It used to be generated inside handleSubmit, so an agent whose request
+   * timed out and tapped Save again sent a NEW key and the server inserted a
+   * SECOND collection for the same cash. Reusing it lets the DB unique
+   * constraint collapse the retry via ON CONFLICT DO NOTHING.
+   */
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID())
   const [saving, setSaving] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState('')
   const [dues, setDues] = useState<Due[]>([])
@@ -72,7 +79,11 @@ export function CollectionForm({ customers, initial }: { customers: Customer[]; 
 
   async function loadDues(customerId: string) {
     setLoadingDues(true); setDues([])
-    const res = await fetch(`/api/admin/dues?customer_id=${customerId}`)
+    // /api/admin/dues is requireAdmin(), so an agent got 403 here and the
+    // `if (res.ok)` below hid it — the dropdown was permanently empty for the
+    // exact user this screen exists for. /api/dues allows agents and does its
+    // own ownership check.
+    const res = await fetch(`/api/dues?customer_id=${customerId}`)
     if (res.ok) {
       const data = await res.json()
       setDues(data.filter((d: Due) => d.status === 'OPEN' || d.status === 'PARTIALLY_PAID'))
@@ -82,17 +93,35 @@ export function CollectionForm({ customers, initial }: { customers: Customer[]; 
 
   function openDialog() {
     setForm({ customer_id: '', due_id: '', amount: '', payment_mode: 'CASH', payment_reference: '', notes: '' })
-    setDues([]); setSelectedCustomer(''); setGps(null); setGpsState('idle'); setDialogOpen(true)
+    setDues([]); setSelectedCustomer(''); setGps(null); setGpsState('idle')
+    setIdempotencyKey(crypto.randomUUID())  // new collection => new key
+    setDialogOpen(true)
   }
 
-  const acquireGps = useCallback((): Promise<void> => {
+  /**
+   * Resolves the fix instead of only writing it to state.
+   *
+   * This previously returned Promise<void> and the caller read `gps` from its
+   * own closure on the very next line — which is always the value from the
+   * render that created the handler, i.e. null. Every collection ever recorded
+   * stored gps_lat NULL while the UI reported "location captured".
+   * `attendance-client.tsx` already had the correct shape.
+   */
+  const acquireGps = useCallback((): Promise<GpsFix | null> => {
     return new Promise(resolve => {
-      if (!navigator.geolocation) { resolve(); return }
+      if (typeof navigator === 'undefined' || !navigator.geolocation) {
+        setGpsState('denied'); resolve(null); return
+      }
       setGpsState('acquiring')
       navigator.geolocation.getCurrentPosition(
-        pos => { setGps({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }); setGpsState('ready'); resolve() },
-        () => { setGpsState('denied'); resolve() },
-        { timeout: 8000 }
+        pos => {
+          const loc: GpsFix = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }
+          setGps(loc)          // state drives the UI badge only
+          setGpsState('ready')
+          resolve(loc)         // the caller must use THIS
+        },
+        () => { setGpsState('denied'); resolve(null) },
+        { timeout: 8000, maximumAge: 30000 }
       )
     })
   }, [])
@@ -113,7 +142,7 @@ export function CollectionForm({ customers, initial }: { customers: Customer[]; 
     }
 
     setSaving(true)
-    await acquireGps()
+    const loc = await acquireGps()
 
     const res = await fetch('/api/collections', {
       method: 'POST',
@@ -122,8 +151,8 @@ export function CollectionForm({ customers, initial }: { customers: Customer[]; 
         ...form,
         due_id: form.due_id || null,
         amount: parseFloat(form.amount),
-        gps_lat: gps?.lat, gps_lng: gps?.lng, gps_accuracy: gps?.accuracy,
-        idempotency_key: generateKey(),
+        gps_lat: loc?.lat, gps_lng: loc?.lng, gps_accuracy: loc?.accuracy,
+        idempotency_key: idempotencyKey,
       }),
     })
 

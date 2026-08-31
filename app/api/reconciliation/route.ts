@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 import { eq, and, desc, sql, sum } from 'drizzle-orm'
 import { requireRole, isResponse } from '@/lib/auth/authorize'
 import { parseBody, createReconciliationSchema } from '@/lib/validation'
-import { createReconciliation } from '@/lib/modules/reconciliation/service'
+import { createReconciliation, istToday } from '@/lib/modules/reconciliation/service'
 import { ServiceError } from '@/lib/modules/errors'
 
 export async function GET(_request: Request) {
@@ -14,7 +14,8 @@ export async function GET(_request: Request) {
 
   // Server-side: always use session user's id, never trust client
   const agentId = actor.id
-  const today = new Date().toISOString().split('T')[0]
+  // IST, not UTC — see istToday() for why this matters before 05:30.
+  const today = istToday()
 
   // Calculate actual confirmed CASH collections server-side
   const [cashPosition] = await db

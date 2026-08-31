@@ -35,7 +35,7 @@ describe('Test 2 — IDOR: agent ownership enforced at schema level', () => {
     const result = createCollectionSchema.safeParse({
       customer_id: 'fake-id-not-mine',
       amount: 100,
-      payment_mode: 'CASH',
+      idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH',
     })
     expect(result.success).toBe(false)
   })
@@ -45,7 +45,7 @@ describe('Test 2 — IDOR: agent ownership enforced at schema level', () => {
     const result = createCollectionSchema.safeParse({
       customer_id: VALID_UUID,
       amount: 100,
-      payment_mode: 'CASH',
+      idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH',
     })
     expect(result.success).toBe(true)
   })
@@ -174,10 +174,10 @@ describe('Test 7 — Reconciliation: cash_collected calculated server-side', () 
 
   it('server calculation logic: only confirmed CASH collections count', () => {
     const collections = [
-      { amount: 500, status: 'CONFIRMED', payment_mode: 'CASH' },
-      { amount: 300, status: 'CONFIRMED', payment_mode: 'CASH' },
-      { amount: 200, status: 'PENDING',   payment_mode: 'CASH' }, // excluded
-      { amount: 100, status: 'CONFIRMED', payment_mode: 'UPI' },  // excluded
+      { amount: 500, status: 'CONFIRMED', idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH' },
+      { amount: 300, status: 'CONFIRMED', idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH' },
+      { amount: 200, status: 'PENDING',   idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH' }, // excluded
+      { amount: 100, status: 'CONFIRMED', idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'UPI' },  // excluded
     ]
     const serverCalc = collections
       .filter(c => c.status === 'CONFIRMED' && c.payment_mode === 'CASH')
@@ -252,35 +252,35 @@ describe('Test 10 — Collection amount must be > 0', () => {
   it('amount = 0 is rejected', async () => {
     const { createCollectionSchema } = await import('@/lib/validation')
     expect(createCollectionSchema.safeParse({
-      customer_id: VALID_UUID, amount: 0, payment_mode: 'CASH',
+      customer_id: VALID_UUID, amount: 0, idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH',
     }).success).toBe(false)
   })
 
   it('amount = -1 is rejected', async () => {
     const { createCollectionSchema } = await import('@/lib/validation')
     expect(createCollectionSchema.safeParse({
-      customer_id: VALID_UUID, amount: -1, payment_mode: 'CASH',
+      customer_id: VALID_UUID, amount: -1, idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH',
     }).success).toBe(false)
   })
 
   it('amount = -0.01 is rejected', async () => {
     const { createCollectionSchema } = await import('@/lib/validation')
     expect(createCollectionSchema.safeParse({
-      customer_id: VALID_UUID, amount: -0.01, payment_mode: 'CASH',
+      customer_id: VALID_UUID, amount: -0.01, idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH',
     }).success).toBe(false)
   })
 
   it('amount = 0.01 is accepted', async () => {
     const { createCollectionSchema } = await import('@/lib/validation')
     expect(createCollectionSchema.safeParse({
-      customer_id: VALID_UUID, amount: 0.01, payment_mode: 'CASH',
+      customer_id: VALID_UUID, amount: 0.01, idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH',
     }).success).toBe(true)
   })
 
   it('amount as string is rejected (type safety)', async () => {
     const { createCollectionSchema } = await import('@/lib/validation')
     expect(createCollectionSchema.safeParse({
-      customer_id: VALID_UUID, amount: 'one hundred', payment_mode: 'CASH',
+      customer_id: VALID_UUID, amount: 'one hundred', idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH',
     }).success).toBe(false)
   })
 })
@@ -305,7 +305,7 @@ describe('Test 12 — Money field type enforcement (Zod layer)', () => {
   it('collection amount must be a number, not a string', async () => {
     const { createCollectionSchema } = await import('@/lib/validation')
     expect(createCollectionSchema.safeParse({
-      customer_id: VALID_UUID, amount: '500', payment_mode: 'CASH',
+      customer_id: VALID_UUID, amount: '500', idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH',
     }).success).toBe(false)
   })
 
@@ -329,7 +329,7 @@ describe('Test 12 — Money field type enforcement (Zod layer)', () => {
 
     // All must reject string amounts
     expect(createCollectionSchema.safeParse({
-      customer_id: VALID_UUID, amount: '100.50', payment_mode: 'CASH',
+      customer_id: VALID_UUID, amount: '100.50', idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH',
     }).success).toBe(false)
 
     expect(createExpenseSchema.safeParse({
@@ -348,7 +348,7 @@ describe('GPS coordinate validation', () => {
   it('rejects lat > 90', async () => {
     const { createCollectionSchema } = await import('@/lib/validation')
     expect(createCollectionSchema.safeParse({
-      customer_id: VALID_UUID, amount: 100, payment_mode: 'CASH',
+      customer_id: VALID_UUID, amount: 100, idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH',
       gps_lat: 91, gps_lng: 80,
     }).success).toBe(false)
   })
@@ -356,7 +356,7 @@ describe('GPS coordinate validation', () => {
   it('rejects lat < -90', async () => {
     const { createCollectionSchema } = await import('@/lib/validation')
     expect(createCollectionSchema.safeParse({
-      customer_id: VALID_UUID, amount: 100, payment_mode: 'CASH',
+      customer_id: VALID_UUID, amount: 100, idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH',
       gps_lat: -91, gps_lng: 80,
     }).success).toBe(false)
   })
@@ -364,7 +364,7 @@ describe('GPS coordinate validation', () => {
   it('rejects lng > 180', async () => {
     const { createCollectionSchema } = await import('@/lib/validation')
     expect(createCollectionSchema.safeParse({
-      customer_id: VALID_UUID, amount: 100, payment_mode: 'CASH',
+      customer_id: VALID_UUID, amount: 100, idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH',
       gps_lat: 13, gps_lng: 181,
     }).success).toBe(false)
   })
@@ -372,7 +372,7 @@ describe('GPS coordinate validation', () => {
   it('rejects lng < -180', async () => {
     const { createCollectionSchema } = await import('@/lib/validation')
     expect(createCollectionSchema.safeParse({
-      customer_id: VALID_UUID, amount: 100, payment_mode: 'CASH',
+      customer_id: VALID_UUID, amount: 100, idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH',
       gps_lat: 13, gps_lng: -181,
     }).success).toBe(false)
   })
@@ -380,7 +380,7 @@ describe('GPS coordinate validation', () => {
   it('accepts valid Chennai coordinates', async () => {
     const { createCollectionSchema } = await import('@/lib/validation')
     expect(createCollectionSchema.safeParse({
-      customer_id: VALID_UUID, amount: 100, payment_mode: 'CASH',
+      customer_id: VALID_UUID, amount: 100, idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH',
       gps_lat: 13.0827, gps_lng: 80.2707, gps_accuracy: 10,
     }).success).toBe(true)
   })
@@ -394,7 +394,7 @@ describe('parseBody discriminated union', () => {
     const req = new Request('http://localhost/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customer_id: 'bad', amount: -1, payment_mode: 'CASH' }),
+      body: JSON.stringify({ customer_id: 'bad', amount: -1, idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'CASH' }),
     })
     const result = await parseBody(req, createCollectionSchema)
     expect(result.ok).toBe(false)
@@ -408,7 +408,7 @@ describe('parseBody discriminated union', () => {
     const req = new Request('http://localhost/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customer_id: VALID_UUID, amount: 250, payment_mode: 'UPI' }),
+      body: JSON.stringify({ customer_id: VALID_UUID, amount: 250, idempotency_key: '11111111-2222-3333-4444-555555555555', payment_mode: 'UPI' }),
     })
     const result = await parseBody(req, createCollectionSchema)
     expect(result.ok).toBe(true)

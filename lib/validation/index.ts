@@ -39,7 +39,11 @@ export const createCollectionSchema = z.object({
   gps_lat: z.number().min(-90).max(90).optional(),
   gps_lng: z.number().min(-180).max(180).optional(),
   gps_accuracy: z.number().min(0).max(50000).optional(),
-  idempotency_key: z.string().min(1).max(255).optional(),
+  // REQUIRED, not optional. Postgres treats NULLs as distinct, so a row stored
+  // with a NULL key can never collide and ON CONFLICT DO NOTHING silently
+  // protects nothing. A client omitting it gets zero de-duplication, which on
+  // these endpoints means a retried request duplicates real money.
+  idempotency_key: z.string().min(1).max(255),
 })
 
 export const adminCollectionActionSchema = z.object({
@@ -99,7 +103,11 @@ export const createExpenseSchema = z.object({
   payment_mode: paymentModeSchema.optional(),
   description: z.string().max(500).trim().optional().default(''),
   expense_date: dateStringSchema,
-  idempotency_key: z.string().min(1).max(255).optional(),
+  // REQUIRED, not optional. Postgres treats NULLs as distinct, so a row stored
+  // with a NULL key can never collide and ON CONFLICT DO NOTHING silently
+  // protects nothing. A client omitting it gets zero de-duplication, which on
+  // these endpoints means a retried request duplicates real money.
+  idempotency_key: z.string().min(1).max(255),
 })
 
 export const adminExpenseActionSchema = z.object({
