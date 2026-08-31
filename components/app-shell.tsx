@@ -3,100 +3,128 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
+import { signOut } from 'next-auth/react'
+import { Building2, CloudOff, LogOut, RefreshCw } from 'lucide-react'
+
 import { cn } from '@/lib/utils'
+import { Bi } from '@/components/ui/bi'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 import {
-  Menu, LayoutDashboard, Clock, Receipt, CreditCard, Users,
-  ArrowLeftRight, ShieldCheck, Building2, CalendarCheck,
-  FileBarChart2, Settings, LogOut, User, Banknote, ClipboardList, CheckSquare,
-} from 'lucide-react'
+  Dialog, DialogClose, DialogContent, DialogDescription,
+  DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog'
 import { NotificationBell } from '@/components/notification-bell'
-import { BottomNav } from '@/components/bottom-nav'
+import {
+  BottomNav, PROFILE_ITEM, activeHref, getNavItems, type NavItem, type Role,
+} from '@/components/bottom-nav'
+import { useOnlineStatus } from '@/lib/api-client'
+import { useQueueCount } from '@/lib/offline-queue'
+import { formatCount } from '@/lib/format'
+import type { LabelKey } from '@/lib/i18n'
 
-type Role = 'ADMIN' | 'COLLECTION_AGENT' | 'STAFF'
+export type { Role }
 
-interface NavItem {
-  label: string
-  href: string
-  icon: React.ElementType
-}
-
-const commonNav: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'My Attendance', href: '/attendance', icon: Clock },
-  { label: 'Office Expenses', href: '/expenses', icon: Receipt },
+/**
+ * Route → screen title.
+ *
+ * The title is shown in the 56px top bar on a phone and by `<PageHeader>`
+ * from `md:` up — never both at once. Longest prefix wins so
+ * `/admin/loans/collection-approval` does not resolve to "Loans".
+ */
+const TITLE_ROUTES: ReadonlyArray<readonly [string, LabelKey]> = [
+  ['/dashboard', 'dashboard'],
+  ['/collections', 'myCollections'],
+  ['/customers', 'myCustomers'],
+  ['/loans', 'loans'],
+  ['/attendance', 'myAttendance'],
+  ['/expenses', 'officeExpenses'],
+  ['/reconciliation', 'cashSettlement'],
+  ['/profile', 'profile'],
+  ['/admin/collections', 'collections'],
+  ['/admin/customers', 'customers'],
+  ['/admin/loans', 'loans'],
+  ['/admin/loans/collection-approval', 'collectionApproval'],
+  ['/admin/loan-requests', 'loanRequests'],
+  ['/admin/employees', 'employees'],
+  ['/admin/attendance', 'attendance'],
+  ['/admin/expenses', 'expenses'],
+  ['/admin/reconciliation', 'reconciliation'],
+  ['/admin/reports', 'reports'],
+  ['/admin/settings', 'settings'],
 ]
 
-const agentNav: NavItem[] = [
-  { label: 'My Collections', href: '/collections', icon: CreditCard },
-  { label: 'My Customers', href: '/customers', icon: Users },
-  { label: 'Loans', href: '/loans', icon: Banknote },
-  { label: 'Cash Settlement', href: '/reconciliation', icon: ArrowLeftRight },
-]
-
-const adminNav: NavItem[] = [
-  { label: 'Collections', href: '/admin/collections', icon: CreditCard },
-  { label: 'Loans', href: '/admin/loans', icon: Banknote },
-  { label: 'Loan Requests', href: '/admin/loan-requests', icon: ClipboardList },
-  { label: 'Collection Approval', href: '/admin/loans/collection-approval', icon: CheckSquare },
-  { label: 'Customers', href: '/admin/customers', icon: Users },
-  { label: 'Employees', href: '/admin/employees', icon: ShieldCheck },
-  { label: 'Attendance', href: '/admin/attendance', icon: CalendarCheck },
-  { label: 'Settlement', href: '/admin/reconciliation', icon: ArrowLeftRight },
-  { label: 'Reports', href: '/admin/reports', icon: FileBarChart2 },
-  { label: 'Settings', href: '/admin/settings', icon: Settings },
-]
-
-function getNavItems(role: Role): NavItem[] {
-  if (role === 'COLLECTION_AGENT') return [...commonNav, ...agentNav]
-  if (role === 'ADMIN') return [...commonNav, ...adminNav]
-  return commonNav
+function screenTitleKey(pathname: string): LabelKey {
+  let best: readonly [string, LabelKey] | null = null
+  for (const entry of TITLE_ROUTES) {
+    const hit = pathname === entry[0] || pathname.startsWith(entry[0] + '/')
+    if (hit && (best === null || entry[0].length > best[0].length)) best = entry
+  }
+  return best ? best[1] : 'appName'
 }
 
-const ROLE_BADGE: Record<Role, 'destructive' | 'secondary' | 'outline'> = {
-  ADMIN: 'destructive',
-  COLLECTION_AGENT: 'secondary',
-  STAFF: 'outline',
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-const ROLE_LABEL: Record<Role, string> = {
-  ADMIN: 'Admin',
-  COLLECTION_AGENT: 'Agent',
-  STAFF: 'Staff',
-}
-
-interface SidebarNavProps {
-  items: NavItem[]
-  pathname: string
-  onClose?: () => void
-}
-
-function SidebarNav({ items, pathname, onClose }: SidebarNavProps) {
+function SidebarLink({ item, active, labelKey }: { item: NavItem; active: boolean; labelKey?: LabelKey }) {
   return (
-    <nav className="flex-1 space-y-0.5 px-2 py-3">
-      {items.map(item => {
-        const active = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href + '/'))
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onClose}
-            className={cn(
-              'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-              active
-                ? 'bg-gray-100 text-gray-900'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
-            )}
-          >
-            <item.icon className="h-4 w-4 shrink-0" />
-            {item.label}
-          </Link>
-        )
-      })}
-    </nav>
+    <Link
+      href={item.href}
+      aria-current={active ? 'page' : undefined}
+      className={cn(
+        'flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors',
+        active
+          ? 'bg-muted text-primary'
+          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+      )}
+    >
+      <item.icon className="size-4 shrink-0" />
+      <Bi k={labelKey ?? item.k} className="min-w-0 truncate" />
+    </Link>
+  )
+}
+
+/**
+ * Offline / pending-sync strip.
+ *
+ * An agent whose phone lost signal has no other way to learn that the money
+ * they just recorded is still sitting on the handset. Silence here is the
+ * expensive failure, so this renders as a full-width bar rather than a chip
+ * tucked into the top bar.
+ */
+function SyncStatusStrip({ online, queued }: { online: boolean; queued: number }) {
+  if (online && queued === 0) return null
+
+  return (
+    <div
+      role="status"
+      className={cn(
+        'flex shrink-0 items-center gap-2 border-b px-4 py-2 text-sm',
+        online
+          ? 'border-info-muted bg-info-muted text-info-muted-foreground'
+          : 'border-warning-muted bg-warning-muted text-warning-muted-foreground',
+      )}
+    >
+      {online ? (
+        <RefreshCw aria-hidden="true" className="size-4 shrink-0" />
+      ) : (
+        <CloudOff aria-hidden="true" className="size-4 shrink-0" />
+      )}
+      <span className="min-w-0 flex-1 truncate font-medium">
+        {online ? null : <Bi k="offlineNow" />}
+        {!online && queued > 0 ? ' · ' : null}
+        {queued > 0 ? (
+          <>
+            <span className="tabular">{formatCount(queued)}</span>{' '}
+            <Bi k="waitingToSync" />
+          </>
+        ) : null}
+      </span>
+    </div>
   )
 }
 
@@ -106,91 +134,127 @@ export interface AppShellProps {
   userRole: Role
 }
 
+/**
+ * Application shell.
+ *
+ * Scroll model: `h-dvh overflow-hidden` on the shell and `overflow-y-auto` on
+ * `<main>`. With `min-h-dvh` the document itself scrolls, the phone URL bar
+ * shows and hides, `dvh` changes under the fixed tab bar and the whole layout
+ * jumps. The tab bar is fixed at 64px + safe area; `<main>` carries `pb-24`
+ * so the last row is never covered.
+ *
+ * There is NO hamburger on a phone. The bottom tab bar plus its More sheet is
+ * the only navigation there; a drawer as well meant two nav systems at once.
+ */
 export function AppShell({ children, userName, userRole }: AppShellProps) {
-  const [open, setOpen] = useState(false)
   const pathname = usePathname()
-  const navItems = getNavItems(userRole)
+  const online = useOnlineStatus()
+  const queued = useQueueCount()
+  const [logoutOpen, setLogoutOpen] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
 
-  const sidebarContent = (
-    <div className="flex h-full flex-col bg-white">
-      <div className="flex h-14 items-center px-4 border-b shrink-0">
-        <Building2 className="h-5 w-5 text-gray-700 mr-2" />
-        <span className="text-sm font-semibold text-gray-900">Finance Tracker</span>
-      </div>
-      <div className="flex-1 overflow-y-auto">
-        <SidebarNav items={navItems} pathname={pathname} onClose={() => setOpen(false)} />
-      </div>
-      <Separator />
-      <div className="p-2 shrink-0">
-        <Link
-          href="/profile"
-          onClick={() => setOpen(false)}
-          className={cn(
-            'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-            pathname === '/profile'
-              ? 'bg-gray-100 text-gray-900'
-              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
-          )}
-        >
-          <User className="h-4 w-4 shrink-0" />
-          Profile
-        </Link>
-      </div>
-    </div>
-  )
+  const navItems = getNavItems(userRole)
+  const active = activeHref(pathname, [...navItems, PROFILE_ITEM])
+  const titleKey = screenTitleKey(pathname)
+
+  async function confirmLogout() {
+    setSigningOut(true)
+    await signOut({ callbackUrl: '/login' })
+  }
 
   return (
-    <div className="flex min-h-dvh bg-gray-50">
-      {/* Desktop sidebar */}
-      <aside className="hidden md:flex md:w-56 md:flex-col md:border-r md:bg-white shrink-0">
-        {sidebarContent}
+    <div className="flex h-dvh overflow-hidden bg-background">
+      {/* Desktop sidebar. Hidden on a phone — the tab bar replaces it. */}
+      <aside className="hidden shrink-0 border-r border-border bg-card md:flex md:w-56 md:flex-col">
+        <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-4">
+          <Building2 className="size-5 shrink-0 text-primary" />
+          <span className="truncate text-sm font-semibold">
+            <Bi k="appName" />
+          </span>
+        </div>
+        <nav aria-label="Sidebar" className="flex-1 space-y-1 overflow-y-auto p-2">
+          {navItems.map(item => (
+            <SidebarLink key={item.href} item={item} active={active === item.href} />
+          ))}
+        </nav>
+        <Separator />
+        <div className="shrink-0 space-y-1 p-2">
+          <SidebarLink item={PROFILE_ITEM} active={active === PROFILE_ITEM.href} />
+          <button
+            type="button"
+            onClick={() => setLogoutOpen(true)}
+            className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-danger transition-colors hover:bg-danger-muted"
+          >
+            <LogOut className="size-4 shrink-0" />
+            <Bi k="logout" className="min-w-0 truncate" />
+          </button>
+        </div>
       </aside>
 
-      <div className="flex flex-1 flex-col min-w-0">
-        {/* Topbar */}
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-white px-4 md:px-6">
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger
-              render={
-                <Button variant="ghost" size="icon" className="md:hidden">
-                  <Menu className="h-5 w-5" />
-                  <span className="sr-only">Open menu</span>
-                </Button>
-              }
-            />
-            <SheetContent side="left" className="w-56 p-0">
-              {sidebarContent}
-            </SheetContent>
-          </Sheet>
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* 56px top bar. The screen title lives here on a phone only —
+            <PageHeader> prints it from md: up, and rendering both stacked the
+            same words twice. */}
+        <header className="flex h-14 shrink-0 items-center gap-1 border-b border-border bg-card px-2 md:px-6">
+          <h1 className="min-w-0 flex-1 truncate px-2 text-lg font-semibold md:hidden">
+            <Bi k={titleKey} />
+          </h1>
+          <div className="hidden min-w-0 flex-1 md:block" />
 
-          <div className="flex-1" />
+          {(userRole === 'ADMIN' || userRole === 'COLLECTION_AGENT') && (
+            <NotificationBell userRole={userRole} />
+          )}
 
-          <div className="flex items-center gap-2">
-            {(userRole === 'ADMIN' || userRole === 'COLLECTION_AGENT') && <NotificationBell userRole={userRole} />}
-            <Badge variant={ROLE_BADGE[userRole]} className="hidden sm:flex">
-              {ROLE_LABEL[userRole]}
-            </Badge>
-            <span className="text-sm font-medium text-gray-700 hidden sm:block max-w-[160px] truncate">
-              {userName}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 text-gray-600"
-              onClick={() => { window.location.href = '/auth/signout' }}
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline text-sm">Logout</span>
-            </Button>
-          </div>
+          <Link
+            href="/profile"
+            aria-label="Profile"
+            className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
+          >
+            {initials(userName)}
+          </Link>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 p-4 pb-20 md:pb-6 md:p-6">
+        <SyncStatusStrip online={online} queued={queued} />
+
+        <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-6 md:pb-6">
           {children}
         </main>
       </div>
-      <BottomNav userRole={userRole} />
+
+      <BottomNav userRole={userRole} onLogout={() => setLogoutOpen(true)} />
+
+      {/* Logout is confirmed, never one tap. A stray tap in the field costs an
+          agent their session and, offline, their unsent work. */}
+      <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              <Bi k="logoutQuestion" />
+            </DialogTitle>
+            <DialogDescription>
+              <Bi k="logoutWarning" />
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose
+              render={
+                <Button variant="outline" size="lg">
+                  <Bi k="stayLoggedIn" />
+                </Button>
+              }
+            />
+            <Button
+              variant="destructive"
+              size="lg"
+              disabled={signingOut}
+              onClick={confirmLogout}
+            >
+              <LogOut />
+              <Bi k="logout" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

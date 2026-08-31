@@ -4,11 +4,10 @@ import { db } from '@/lib/db'
 import { reconciliations, profiles } from '@/lib/db/schema'
 import { eq, and, desc } from 'drizzle-orm'
 import { AdminReconciliationClient } from '@/components/reconciliation/admin-reconciliation-client'
-import type { Session } from 'next-auth'
 
 export default async function AdminReconciliationPage() {
-  const session = (await auth()) as Session | null
-  if (!session?.user?.id || (session.user as any).role !== 'ADMIN') redirect('/dashboard')
+  const session = await auth()
+  if (!session?.user?.id || session.user.role !== 'ADMIN') redirect('/dashboard')
 
   const [initial, agents] = await Promise.all([
     db.select({

@@ -1,8 +1,20 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
-import { cn } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
+import { Users } from 'lucide-react'
+
+import { PageHeader } from '@/components/ui/page-header'
+import { DataList, type DataListColumn } from '@/components/ui/data-list'
+import { EmptyState } from '@/components/ui/empty-state'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { Money } from '@/components/ui/money'
+import { Bi } from '@/components/ui/bi'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { FormField } from '@/components/ui/form-field'
+import { formatCount, formatDate, toNumber } from '@/lib/format'
+import { t } from '@/lib/i18n'
 
 interface LoanRequestCustomer {
   request_id: string
@@ -24,177 +36,182 @@ interface Props {
   initial: LoanRequestCustomer[]
 }
 
-const STATUS_STYLE: Record<string, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-700',
-  APPROVED: 'bg-green-100 text-green-700',
-  REJECTED: 'bg-red-100 text-red-700',
-}
-
-function fmt(n: string | number | null) {
-  const v = parseFloat(String(n ?? '0'))
-  return `₹${isNaN(v) ? 0 : v.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
-}
-
-function toIST(s: string | null): string {
+/** The date the agent picked in the filter is an IST calendar date. */
+function toIstDate(s: string | null): string {
   if (!s) return ''
-  return new Date(s).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date(s))
 }
 
-function fmtDate(s: string | null) {
-  if (!s) return '—'
-  return new Date(s).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+function displayName(r: LoanRequestCustomer): string {
+  return r.customer_name ?? r.new_customer_name ?? t('customer').en
 }
 
 export default function AgentCustomersClient({ initial }: Props) {
+  const router = useRouter()
   const [requestedDate, setRequestedDate] = useState('')
   const [disbursedDate, setDisbursedDate] = useState('')
 
-  const filtered = initial.filter(r => {
-    if (requestedDate && toIST(r.created_at) !== requestedDate) return false
-    if (disbursedDate && r.disbursement_date !== disbursedDate) return false
-    return true
-  })
+  const filtered = initial
+    .filter(r => {
+      if (requestedDate && toIstDate(r.created_at) !== requestedDate) return false
+      if (disbursedDate && r.disbursement_date !== disbursedDate) return false
+      return true
+    })
+    // Outstanding is the whole point of this screen: the agent visits the
+    // biggest arrear first, so that is the default order.
+    .sort((a, b) => toNumber(b.outstanding_total) - toNumber(a.outstanding_total))
+
+  const filtering = Boolean(requestedDate || disbursedDate)
+
+  const columns: DataListColumn<LoanRequestCustomer>[] = [
+    {
+      key: 'customer',
+      header: <Bi k="customer" />,
+      primary: true,
+      cell: r => (
+        <div className="min-w-0">
+          <p className="truncate font-medium">{displayName(r)}</p>
+          {r.customer_code ? (
+            <p className="text-xs text-muted-foreground">{r.customer_code}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              <Bi k="newCustomerNotCreated" />
+            </p>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'loanAmount',
+      header: <Bi k="loanAmount" />,
+      cell: r => <Money value={r.loan_amount} size="row" intent="neutral" />,
+    },
+    {
+      key: 'requested',
+      header: <Bi k="requestedOn" />,
+      cell: r => <span className="text-muted-foreground">{formatDate(r.created_at)}</span>,
+    },
+    {
+      key: 'disburse',
+      header: <Bi k="disburseOn" />,
+      cell: r => <span className="text-muted-foreground">{formatDate(r.disbursement_date)}</span>,
+    },
+    {
+      key: 'status',
+      header: <Bi k="status" />,
+      cell: r => <StatusBadge status={r.status} />,
+    },
+    {
+      key: 'outstanding',
+      header: <Bi k="outstanding" />,
+      align: 'right',
+      cell: r =>
+        r.customer_id ? (
+          // `owed`, never `in`/`auto`: an arrear rendered green reads as good news.
+          <Money value={r.outstanding_total ?? '0'} size="row" intent="owed" />
+        ) : (
+          <span className="text-sm text-muted-foreground">—</span>
+        ),
+    },
+  ]
+
+  const renderCard = (r: LoanRequestCustomer) => (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate font-medium">{displayName(r)}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {r.customer_code ?? r.new_customer_phone ?? t('newCustomerNotCreated').en}
+          </p>
+        </div>
+        <div className="shrink-0 text-right">
+          {r.customer_id ? (
+            <Money value={r.outstanding_total ?? '0'} size="row" intent="owed" />
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
+          )}
+          <p className="text-xs text-muted-foreground">
+            <Bi k="outstanding" />
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <StatusBadge status={r.status} />
+        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Bi k="loanAmount" />
+          <Money value={r.loan_amount} size="caption" />
+        </span>
+      </div>
+    </div>
+  )
 
   return (
-    <div className="space-y-4 max-w-3xl">
-      <h1 className="text-xl font-semibold">My Customers</h1>
-      <p className="text-sm text-gray-500">{initial.length} loan request{initial.length !== 1 ? 's' : ''}</p>
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        titleKey="myCustomers"
+        subtitle={
+          <span className="flex items-center gap-1">
+            <span className="tabular">{formatCount(initial.length)}</span>
+            <Bi k="loanRequestsCount" />
+            <span aria-hidden="true">·</span>
+            <Bi k="highestOutstandingFirst" />
+          </span>
+        }
+      />
 
-      {/* Date filters */}
-      <div className="flex flex-wrap gap-3 items-end">
-        <div className="space-y-1">
-          <p className="text-xs text-gray-500 font-medium">Requested Date</p>
-          <div className="flex items-center gap-1.5">
-            <input
-              type="date"
-              value={requestedDate}
-              onChange={e => setRequestedDate(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            {requestedDate && (
-              <button onClick={() => setRequestedDate('')} className="text-xs text-gray-400 hover:text-gray-600 underline">
-                Clear
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-xs text-gray-500 font-medium">Disbursement Date</p>
-          <div className="flex items-center gap-1.5">
-            <input
-              type="date"
-              value={disbursedDate}
-              onChange={e => setDisbursedDate(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            {disbursedDate && (
-              <button onClick={() => setDisbursedDate('')} className="text-xs text-gray-400 hover:text-gray-600 underline">
-                Clear
-              </button>
-            )}
-          </div>
-        </div>
-
-        {(requestedDate || disbursedDate) && (
-          <p className="text-xs text-gray-500 self-end pb-2">{filtered.length} result{filtered.length !== 1 ? 's' : ''}</p>
-        )}
+      <div className="grid grid-cols-2 gap-3">
+        <FormField labelKey="requestedDate" htmlFor="filter-requested">
+          <Input
+            id="filter-requested"
+            type="date"
+            value={requestedDate}
+            onChange={e => setRequestedDate(e.target.value)}
+          />
+        </FormField>
+        <FormField labelKey="disbursementDate" htmlFor="filter-disbursed">
+          <Input
+            id="filter-disbursed"
+            type="date"
+            value={disbursedDate}
+            onChange={e => setDisbursedDate(e.target.value)}
+          />
+        </FormField>
       </div>
 
-      {filtered.length === 0 && (
-        <div className="bg-white rounded-xl border p-8 text-center text-gray-400 text-sm">
-          No loan requests{requestedDate || disbursedDate ? ' for the selected filter' : ' yet'}
+      {filtering ? (
+        <div className="flex items-center justify-between gap-3">
+          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+            <span className="tabular">{formatCount(filtered.length)}</span>
+            <Bi k="results" />
+          </span>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setRequestedDate('')
+              setDisbursedDate('')
+            }}
+          >
+            <Bi k="clear" />
+          </Button>
         </div>
-      )}
+      ) : null}
 
-      {/* Mobile cards */}
-      {filtered.length > 0 && (
-        <>
-          <div className="sm:hidden space-y-3">
-            {filtered.map(r => (
-              <div key={r.request_id} className="bg-white rounded-xl border p-4 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{r.customer_name ?? r.new_customer_name ?? '—'}</p>
-                    {r.customer_code && <p className="text-xs text-gray-400">{r.customer_code}</p>}
-                    {!r.customer_id && r.new_customer_phone && (
-                      <p className="text-xs text-gray-400">{r.new_customer_phone}{r.new_customer_area ? ` · ${r.new_customer_area}` : ''}</p>
-                    )}
-                  </div>
-                  <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium shrink-0', STATUS_STYLE[r.status])}>
-                    {r.status}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-x-4 text-sm">
-                  <div>
-                    <span className="text-xs text-gray-400 block">Loan Amount</span>
-                    <span className="font-medium">{fmt(r.loan_amount)}</span>
-                  </div>
-                  <div>
-                    <span className="text-xs text-gray-400 block">Outstanding</span>
-                    <span className={r.customer_id ? 'font-medium text-orange-600' : 'text-gray-400'}>
-                      {r.customer_id && r.outstanding_total ? fmt(r.outstanding_total) : '—'}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between text-xs text-gray-400">
-                  <span>Requested: {fmtDate(r.created_at)}</span>
-                  <span>Disburse: {fmtDate(r.disbursement_date)}</span>
-                </div>
-                {r.customer_id && (
-                  <Link href={`/customers/${r.customer_id}`} className="text-xs text-blue-600 hover:underline">
-                    View customer →
-                  </Link>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Desktop table */}
-          <div className="hidden sm:block bg-white rounded-xl border overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  {['Customer', 'Loan Amount', 'Outstanding', 'Requested', 'Disburse', 'Status', ''].map(h => (
-                    <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {filtered.map(r => (
-                  <tr key={r.request_id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <p className="font-medium">{r.customer_name ?? r.new_customer_name ?? '—'}</p>
-                      {r.customer_code && <p className="text-xs text-gray-400">{r.customer_code}</p>}
-                      {!r.customer_id && r.new_customer_phone && (
-                        <p className="text-xs text-gray-400">{r.new_customer_phone}</p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 font-medium">{fmt(r.loan_amount)}</td>
-                    <td className="px-4 py-3">
-                      {r.customer_id && r.outstanding_total
-                        ? <span className="font-medium text-orange-600">{fmt(r.outstanding_total)}</span>
-                        : <span className="text-gray-400">—</span>}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{fmtDate(r.created_at)}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{fmtDate(r.disbursement_date)}</td>
-                    <td className="px-4 py-3">
-                      <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', STATUS_STYLE[r.status])}>
-                        {r.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {r.customer_id && (
-                        <Link href={`/customers/${r.customer_id}`} className="text-blue-600 hover:underline text-xs">View</Link>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
+      <DataList
+        items={filtered}
+        getKey={r => r.request_id}
+        columns={columns}
+        renderCard={renderCard}
+        onRowClick={r => {
+          if (r.customer_id) router.push(`/customers/${r.customer_id}`)
+        }}
+        empty={
+          <EmptyState
+            icon={Users}
+            titleKey={filtering ? 'noResultsForFilter' : 'noLoanRequestsYet'}
+            descriptionKey={filtering ? undefined : 'noCustomersAssigned'}
+          />
+        }
+      />
     </div>
   )
 }

@@ -9,8 +9,8 @@ use the closest thing listed. Do not add a new dependency.
 ## 0. Who uses this app
 
 Field collection agents and small shop owners in Tamil Nadu.
+(The app itself is English only — see rule 3.)
 - They hold a phone in one hand, often outdoors, often in sunlight.
-- Many read Tamil more comfortably than English.
 - They care about **one number** (how much) and **one action** (record it).
 
 Design consequences, in priority order:
@@ -18,7 +18,9 @@ Design consequences, in priority order:
 1. **Numbers are the loudest thing on the screen.** Bigger than any heading.
 2. **Buttons are large, coloured, and carry an icon.** An icon + a number should be
    understandable with the text covered.
-3. **Every label is bilingual.** Tamil first (larger), English second (smaller, muted).
+3. **English only.** Bilingual Tamil was tried and explicitly reversed by the
+   product owner: "buttons speak more than words" meant FEWER words and bigger
+   icons, not a second language. Do NOT re-add Tamil or any other language.
 4. **Colour carries meaning, never decoration.** Green = money in / confirmed.
    Red = money out / rejected. Amber = waiting. Blue = neutral action.
 5. **No horizontal scrolling, ever, on a phone.**
@@ -96,27 +98,29 @@ Never call `.toLocaleString()` directly in feature code.
 
 ---
 
-## 5. Bilingual labels
+## 5. Labels
 
 All user-facing text comes from `lib/i18n.ts`:
 
 ```ts
 import { t } from '@/lib/i18n'
-t('collections')  // => { ta: 'வசூல்', en: 'Collections' }
+t('collections')  // => { en: 'Collections' }
 ```
 
 Render with `<Bi>` from `components/ui/bi.tsx`:
-- `<Bi k="collections" />`         → Tamil line, English line under it, muted+smaller
-- `<Bi k="collections" inline />`  → "வசூல் · Collections" on one line
-- `<Bi k="collections" only="ta" />` → Tamil only
+- `<Bi k="collections" />` → the English string
+
+**English only.** The `Label` object shape (`{ en: string }`) is kept rather than
+bare strings so a second language could be added later without touching ~130 call
+sites — but do NOT add one unless the product owner asks. An earlier version of
+this file mandated Tamil; that was reversed. `inline` and `only` props on `<Bi>`
+are accepted no-ops left over from the bilingual version.
 
 Rules:
-- Tamil is the primary line. English is the secondary, `text-xs text-muted-foreground`.
-- Buttons, nav items, table headers, status badges, and form labels are ALL bilingual.
+- Buttons, nav items, table headers, status badges and form labels all use `t()`.
 - Do NOT translate: proper nouns, codes (COL-001), amounts, dates.
-- If a key is missing from `lib/i18n.ts`, ADD it. Do not hardcode a string.
-
----
+- If a key is missing from `lib/i18n.ts`, ADD it. Never hardcode a user-facing string.
+- Keep labels SHORT. A bottom-tab label has room for about one word at 360px.
 
 ## 6. Shared components — use these, do not rebuild
 
@@ -142,18 +146,18 @@ No feature file may contain a raw `<table>` element.
 
 ## 7. Status → colour map (canonical, in `<StatusBadge>`)
 
-| Status | Token | Tamil |
-|---|---|---|
-| CONFIRMED, PAID, APPROVED, VERIFIED, PRESENT, ACTIVE | success | உறுதி / செலுத்தப்பட்டது / ஒப்புதல் / சரிபார்க்கப்பட்டது / வந்தார் |
+| Status | Token |
+|---|---|
+| CONFIRMED, PAID, APPROVED, VERIFIED, PRESENT, ACTIVE | success |
 | PENDING, SUBMITTED, PARTIALLY_PAID, LATE, HALF_DAY | warning | காத்திருப்பு / சமர்ப்பிக்கப்பட்டது / பகுதி / தாமதம் / அரை நாள் |
-| REJECTED, CANCELLED, ABSENT, OVERDUE, INACTIVE | danger | நிராகரிப்பு / ரத்து / வரவில்லை / தவணை தாண்டியது |
-| OPEN, DRAFT | info | நிலுவை |
+| REJECTED, CANCELLED, ABSENT, OVERDUE, INACTIVE | danger |
+| OPEN, DRAFT | info |
 
 ---
 
 ## 8. Layout shell
 
-- **Phone**: fixed **bottom tab bar**, max 5 items, icon + short Tamil label, 64px tall,
+- **Phone**: fixed **bottom tab bar**, max 5 items, icon + short English label, 64px tall,
   padded with `env(safe-area-inset-bottom)`. Top bar is compact (56px): screen title +
   notification bell + avatar. No hamburger for the main items.
 - **Overflow items** (more than 5) go into a "மேலும் / More" sheet on the 5th tab.

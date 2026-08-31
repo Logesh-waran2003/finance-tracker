@@ -26,7 +26,7 @@ export default async function AttendancePage() {
   const session = await auth()
   if (!session?.user?.id) redirect('/login')
 
-  const role = (session.user as any).role
+  const role = session.user.role
 
   // Admin has no personal attendance — redirect to admin attendance view
   if (role === 'ADMIN') redirect('/admin/attendance')
@@ -52,10 +52,6 @@ export default async function AttendancePage() {
   const history = historyRaw.map(serializeRecord)
 
   return (
-    <AttendanceClient
-      today={today}
-      todayRecord={todayRecord as unknown as Parameters<typeof AttendanceClient>[0]['todayRecord']}
-      history={history as unknown as Parameters<typeof AttendanceClient>[0]['history']}
-    />
+    <AttendanceClient today={today} todayRecord={todayRecord} history={history} />
   )
 }

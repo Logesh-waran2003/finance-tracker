@@ -3,19 +3,19 @@ import { db } from '@/lib/db'
 import { customers, dues, collections, profiles, loanRequests, loans } from '@/lib/db/schema'
 import { eq, and, isNull, sql } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
-import type { Session } from 'next-auth'
-import { EditDueDialog } from '@/components/customers/edit-due-dialog'
+import { CustomerDetailClient } from '@/components/customers/customer-detail-client'
+import { toNumber } from '@/lib/format'
 
 interface CustomerDetailPageProps {
   params: Promise<{ id: string }>
 }
 
 export default async function CustomerDetailPage({ params }: CustomerDetailPageProps) {
-  const session = (await auth()) as Session | null
+  const session = await auth()
   if (!session?.user?.id) redirect('/login')
 
   const { id } = await params
-  const role = (session.user as any).role
+  const role = session.user.role
 
   const customer = await db.select().from(customers).where(eq(customers.id, id)).limit(1).then(r => r[0])
   if (!customer) redirect('/customers')
@@ -67,228 +67,81 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
       .orderBy(sql`${loans.created_at} DESC`),
   ])
 
+  // `toNumber` is used for summing only. Every displayed amount stays a string.
   const confirmedFreeform = collectionsList
     .filter(c => c.status === 'CONFIRMED' && !c.due_id && !c.deleted_at)
-    .reduce((sum, c) => sum + parseFloat(c.amount as string), 0)
+    .reduce((sum, c) => sum + toNumber(c.amount), 0)
+
+  const collectedTotal = collectionsList
+    .filter(c => c.status === 'CONFIRMED' && !c.deleted_at)
+    .reduce((sum, c) => sum + toNumber(c.amount), 0)
 
   const loanOutstanding = loansList
     .filter(l => !['COMPLETED', 'CANCELLED', 'DRAFT'].includes(l.status))
-    .reduce((sum, l) => sum + parseFloat(l.total_outstanding as string), 0)
+    .reduce((sum, l) => sum + toNumber(l.total_outstanding), 0)
 
-  const totalOutstanding = Math.max(0,
-    parseFloat(customer.opening_balance as string ?? '0')
-    + duesList
-        .filter(d => d.status !== 'PAID' && d.status !== 'CANCELLED')
-        .reduce((sum, d) => sum + parseFloat(d.outstanding_amount as string), 0)
-    + loanOutstanding
-    - confirmedFreeform
+  const duesOutstanding = duesList
+    .filter(d => d.status !== 'PAID' && d.status !== 'CANCELLED')
+    .reduce((sum, d) => sum + toNumber(d.outstanding_amount), 0)
+
+  const totalOutstanding = Math.max(
+    0,
+    toNumber(customer.opening_balance) + duesOutstanding + loanOutstanding - confirmedFreeform
   )
 
-  const STATUS_BADGE: Record<string, string> = {
-    OPEN: 'bg-blue-100 text-blue-700',
-    PARTIALLY_PAID: 'bg-yellow-100 text-yellow-700',
-    PAID: 'bg-green-100 text-green-700',
-    OVERDUE: 'bg-red-100 text-red-700',
-    CANCELLED: 'bg-gray-100 text-gray-500',
-  }
-
-  const COL_STATUS: Record<string, string> = {
-    PENDING: 'bg-yellow-100 text-yellow-700',
-    CONFIRMED: 'bg-green-100 text-green-700',
-    REJECTED: 'bg-red-100 text-red-700',
-    CANCELLED: 'bg-gray-100 text-gray-500',
-  }
-
-  // Timeline: combine dues + collections sorted by date
-  const timeline = [
-    ...duesList.map(d => ({ type: 'due' as const, date: d.created_at, data: d })),
-    ...collectionsList.map(c => ({ type: 'collection' as const, date: c.collected_at, data: c })),
-  ].sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime())
+  const activeLoanCount = loansList.filter(
+    l => !['COMPLETED', 'CANCELLED', 'DRAFT'].includes(l.status)
+  ).length
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">{customer.full_name}</h1>
-          <p className="text-gray-500 text-sm">{customer.customer_code}</p>
-        </div>
-        <span className={`text-xs font-medium px-2 py-1 rounded-full ${customer.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-          {customer.is_active ? 'Active' : 'Inactive'}
-        </span>
-      </div>
-
-      {/* Info grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white rounded-xl border p-4 text-sm">
-        <div><span className="text-gray-500">Phone</span><p className="font-medium mt-0.5">{customer.phone ?? '—'}</p></div>
-        <div><span className="text-gray-500">Email</span><p className="font-medium mt-0.5">{customer.email ?? '—'}</p></div>
-        <div><span className="text-gray-500">Area / City</span><p className="font-medium mt-0.5">{[customer.area, customer.city].filter(Boolean).join(', ') || '—'}</p></div>
-        <div><span className="text-gray-500">Address</span><p className="font-medium mt-0.5">{customer.address ?? '—'}</p></div>
-        <div><span className="text-gray-500">Assigned Agent</span><p className="font-medium mt-0.5">{agent?.full_name ?? '—'}</p></div>
-        <div><span className="text-gray-500">Outstanding Balance</span><p className="font-medium mt-0.5">₹{parseFloat(customer.opening_balance as string).toLocaleString()}</p></div>
-        {customer.gps_lat && customer.gps_lng && (
-          <div><span className="text-gray-500">GPS</span><p className="font-medium mt-0.5 text-xs">{customer.gps_lat}, {customer.gps_lng}</p></div>
-        )}
-        {customer.notes && <div className="sm:col-span-2"><span className="text-gray-500">Notes</span><p className="font-medium mt-0.5">{customer.notes}</p></div>}
-      </div>
-
-      {/* Outstanding summary */}
-      <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 flex items-center justify-between">
-        <p className="text-sm text-orange-800 font-medium">Total Outstanding</p>
-        <p className="text-xl font-bold text-orange-700">₹{totalOutstanding.toLocaleString()}</p>
-      </div>
-
-      {/* Active Loans */}
-      {loansList.length > 0 && (
-        <div>
-          <h2 className="text-base font-semibold mb-2">Loans</h2>
-          <div className="sm:hidden space-y-3">
-            {loansList.map(l => (
-              <div key={l.id} className="bg-white rounded-xl border p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="font-mono text-sm text-gray-500">{l.loan_number}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    l.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-                    l.status === 'OVERDUE' ? 'bg-red-100 text-red-700' :
-                    l.status === 'COMPLETED' ? 'bg-blue-100 text-blue-700' :
-                    'bg-gray-100 text-gray-500'
-                  }`}>{l.status}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-sm">
-                  <div><p className="text-xs text-gray-500">Amount</p><p className="font-medium">₹{parseFloat(l.loan_amount as string).toLocaleString()}</p></div>
-                  <div><p className="text-xs text-gray-500">Outstanding</p><p className="font-medium text-orange-600">₹{parseFloat(l.total_outstanding as string).toLocaleString()}</p></div>
-                  <div><p className="text-xs text-gray-500">Daily</p><p className="font-medium">₹{parseFloat(l.daily_installment as string).toLocaleString()}</p></div>
-                </div>
-                <p className="text-xs text-gray-400">Disbursed: {l.disbursement_date ?? '—'}</p>
-              </div>
-            ))}
-          </div>
-          <div className="hidden sm:block bg-white rounded-xl border overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  {['Loan #', 'Amount', 'Outstanding', 'Daily', 'Disburse Date', 'Status'].map(h => (
-                    <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {loansList.map(l => (
-                  <tr key={l.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-2 font-mono text-gray-600">{l.loan_number}</td>
-                    <td className="px-4 py-2 font-medium">₹{parseFloat(l.loan_amount as string).toLocaleString()}</td>
-                    <td className="px-4 py-2 text-orange-600 font-medium">₹{parseFloat(l.total_outstanding as string).toLocaleString()}</td>
-                    <td className="px-4 py-2 text-gray-500">₹{parseFloat(l.daily_installment as string).toLocaleString()}</td>
-                    <td className="px-4 py-2 text-gray-500">{l.disbursement_date ?? '—'}</td>
-                    <td className="px-4 py-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        l.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-                        l.status === 'OVERDUE' ? 'bg-red-100 text-red-700' :
-                        l.status === 'COMPLETED' ? 'bg-blue-100 text-blue-700' :
-                        'bg-gray-100 text-gray-500'
-                      }`}>{l.status}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Dues table */}
-      <div>
-        <h2 className="text-base font-semibold mb-2">Dues</h2>
-
-        {/* Mobile cards */}
-        <div className="sm:hidden space-y-3">
-          {duesList.length === 0 && <p className="text-sm text-gray-400">No dues</p>}
-          {duesList.map(d => (
-            <div key={d.id} className="bg-white rounded-xl border p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">{d.invoice_number ?? '—'}</p>
-                  <p className="text-xs text-gray-400">{d.due_date ?? 'No due date'}</p>
-                </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[d.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                  {d.status.replace('_', ' ')}
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                <div><p className="text-xs text-gray-500">Amount</p><p className="font-medium">₹{parseFloat(d.amount as string).toLocaleString()}</p></div>
-                <div><p className="text-xs text-gray-500">Outstanding</p><p className="font-medium text-orange-600">₹{parseFloat(d.outstanding_amount as string).toLocaleString()}</p></div>
-                <div><p className="text-xs text-gray-500">Penalty</p><p className="font-medium">{d.penalty_rate && parseFloat(d.penalty_rate as string) > 0 ? `${parseFloat(d.penalty_rate as string)}%` : '—'}</p></div>
-              </div>
-              {role === 'ADMIN' && <EditDueDialog due={{ id: d.id, invoice_number: d.invoice_number, due_date: d.due_date, penalty_rate: d.penalty_rate as string | null, notes: d.notes }} />}
-            </div>
-          ))}
-        </div>
-
-        {/* Desktop table */}
-        <div className="hidden sm:block bg-white rounded-xl border overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                {['Invoice', 'Amount', 'Outstanding', 'Due Date', 'Penalty', 'Status', ''].map(h => (
-                  <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {duesList.length === 0 && <tr><td colSpan={7} className="px-4 py-6 text-center text-gray-400">No dues</td></tr>}
-              {duesList.map(d => (
-                <tr key={d.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-2 text-gray-600">{d.invoice_number ?? '—'}</td>
-                  <td className="px-4 py-2 font-medium">₹{parseFloat(d.amount as string).toLocaleString()}</td>
-                  <td className="px-4 py-2 text-orange-600 font-medium">₹{parseFloat(d.outstanding_amount as string).toLocaleString()}</td>
-                  <td className="px-4 py-2 text-gray-500">{d.due_date ?? '—'}</td>
-                  <td className="px-4 py-2 text-gray-500">{d.penalty_rate && parseFloat(d.penalty_rate as string) > 0 ? `${parseFloat(d.penalty_rate as string)}%` : '—'}</td>
-                  <td className="px-4 py-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[d.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {d.status.replace('_', ' ')}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2">
-                    {role === 'ADMIN' && <EditDueDialog due={{ id: d.id, invoice_number: d.invoice_number, due_date: d.due_date, penalty_rate: d.penalty_rate as string | null, notes: d.notes }} />}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Timeline */}
-      <div>
-        <h2 className="text-base font-semibold mb-2">Activity Timeline</h2>
-        <div className="space-y-2">
-          {timeline.length === 0 && <p className="text-sm text-gray-400">No activity yet</p>}
-          {timeline.map((item, i) => (
-            <div key={i} className="flex gap-3 bg-white rounded-lg border p-3 text-sm">
-              <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${item.type === 'collection' ? 'bg-green-500' : 'bg-blue-400'}`} />
-              <div className="flex-1 min-w-0">
-                {item.type === 'due' && (
-                  <>
-                    <p className="font-medium">Due created — ₹{parseFloat((item.data as any).amount).toLocaleString()}</p>
-                    {(item.data as any).invoice_number && <p className="text-gray-500 text-xs">Invoice: {(item.data as any).invoice_number}</p>}
-                  </>
-                )}
-                {item.type === 'collection' && (
-                  <>
-                    <p className="font-medium">Collection — ₹{parseFloat((item.data as any).amount).toLocaleString()}</p>
-                    <p className="text-gray-500 text-xs">{(item.data as any).payment_mode} &middot; {(item.data as any).collection_number}
-                      <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${COL_STATUS[(item.data as any).status] ?? 'bg-gray-100 text-gray-500'}`}>
-                        {(item.data as any).status}
-                      </span>
-                    </p>
-                  </>
-                )}
-                <p className="text-xs text-gray-400 mt-0.5">{new Date(item.date!).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+    <CustomerDetailClient
+      customer={{
+        id: customer.id,
+        full_name: customer.full_name,
+        customer_code: customer.customer_code,
+        phone: customer.phone,
+        email: customer.email,
+        area: customer.area,
+        city: customer.city,
+        address: customer.address,
+        notes: customer.notes,
+        is_active: customer.is_active ?? false,
+        gps_lat: customer.gps_lat,
+        gps_lng: customer.gps_lng,
+      }}
+      agentName={agent?.full_name ?? null}
+      totalOutstanding={totalOutstanding.toFixed(2)}
+      duesOutstanding={duesOutstanding.toFixed(2)}
+      collectedTotal={collectedTotal.toFixed(2)}
+      activeLoanCount={activeLoanCount}
+      dues={duesList.map(d => ({
+        id: d.id,
+        invoice_number: d.invoice_number,
+        amount: d.amount,
+        outstanding_amount: d.outstanding_amount,
+        due_date: d.due_date,
+        penalty_rate: d.penalty_rate,
+        status: d.status,
+        notes: d.notes,
+      }))}
+      collections={collectionsList.map(c => ({
+        id: c.id,
+        collection_number: c.collection_number,
+        amount: c.amount,
+        payment_mode: c.payment_mode,
+        status: c.status,
+        collected_at: c.collected_at?.toISOString() ?? null,
+      }))}
+      loans={loansList.map(l => ({
+        id: l.id,
+        loan_number: l.loan_number,
+        loan_amount: l.loan_amount,
+        total_outstanding: l.total_outstanding,
+        daily_installment: l.daily_installment,
+        status: l.status,
+        disbursement_date: l.disbursement_date,
+      }))}
+      isAdmin={role === 'ADMIN'}
+    />
   )
 }

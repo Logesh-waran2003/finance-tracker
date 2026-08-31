@@ -1,13 +1,37 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { CheckCircle2, Clock, Download, Inbox, Loader2, Receipt, XCircle } from 'lucide-react'
+import { toast } from 'sonner'
+
+import { Bi } from '@/components/ui/bi'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { Loader2, CheckCircle, XCircle, Download } from 'lucide-react'
+import { DataList, type DataListColumn } from '@/components/ui/data-list'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { EmptyState } from '@/components/ui/empty-state'
+import { FormField } from '@/components/ui/form-field'
+import { Input } from '@/components/ui/input'
+import { Money } from '@/components/ui/money'
+import { PageHeader } from '@/components/ui/page-header'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { StatTile } from '@/components/ui/stat-tile'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { Textarea } from '@/components/ui/textarea'
+import { apiGet, apiPatch } from '@/lib/api-client'
+import { formatDate, toNumber } from '@/lib/format'
+import { t, type LabelKey } from '@/lib/i18n'
 
 interface ExpenseRow {
   id: string
@@ -21,33 +45,41 @@ interface ExpenseRow {
   expense_date: string
   status: string
   approved_by: string | null
-  approved_at: Date | string | null
+  approved_at: string | null
   rejection_reason: string | null
-  created_at: Date | string | null
+  created_at: string | null
 }
 
-interface Employee { id: string; full_name: string }
-
-const STATUS_COLOR: Record<string, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-700',
-  APPROVED: 'bg-green-100 text-green-700',
-  REJECTED: 'bg-red-100 text-red-700',
+interface Employee {
+  id: string
+  full_name: string
 }
 
-function fmtDate(d: string) {
-  return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+const STATUS_FILTERS: { value: string; key: LabelKey }[] = [
+  { value: 'ALL', key: 'allStatus' },
+  { value: 'PENDING', key: 'statusPending' },
+  { value: 'APPROVED', key: 'statusApproved' },
+  { value: 'REJECTED', key: 'statusRejected' },
+]
+
+function isoDate(d: Date): string {
+  // Built from local parts, not toISOString(): in IST, `toISOString()` on a
+  // local midnight rolls the date back one day.
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${month}-${day}`
 }
 
-function fmtCurrency(val: string | number) {
-  return '₹' + parseFloat(String(val)).toLocaleString('en-IN', { minimumFractionDigits: 2 })
-}
-
-function getMonthRange() {
+function monthRange() {
   const now = new Date()
-  const start = new Date(now.getFullYear(), now.getMonth(), 1)
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-  const fmt = (d: Date) => d.toISOString().split('T')[0]
-  return { start: fmt(start), end: fmt(end) }
+  return {
+    start: isoDate(new Date(now.getFullYear(), now.getMonth(), 1)),
+    end: isoDate(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+  }
+}
+
+function csvCell(value: string | number | null | undefined): string {
+  return `"${String(value ?? '').replace(/"/g, '""')}"`
 }
 
 export function AdminExpensesClient({
@@ -57,224 +89,470 @@ export function AdminExpensesClient({
   initial: ExpenseRow[]
   employees: Employee[]
 }) {
-  const defaultRange = getMonthRange()
-  const [rows, setRows] = useState(initial)
+  const defaultRange = monthRange()
+  const [rows, setRows] = useState<ExpenseRow[]>(initial)
   const [from, setFrom] = useState(defaultRange.start)
   const [to, setTo] = useState(defaultRange.end)
   const [empFilter, setEmpFilter] = useState('ALL')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [loading, setLoading] = useState(false)
 
-  const [rejecting, setRejecting] = useState<ExpenseRow | null>(null)
+  const [actioning, setActioning] = useState<string | null>(null)
+  const [approveTarget, setApproveTarget] = useState<ExpenseRow | null>(null)
+  const [rejectTarget, setRejectTarget] = useState<ExpenseRow | null>(null)
   const [rejectReason, setRejectReason] = useState('')
-  const [actionLoading, setActionLoading] = useState<string | null>(null)
-  const [actionErr, setActionErr] = useState('')
+
+  const filtered = useMemo(
+    () =>
+      rows.filter(r => {
+        const matchEmp = empFilter === 'ALL' || r.employee_id === empFilter
+        const matchStatus = statusFilter === 'ALL' || r.status === statusFilter
+        return matchEmp && matchStatus
+      }),
+    [rows, empFilter, statusFilter],
+  )
+
+  const pendingRows = useMemo(() => filtered.filter(r => r.status === 'PENDING'), [filtered])
+  const otherRows = useMemo(() => filtered.filter(r => r.status !== 'PENDING'), [filtered])
+
+  const pendingValue = useMemo(
+    () => pendingRows.reduce((sum, r) => sum + toNumber(r.amount), 0),
+    [pendingRows],
+  )
+  const approvedTotal = useMemo(
+    () =>
+      filtered
+        .filter(r => r.status === 'APPROVED')
+        .reduce((sum, r) => sum + toNumber(r.amount), 0),
+    [filtered],
+  )
 
   async function fetchData() {
     setLoading(true)
     const params = new URLSearchParams({ start: from, end: to })
     if (empFilter !== 'ALL') params.set('employee_id', empFilter)
     if (statusFilter !== 'ALL') params.set('status', statusFilter)
-    const res = await fetch(`/api/admin/expenses?${params}`)
-    if (res.ok) setRows(await res.json())
+    const res = await apiGet<ExpenseRow[]>(`/api/admin/expenses?${params}`)
     setLoading(false)
+    if (!res.ok) return
+    setRows(res.data)
   }
 
-  async function action(id: string, act: 'approve' | 'reject', reason?: string) {
-    setActionLoading(id); setActionErr('')
-    const res = await fetch(`/api/admin/expenses/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: act, reason }),
+  async function approveExpense() {
+    const target = approveTarget
+    if (!target) return
+    setActioning(target.id)
+    const res = await apiPatch<Partial<ExpenseRow>>(`/api/admin/expenses/${target.id}`, {
+      action: 'approve',
     })
-    const data = await res.json()
-    if (!res.ok) { setActionErr(data.error ?? 'Failed'); setActionLoading(null); return }
-    setRows(prev => prev.map(r => r.id === id ? { ...r, ...data } : r))
-    setRejecting(null); setRejectReason(''); setActionLoading(null)
+    setActioning(null)
+    // Failure: the row keeps its previous state, the dialog stays open.
+    if (!res.ok) return
+    setRows(prev => prev.map(r => (r.id === target.id ? { ...r, ...res.data } : r)))
+    setApproveTarget(null)
+    toast.success(t('expenseApproved').en)
+  }
+
+  async function rejectExpense() {
+    const target = rejectTarget
+    const reason = rejectReason.trim()
+    if (!target || !reason) return
+    setActioning(target.id)
+    const res = await apiPatch<Partial<ExpenseRow>>(`/api/admin/expenses/${target.id}`, {
+      action: 'reject',
+      reason,
+    })
+    setActioning(null)
+    // Failure: the typed reason stays in the open dialog.
+    if (!res.ok) return
+    setRows(prev => prev.map(r => (r.id === target.id ? { ...r, ...res.data } : r)))
+    setRejectTarget(null)
+    setRejectReason('')
+    toast.success(t('expenseRejected').en)
   }
 
   function exportCSV() {
-    const header = ['Employee', 'Category', 'Description', 'Amount', 'Mode', 'Date', 'Status']
-    const data = filtered.map(r => [
-      r.employee_name ?? '', r.category_name ?? '', r.description,
-      parseFloat(r.amount).toFixed(2), r.payment_mode, r.expense_date, r.status,
+    const header = [
+      'Employee', 'Category', 'Description', 'Amount', 'Mode', 'Date', 'Status', 'Rejection Reason',
+    ]
+    const body = filtered.map(r => [
+      r.employee_name,
+      r.category_name,
+      r.description,
+      r.amount,
+      r.payment_mode,
+      r.expense_date,
+      r.status,
+      r.rejection_reason,
     ])
-    const csv = [header, ...data].map(row => row.map(v => `"${v}"`).join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = `expenses-${from}-to-${to}.csv`
-    a.click(); URL.revokeObjectURL(url)
+    const csv = [header, ...body].map(row => row.map(csvCell).join(',')).join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `expenses-${from}-to-${to}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
-  const filtered = rows.filter(r => {
-    const matchEmp = empFilter === 'ALL' || r.employee_id === empFilter
-    const matchStatus = statusFilter === 'ALL' || r.status === statusFilter
-    return matchEmp && matchStatus
-  })
+  function rowActions(row: ExpenseRow, layout: 'card' | 'row') {
+    if (row.status !== 'PENDING') return null
+    const busy = actioning === row.id
+    return (
+      <div className={layout === 'card' ? 'flex flex-col gap-2' : 'flex gap-2'}>
+        <Button
+          variant="success"
+          size={layout === 'card' ? 'default' : 'sm'}
+          disabled={busy}
+          onClick={() => setApproveTarget(row)}
+        >
+          {busy ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
+          <Bi k="approve" />
+        </Button>
+        <Button
+          variant="destructive"
+          size={layout === 'card' ? 'default' : 'sm'}
+          disabled={busy}
+          onClick={() => {
+            setRejectTarget(row)
+            setRejectReason('')
+          }}
+        >
+          <XCircle />
+          <Bi k="reject" />
+        </Button>
+      </div>
+    )
+  }
+
+  const columns: DataListColumn<ExpenseRow>[] = [
+    {
+      key: 'employee',
+      header: <Bi k="employee" />,
+      primary: true,
+      cell: r => <span className="font-medium">{r.employee_name ?? '—'}</span>,
+    },
+    {
+      key: 'category',
+      header: <Bi k="category" />,
+      cell: r => <span className="text-muted-foreground">{r.category_name ?? '—'}</span>,
+    },
+    {
+      key: 'description',
+      header: <Bi k="description" />,
+      cell: r => (
+        <span className="block max-w-48 truncate" title={r.description}>
+          {r.description}
+        </span>
+      ),
+    },
+    {
+      key: 'amount',
+      header: <Bi k="amount" />,
+      align: 'right',
+      // An expense is money leaving the business once approved.
+      cell: r => <Money value={r.amount} intent={r.status === 'APPROVED' ? 'out' : 'neutral'} />,
+    },
+    {
+      key: 'date',
+      header: <Bi k="date" />,
+      cell: r => (
+        <span className="whitespace-nowrap text-muted-foreground">
+          {formatDate(r.expense_date)}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: <Bi k="status" />,
+      cell: r => (
+        <div className="flex flex-col items-start gap-1">
+          <StatusBadge status={r.status} />
+          {r.rejection_reason ? (
+            <span className="max-w-40 truncate text-xs text-danger" title={r.rejection_reason}>
+              {r.rejection_reason}
+            </span>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: 'actions',
+      header: <Bi k="actions" />,
+      align: 'right',
+      hideOnMobile: true,
+      cell: r => rowActions(r, 'row'),
+    },
+  ]
+
+  const renderCard = (r: ExpenseRow) => (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate font-medium">{r.employee_name ?? '—'}</p>
+          <p className="truncate text-xs text-muted-foreground">{r.category_name ?? '—'}</p>
+        </div>
+        <Money
+          value={r.amount}
+          intent={r.status === 'APPROVED' ? 'out' : 'neutral'}
+          className="shrink-0"
+        />
+      </div>
+      <p className="text-sm text-muted-foreground">{r.description}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <StatusBadge status={r.status} />
+        <span className="text-xs text-muted-foreground">{formatDate(r.expense_date)}</span>
+      </div>
+      {r.rejection_reason ? (
+        <p className="text-xs text-danger">{r.rejection_reason}</p>
+      ) : null}
+      {rowActions(r, 'card')}
+    </div>
+  )
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-xl font-semibold">Office Expenses</h1>
-        <Button variant="outline" size="sm" onClick={exportCSV}>
-          <Download size={14} className="mr-1" />Export CSV
-        </Button>
+    <div className="flex flex-col gap-5">
+      <PageHeader
+        titleKey="officeExpenses"
+        action={
+          <Button variant="outline" onClick={exportCSV}>
+            <Download />
+            <Bi k="exportCsv" />
+          </Button>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+        <StatTile
+          icon={Clock}
+          labelKey="pendingApprovals"
+          value={pendingRows.length}
+          kind="count"
+          intent="warning"
+        />
+        <StatTile
+          icon={Receipt}
+          labelKey="pendingValue"
+          value={pendingValue}
+          intent="warning"
+          compact
+        />
+        <StatTile
+          icon={CheckCircle2}
+          labelKey="approvedTotal"
+          value={approvedTotal}
+          intent="neutral"
+          compact
+          className="col-span-2 md:col-span-1"
+        />
       </div>
 
-      {actionErr && <p className="text-sm text-red-600 bg-red-50 rounded p-2">{actionErr}</p>}
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2 items-end">
-        <div className="space-y-1">
-          <Label className="text-xs">From</Label>
-          <Input type="date" value={from} onChange={e => setFrom(e.target.value)} className="w-36" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">To</Label>
-          <Input type="date" value={to} onChange={e => setTo(e.target.value)} className="w-36" />
-        </div>
-        <Select value={empFilter} onValueChange={v => setEmpFilter(v || 'ALL')}>
-          <SelectTrigger className="w-44"><SelectValue placeholder="All Employees" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All Employees</SelectItem>
-            {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={v => setStatusFilter(v || 'ALL')}>
-          <SelectTrigger className="w-36"><SelectValue placeholder="All Status" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All Status</SelectItem>
-            {['PENDING', 'APPROVED', 'REJECTED'].map(s => (
-              <SelectItem key={s} value={s}>{s}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button size="sm" onClick={fetchData} disabled={loading}>
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
-        </Button>
-      </div>
+      <section className="flex flex-col gap-3">
+        <h2 className="text-base font-semibold">
+          <Bi k="pendingQueue" />
+        </h2>
+        <DataList
+          items={pendingRows}
+          getKey={r => r.id}
+          columns={columns}
+          renderCard={renderCard}
+          empty={
+            <EmptyState
+              icon={CheckCircle2}
+              titleKey="noPendingItems"
+              descriptionKey="queueAllClear"
+            />
+          }
+        />
+      </section>
 
       <Card>
-        <CardContent className="p-0">
-          <div className="sm:hidden space-y-3 p-3">
-            {filtered.length === 0 && <p className="text-center text-gray-400 py-6 text-sm">No records found</p>}
-            {filtered.map(r => (
-              <Card key={r.id}>
-                <CardContent className="p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium text-sm">{r.employee_name ?? '—'}</p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status] ?? 'bg-gray-100 text-gray-600'}`}>{r.status}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">{r.category_name ?? '—'}</span>
-                    <span className="font-medium">{fmtCurrency(r.amount)}</span>
-                  </div>
-                  <p className="text-sm text-gray-700 truncate">{r.description}</p>
-                  <p className="text-xs text-gray-400">{fmtDate(r.expense_date)}</p>
-                  {r.rejection_reason && <p className="text-xs text-red-500">{r.rejection_reason}</p>}
-                  {r.status === 'PENDING' && (
-                    <div className="flex gap-2 pt-1">
-                      <Button size="sm" variant="ghost" className="flex-1 h-8 text-xs text-green-600 hover:text-green-700 hover:bg-green-50" disabled={actionLoading === r.id} onClick={() => action(r.id, 'approve')}>
-                        {actionLoading === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Approve'}
-                      </Button>
-                      <Button size="sm" variant="ghost" className="flex-1 h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50" disabled={actionLoading === r.id} onClick={() => { setRejecting(r); setRejectReason(''); setActionErr('') }}>
-                        Reject
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <div className="hidden sm:block overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                {['Employee', 'Category', 'Description', 'Amount', 'Date', 'Status', 'Actions'].map(h => (
-                  <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {filtered.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400 text-sm">No records found</td></tr>
-              )}
-              {filtered.map(r => (
-                <tr key={r.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-2 font-medium">{r.employee_name ?? '—'}</td>
-                  <td className="px-4 py-2 text-gray-600">{r.category_name ?? '—'}</td>
-                  <td className="px-4 py-2 max-w-[180px] truncate text-gray-700" title={r.description}>{r.description}</td>
-                  <td className="px-4 py-2 font-medium">{fmtCurrency(r.amount)}</td>
-                  <td className="px-4 py-2 text-gray-600 whitespace-nowrap">{fmtDate(r.expense_date)}</td>
-                  <td className="px-4 py-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {r.status}
-                    </span>
-                    {r.rejection_reason && (
-                      <p className="text-xs text-red-500 mt-0.5 max-w-[140px] truncate" title={r.rejection_reason}>
-                        {r.rejection_reason}
-                      </p>
+        <CardContent className="flex flex-col gap-3 p-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <FormField labelKey="from" htmlFor="exp-from">
+              <Input
+                id="exp-from"
+                type="date"
+                value={from}
+                onChange={e => setFrom(e.target.value)}
+              />
+            </FormField>
+            <FormField labelKey="to" htmlFor="exp-to">
+              <Input id="exp-to" type="date" value={to} onChange={e => setTo(e.target.value)} />
+            </FormField>
+            <FormField labelKey="employee" htmlFor="exp-emp">
+              <Select value={empFilter} onValueChange={v => setEmpFilter(v ?? 'ALL')}>
+                <SelectTrigger id="exp-emp">
+                  <SelectValue>
+                    {empFilter === 'ALL' ? (
+                      <Bi k="allEmployees" />
+                    ) : (
+                      (employees.find(e => e.id === empFilter)?.full_name ?? '—')
                     )}
-                  </td>
-                  <td className="px-4 py-2">
-                    {r.status === 'PENDING' && (
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 text-green-600 hover:text-green-700 hover:bg-green-50 px-2"
-                          disabled={actionLoading === r.id}
-                          onClick={() => action(r.id, 'approve')}
-                        >
-                          {actionLoading === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle size={14} />}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 text-red-600 hover:text-red-700 hover:bg-red-50 px-2"
-                          disabled={actionLoading === r.id}
-                          onClick={() => { setRejecting(r); setRejectReason(''); setActionErr('') }}
-                        >
-                          <XCircle size={14} />
-                        </Button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">
+                    <Bi k="allEmployees" />
+                  </SelectItem>
+                  {employees.map(e => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+            <FormField labelKey="status" htmlFor="exp-status">
+              <Select value={statusFilter} onValueChange={v => setStatusFilter(v ?? 'ALL')}>
+                <SelectTrigger id="exp-status">
+                  <SelectValue>
+                    <Bi
+                      k={
+                        STATUS_FILTERS.find(o => o.value === statusFilter)?.key ?? 'allStatus'
+                      }
+                    />
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_FILTERS.map(o => (
+                    <SelectItem key={o.value} value={o.value}>
+                      <Bi k={o.key} />
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
           </div>
+          <Button onClick={fetchData} disabled={loading} className="md:self-start">
+            {loading ? <Loader2 className="animate-spin" /> : null}
+            <Bi k="applyFilters" />
+          </Button>
         </CardContent>
       </Card>
 
-      {/* Reject dialog */}
-      <Dialog open={!!rejecting} onOpenChange={() => setRejecting(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogTitle className="font-semibold">Reject Expense</DialogTitle>
-          {rejecting && (
-            <p className="text-sm text-gray-500">
-              {rejecting.employee_name} — {rejecting.description} — {fmtCurrency(rejecting.amount)}
-            </p>
-          )}
-          {actionErr && <p className="text-sm text-red-600 bg-red-50 rounded p-2">{actionErr}</p>}
-          <div className="space-y-1">
-            <Label>Rejection Reason</Label>
-            <Input
+      <section className="flex flex-col gap-3">
+        <h2 className="text-base font-semibold">
+          <Bi k="allRecords" />
+        </h2>
+        <DataList
+          items={otherRows}
+          getKey={r => r.id}
+          columns={columns}
+          renderCard={renderCard}
+          empty={<EmptyState icon={Inbox} titleKey="noExpensesYet" />}
+        />
+      </section>
+
+      {/* Approve — money leaves the business, so the amount is shown large. */}
+      <Dialog
+        open={!!approveTarget}
+        onOpenChange={open => {
+          if (!open && !actioning) setApproveTarget(null)
+        }}
+      >
+        <DialogContent>
+          <DialogTitle>
+            <Bi k="approveExpense" />
+          </DialogTitle>
+          <DialogDescription>
+            <Bi k="moneyMovesWarning" />
+          </DialogDescription>
+          {approveTarget ? (
+            <div className="flex flex-col items-center gap-1 rounded-xl bg-muted p-4 text-center">
+              <span className="text-sm text-muted-foreground">
+                {approveTarget.employee_name ?? '—'} · {approveTarget.description}
+              </span>
+              <Money value={approveTarget.amount} size="stat" intent="out" />
+              <span className="text-xs text-muted-foreground">
+                <Bi k="approveThisAmount" />
+              </span>
+            </div>
+          ) : null}
+          <div className="flex flex-col gap-2 md:flex-row-reverse">
+            <Button
+              variant="success"
+              size="lg"
+              className="md:flex-1"
+              disabled={!!actioning}
+              onClick={approveExpense}
+            >
+              {actioning ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
+              <Bi k="approve" />
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="md:flex-1"
+              disabled={!!actioning}
+              onClick={() => setApproveTarget(null)}
+            >
+              <Bi k="cancel" />
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject — always captures a reason. */}
+      <Dialog
+        open={!!rejectTarget}
+        onOpenChange={open => {
+          if (!open && !actioning) {
+            setRejectTarget(null)
+            setRejectReason('')
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogTitle>
+            <Bi k="rejectExpense" />
+          </DialogTitle>
+          {rejectTarget ? (
+            <DialogDescription>
+              {rejectTarget.employee_name ?? '—'} · {rejectTarget.description}
+            </DialogDescription>
+          ) : null}
+          {rejectTarget ? (
+            <div className="flex flex-col items-center gap-1 rounded-xl bg-muted p-4 text-center">
+              <Money value={rejectTarget.amount} size="stat" />
+            </div>
+          ) : null}
+          <FormField
+            labelKey="rejectionReason"
+            htmlFor="exp-reject-reason"
+            required
+            hint={<Bi k="reasonVisibleToAgent" />}
+          >
+            <Textarea
+              id="exp-reject-reason"
+              rows={3}
               value={rejectReason}
               onChange={e => setRejectReason(e.target.value)}
-              placeholder="Enter reason…"
+              placeholder={t('enterReason').en}
             />
-          </div>
-          <div className="flex gap-2 pt-2">
+          </FormField>
+          <div className="flex flex-col gap-2 md:flex-row-reverse">
             <Button
               variant="destructive"
-              onClick={() => rejecting && action(rejecting.id, 'reject', rejectReason)}
-              disabled={!rejectReason.trim() || actionLoading === rejecting?.id}
+              size="lg"
+              className="md:flex-1"
+              disabled={!rejectReason.trim() || !!actioning}
+              onClick={rejectExpense}
             >
-              {actionLoading === rejecting?.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reject'}
+              {actioning ? <Loader2 className="animate-spin" /> : <XCircle />}
+              <Bi k="reject" />
             </Button>
-            <Button variant="outline" onClick={() => setRejecting(null)}>Cancel</Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="md:flex-1"
+              disabled={!!actioning}
+              onClick={() => {
+                setRejectTarget(null)
+                setRejectReason('')
+              }}
+            >
+              <Bi k="cancel" />
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

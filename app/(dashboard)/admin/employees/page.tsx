@@ -4,11 +4,10 @@ import { db } from '@/lib/db'
 import { profiles, branches } from '@/lib/db/schema'
 import { asc } from 'drizzle-orm'
 import { EmployeeTable } from '@/components/employees/employee-table'
-import type { Session } from 'next-auth'
 
 export default async function AdminEmployeesPage() {
-  const session = (await auth()) as Session | null
-  if (!session?.user?.id || (session.user as any).role !== 'ADMIN') redirect('/dashboard')
+  const session = await auth()
+  if (!session?.user?.id || session.user.role !== 'ADMIN') redirect('/dashboard')
 
   const [employees, branchList] = await Promise.all([
     db.select({

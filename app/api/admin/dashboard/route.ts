@@ -6,29 +6,52 @@ import { requireAdmin, isResponse } from '@/lib/auth/authorize'
 
 // ── date helpers (IST = UTC+5:30) ─────────────────────────────────────────────
 
+/**
+ * IST date helpers.
+ *
+ * `new Date(Date.now() + 330*60_000)` shifts the instant, but the shift is only
+ * readable with the `getUTC*` accessors. `monthStartIST` and `yearStartIST` used
+ * the LOCAL accessors (`getFullYear`/`getMonth`) on that already-shifted value,
+ * so on a machine running in IST they double-shifted by 11 hours.
+ *
+ * Consequence: for the last ~11 hours of every month, `monthStartIST()` returned
+ * the FIRST OF THE NEXT MONTH, so the KPI filter became
+ * `collected_at >= <a future date>` and the admin dashboard reported ₹0
+ * collected for the month while its own trend chart — which used a different,
+ * correct helper — showed real money.
+ *
+ * Everything now derives from one IST formatter, matching istToday() in
+ * lib/modules/reconciliation/service.ts.
+ */
+const IST_DATE = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' })
+
+/** YYYY-MM-DD in IST. */
+function istDate(at: Date = new Date()): string {
+  return IST_DATE.format(at)
+}
+
 function todayIST() {
-  const istNow = new Date(Date.now() + 330 * 60_000)
-  return istNow.toISOString().slice(0, 10)
+  return istDate()
 }
 
 function monthStartIST() {
-  const istNow = new Date(Date.now() + 330 * 60_000)
-  return `${istNow.getFullYear()}-${String(istNow.getMonth() + 1).padStart(2, '0')}-01`
+  return `${istDate().slice(0, 7)}-01`
 }
 
 function yearStartIST() {
-  const istNow = new Date(Date.now() + 330 * 60_000)
-  return `${istNow.getFullYear()}-01-01`
+  return `${istDate().slice(0, 4)}-01-01`
+}
+
+function daysAgoIST(days: number) {
+  return istDate(new Date(Date.now() - days * 24 * 3600_000))
 }
 
 function sevenDaysAgoIST() {
-  const d = new Date(Date.now() + 330 * 60_000 - 7 * 24 * 3600_000)
-  return d.toISOString().slice(0, 10)
+  return daysAgoIST(7)
 }
 
 function thirtyDaysAgoIST() {
-  const d = new Date(Date.now() + 330 * 60_000 - 30 * 24 * 3600_000)
-  return d.toISOString().slice(0, 10)
+  return daysAgoIST(30)
 }
 
 function n(v: string | null | undefined): number {

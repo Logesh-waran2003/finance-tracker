@@ -543,6 +543,332 @@ export const labels = {
   offlineHelp: { en: 'Saved collections are safe. They sync automatically when the network returns.',
   },
   backToDashboard: { en: 'Back to dashboard' },
+
+  // ===============================================================
+  // SHELL / DASHBOARD / AUTH / PROFILE — second appended block.
+  // Owned by the navigation-shell agent. Append only, do not reorder.
+  // ===============================================================
+
+  // --- nav destinations (full names, used by the sidebar and More sheet) ---
+  loans: { en: 'Loans' },
+  loanRequests: { en: 'Loan Requests' },
+  collectionApproval: { en: 'Collection Approval' },
+  cashSettlement: { en: 'Cash Settlement' },
+  officeExpenses: { en: 'Office Expenses' },
+
+  // --- short tab labels (must fit ~72px at 360px) ---
+  tabHome: { en: 'Home' },
+  tabCollections: { en: 'Collections' },
+  tabCustomers: { en: 'Customers' },
+  tabLoans: { en: 'Loans' },
+  tabAttendance: { en: 'Attendance' },
+  tabExpenses: { en: 'Expenses' },
+  tabRequests: { en: 'Requests' },
+  tabSettlement: { en: 'Settlement' },
+  tabMore: { en: 'More' },
+
+  // --- shell status ---
+  online: { en: 'Online' },
+  syncedUpToDate: { en: 'Everything is saved' },
+  offlineBannerHelp: { en: 'Work is saved on this phone and sent when the network returns.' },
+  screenTitle: { en: 'Screen' },
+  moreOptions: { en: 'More options' },
+  yourAccount: { en: 'Your account' },
+  stayLoggedIn: { en: 'Stay signed in' },
+
+  // --- dashboard ---
+  loanOutstanding: { en: 'Loan Outstanding' },
+  activeLoans: { en: 'Active loans' },
+  dueToday: { en: 'Due today' },
+  collectedToday: { en: 'Collected today' },
+  awaitingApproval: { en: 'Awaiting approval' },
+  openDues: { en: 'Open dues' },
+  handOverCash: { en: 'Hand over cash' },
+  quickActions: { en: 'Quick actions' },
+  attendanceTodayLabel: { en: 'Attendance today' },
+  ofExpected: { en: 'of expected' },
+  allOpenDuesCaption: { en: 'All open dues' },
+  agentsOnDuty: { en: 'Agents on duty' },
+  period: { en: 'Period' },
+  periodDaily: { en: 'Daily' },
+  periodMonthly: { en: 'Monthly' },
+  periodYearly: { en: 'Yearly' },
+  agentAttendanceToday: { en: "Today's agent attendance" },
+  dashboardLoadFailed: { en: 'Could not load the dashboard' },
+  location: { en: 'Location' },
+  viewOnMap: { en: 'View on map' },
+
+  // --- profile / appearance ---
+  useDarkScreenHint: { en: 'Easier on the eyes indoors and at night.' },
+  accountDetails: { en: 'Account details' },
+  savingChanges: { en: 'Saving…' },
+  couldNotSave: { en: 'Could not save your changes' },
+
+  // --- short KPI tile labels (a tile label truncates past ~16 characters) ---
+  toApprove: { en: 'To approve' },
+  cashOnHand: { en: 'Cash on hand' },
+
+  // ===============================================================
+  // MONEY SCREENS (collections + cash handover) — appended block.
+  // Owned by the money-screens agent. Append only, do not reorder.
+  // ===============================================================
+
+  // --- collections ---
+  loanPayment: { en: 'Loan' },
+  records: { en: 'records' },
+  amountExceedsOutstanding: { en: 'More than the outstanding balance' },
+  noOutstandingBalance: { en: 'No outstanding balance' },
+  collectionQueuedOffline: { en: 'Saved on this phone. It sends when the signal returns.' },
+  gpsDeniedStillSaves: { en: 'Location off — the collection is still saved' },
+  cancelCollection: { en: 'Cancel collection' },
+  paymentModeRequired: { en: 'Choose a payment mode' },
+  filterByDate: { en: 'Filter by date' },
+  noCollectionsForDate: { en: 'No collections on this date' },
+  recordFirstCollection: { en: 'Tap Record Collection to add the first one' },
+
+  // --- cash handover ---
+  cashHandover: { en: 'Cash handover' },
+  handoverAll: { en: 'Hand over everything' },
+  handoverShortfall: { en: 'Short by' },
+  handoverExcess: { en: 'Over by' },
+  handoverSubmitting: { en: 'Handing over…' },
+  handoverAmount: { en: 'Cash you are handing over' },
+  autoFromConfirmedCash: { en: 'Added up from your confirmed cash collections' },
+  handoverNotQueued: { en: 'Cash handover is never saved for later. It needs a live confirmation.' },
+
+  // ===============================================================
+  // ATTENDANCE / EXPENSES / CUSTOMERS — appended by the
+  // attendance+expenses+customers agent. Append only, do not reorder.
+  // ===============================================================
+
+  // --- attendance ---
+  attendanceNeedsInternet: { en: 'Check in and check out need internet' },
+  gpsSavedOnCheckIn: { en: 'Location is saved when you check in' },
+  notCheckedInYet: { en: 'Not checked in yet' },
+  checkInFailed: { en: 'Could not check in' },
+  checkOutFailed: { en: 'Could not check out' },
+  dayAlreadyDone: { en: 'Work day finished' },
+  noAttendanceHelp: { en: 'Check in when you start work. Your days show here.' },
+
+  // --- expenses ---
+  expensesNeedInternet: { en: 'Expenses need internet. Try again when you have signal.' },
+  categoryRequired: { en: 'Choose a category' },
+  noExpensesHelp: { en: 'Add bus fare, tea or fuel as you spend it.' },
+  withdrawExpense: { en: 'Withdraw this claim?' },
+  withdrawExpenseBody: { en: 'The claim is marked Rejected and stays in the records. You cannot bring it back. Only a pending claim can be withdrawn.' },
+  withdraw: { en: 'Withdraw' },
+  keepIt: { en: 'Keep it' },
+  expenseWithdrawn: { en: 'Claim withdrawn' },
+  thisMonth: { en: 'This month' },
+
+  // --- customer list ---
+  requestedDate: { en: 'Requested Date' },
+  disbursementDate: { en: 'Disbursement Date' },
+  requestedOn: { en: 'Requested' },
+  disburseOn: { en: 'Disburse' },
+  loanAmount: { en: 'Loan Amount' },
+  loanRequestsCount: { en: 'loan requests' },
+  results: { en: 'Results' },
+  noLoanRequestsYet: { en: 'No loan requests yet' },
+  noResultsForFilter: { en: 'Nothing matches this filter' },
+  newCustomerNotCreated: { en: 'New customer — not created yet' },
+  highestOutstandingFirst: { en: 'Highest outstanding first' },
+
+  // --- customer detail ---
+  activityTimeline: { en: 'Activity Timeline' },
+  dueCreated: { en: 'Due created' },
+  collectionEntry: { en: 'Collection' },
+  loanNumber: { en: 'Loan No.' },
+  dailyInstallment: { en: 'Daily' },
+  disbursedOn: { en: 'Disbursed' },
+  noLoans: { en: 'No loans' },
+  noActivityYet: { en: 'No activity yet' },
+  penaltyRate: { en: 'Penalty Rate' },
+  penaltyRatePerMonth: { en: 'Penalty rate (% per month)' },
+  gpsCoordinates: { en: 'GPS' },
+
+  // --- due dialogs ---
+  editDue: { en: 'Edit Due' },
+  dueAdded: { en: 'Due added' },
+  dueUpdated: { en: 'Due updated' },
+
+  // ===============================================================
+  // ADMIN SCREENS (collections / customers / employees / attendance /
+  // reconciliation / expenses / reports / settings) — appended by the
+  // admin-screens agent. Append only, do not reorder.
+  // ===============================================================
+
+  // --- shared approve / reject ---
+  noPendingItems: { en: 'Nothing waiting for approval' },
+  queueAllClear: { en: 'Every record has been actioned' },
+  actionFailed: { en: 'Could not save. Nothing changed.' },
+
+  // --- customers ---
+  activeLoan: { en: 'Active Loan' },
+  adjustOpeningBalance: { en: 'Adjust Opening Balance' },
+  amountToDeduct: { en: 'Amount to deduct' },
+  balanceAdjusted: { en: 'Opening balance adjusted' },
+  balanceReasonHint: { en: 'e.g. data correction, migrated balance' },
+  openingBalanceHint: { en: 'Debt before any collection. It cannot be changed after creation.' },
+
+  // --- attendance ---
+  gpsAccuracy: { en: 'Accuracy' },
+
+  // --- reports ---
+  reportFilters: { en: 'Report Filters' },
+
+  // --- branches / settings ---
+  editBranch: { en: 'Edit Branch' },
+  officeLocation: { en: 'Office Location (GPS)' },
+  latitude: { en: 'Latitude' },
+  longitude: { en: 'Longitude' },
+  useMyCurrentLocation: { en: 'Use my current location' },
+  officeGpsSet: { en: 'Office GPS set' },
+  geolocationUnsupported: { en: 'This device cannot give a location' },
+  locationCaptured: { en: 'Location captured' },
+  previewOnMap: { en: 'Preview office on map' },
+
+  // ===============================================================
+  // LOANS MODULE (agent loans, admin loans, loan requests, monitoring,
+  // collection approval, loan detail) — appended by the loans agent.
+  // Append only, do not reorder.
+  // ===============================================================
+
+  // --- shared loan nouns ---
+  myLoans: { en: 'My loans' },
+  disbursedAmount: { en: 'Disbursed' },
+  todaysInstallment: { en: "Today's installment" },
+  principalOutstanding: { en: 'Principal outstanding' },
+  penaltyOutstanding: { en: 'Penalty outstanding' },
+  principalCollected: { en: 'Principal collected' },
+  interestPercent: { en: 'Interest %' },
+  interest: { en: 'Interest' },
+  tenureDays: { en: 'Tenure (days)' },
+  tenure: { en: 'Tenure' },
+  penaltyAmount: { en: 'Penalty amount' },
+  penaltyPerMiss: { en: 'Penalty per missed day' },
+  repaymentStartDate: { en: 'Repayment start date' },
+  perDay: { en: 'per day' },
+  daysUnit: { en: 'days' },
+  totalLoans: { en: 'Total loans' },
+  totalLoanAmount: { en: 'Total loan amount' },
+  overdueLoans: { en: 'Overdue' },
+  missed: { en: 'Missed' },
+  expectedToday: { en: 'Expected today' },
+  dueAmount: { en: 'Due amount' },
+  paidAt: { en: 'Paid at' },
+  paymentNumber: { en: 'Payment #' },
+  scheduleDate: { en: 'Schedule date' },
+  collectedAtLabel: { en: 'Collected at' },
+  requestNumber: { en: 'Request #' },
+  requestedBy: { en: 'Requested by' },
+
+  // --- agent loans screen ---
+  todaysCollectionsHeading: { en: "Today's collections" },
+  allMyLoans: { en: 'All my loans' },
+  noPendingCollectionsToday: { en: 'Nothing left to collect today' },
+  noLoansAssigned: { en: 'No loans assigned to you yet' },
+  collect: { en: 'Collect' },
+  collectInstallment: { en: 'Collect installment' },
+  confirmCollectionAmount: { en: 'Confirm this collection' },
+  needsAdminApproval: { en: 'Needs admin approval' },
+  balanceUpdatesAfterApproval: {
+    en: 'The loan balance changes only after an admin approves this payment.',
+  },
+  awaitingApprovalRow: { en: 'Sent for approval — balance not updated yet' },
+  collectionSentForApproval: { en: 'Collection sent for admin approval' },
+  collectionFailed: { en: 'Could not record the collection' },
+  requestLoan: { en: 'Request loan' },
+  myLoanRequests: { en: 'My loan requests' },
+  existingCustomer: { en: 'Existing customer' },
+  newCustomerOption: { en: 'New customer' },
+  newCustomerName: { en: 'New customer name' },
+  loanRequestSubmitted: { en: 'Loan request sent for admin approval' },
+  loanAmountTenureDateRequired: {
+    en: 'Loan amount, tenure and disbursement date are required',
+  },
+  tenureMustBePositive: { en: 'Tenure must be more than 0 days' },
+  newCustomerNameRequired: { en: 'Enter the new customer name' },
+
+  // --- admin loans list ---
+  createLoan: { en: 'Create loan' },
+  loanCreated: { en: 'Loan created' },
+  searchLoans: { en: 'Search customer or loan number' },
+  noLoansFound: { en: 'No loans found' },
+  allStatuses: { en: 'All statuses' },
+
+  // --- admin approve / reject (identical on three screens) ---
+  approvePayment: { en: 'Approve payment' },
+  rejectPayment: { en: 'Reject payment' },
+  approvePaymentHelp: {
+    en: 'This marks the installment paid and updates the loan balance.',
+  },
+  rejectPaymentHelp: {
+    en: 'The installment stays open so the agent can collect again.',
+  },
+  approveLoanRequest: { en: 'Approve loan request' },
+  rejectLoanRequest: { en: 'Reject loan request' },
+  approveLoanRequestHelp: {
+    en: 'The loan is created and assigned to the agent who asked for it.',
+  },
+  rejectLoanRequestHelp: { en: 'Say why the request is refused.' },
+  paymentApproved: { en: 'Payment approved' },
+  paymentRejected: { en: 'Payment rejected — the agent can collect again' },
+  loanRequestApproved: { en: 'Loan request approved and loan created' },
+  loanRequestRejected: { en: 'Loan request rejected' },
+  approvalFailed: { en: 'Could not approve. Nothing changed.' },
+  rejectionFailed: { en: 'Could not reject. Nothing changed.' },
+  reviewAgentLoanRequests: { en: 'Review loan requests sent by agents' },
+  rejectedReasonPrefix: { en: 'Rejected' },
+
+  // --- admin loan monitoring ---
+  loanMonitoring: { en: 'Loan monitoring' },
+  collectionStatusForDay: { en: 'Collection status for the day' },
+  noSchedulesForDate: { en: 'No installments for this date' },
+  totalScheduled: { en: 'Total scheduled' },
+  paymentsReceived: { en: 'Payments received' },
+  stillToCollect: { en: 'Still to collect' },
+  notCollected: { en: 'Not collected' },
+  filterAll: { en: 'All' },
+
+  // --- admin loan detail ---
+  scheduleTab: { en: 'Schedule' },
+  paymentsTab: { en: 'Payments' },
+  penaltiesTab: { en: 'Penalties' },
+  detailsTab: { en: 'Details' },
+  noScheduleEntries: { en: 'No installments yet' },
+  noPaymentsRecorded: { en: 'No payments recorded' },
+  noPenalties: { en: 'No penalties' },
+  collectCash: { en: 'Collect cash' },
+  collectCashTitle: { en: 'Collect a cash payment' },
+  remainingPrincipal: { en: 'Remaining principal' },
+  cashCollectionRecorded: { en: 'Cash collection recorded' },
+  reverse: { en: 'Reverse' },
+  reversePayment: { en: 'Reverse payment' },
+  confirmReversal: { en: 'Confirm reversal' },
+  reversalReasonHint: { en: 'Say why this payment is being reversed' },
+  paymentReversed: { en: 'Payment reversed' },
+  reversalFailed: { en: 'Could not reverse the payment' },
+  reversed: { en: 'Reversed' },
+  waive: { en: 'Waive' },
+  waivePenalty: { en: 'Waive penalty' },
+  waivedAmount: { en: 'Waived amount' },
+  waived: { en: 'Waived' },
+  confirmWaiver: { en: 'Confirm waiver' },
+  penaltyWaived: { en: 'Penalty waived' },
+  waiverFailed: { en: 'Could not waive the penalty' },
+  reassignAgent: { en: 'Reassign agent' },
+  confirmReassignment: { en: 'Confirm reassignment' },
+  agentReassigned: { en: 'Agent reassigned' },
+  reassignFailed: { en: 'Could not reassign the agent' },
+  loanCreateFailed: { en: 'Could not create the loan' },
+  loanRequestFailed: { en: 'Could not send the loan request' },
+  customerProfile: { en: 'Customer profile' },
+  noHistoryForCustomer: { en: 'No history for this customer' },
+  unpaidDues: { en: 'Unpaid dues' },
+  recentCollections: { en: 'Recent collections' },
+  customerLoadFailed: { en: 'Could not load the customer' },
+  viewCustomer: { en: 'View customer' },
 } as const satisfies Record<string, Label>
 
 export type LabelKey = keyof typeof labels

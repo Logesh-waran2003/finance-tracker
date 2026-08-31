@@ -12,7 +12,7 @@ function toIST(d: Date | null) {
 export default async function AdminCollectionsPage() {
   const session = await auth()
   if (!session?.user?.id) redirect('/login')
-  if ((session.user as any).role !== 'ADMIN') redirect('/dashboard')
+  if (session.user.role !== 'ADMIN') redirect('/dashboard')
 
   const rawCollections = await db
     .select({
@@ -53,9 +53,6 @@ export default async function AdminCollectionsPage() {
   }))
 
   return (
-    <AdminCollectionsClient
-      initial={serialized as any}
-      agents={agents}
-    />
+    <AdminCollectionsClient initial={serialized} agents={agents} />
   )
 }

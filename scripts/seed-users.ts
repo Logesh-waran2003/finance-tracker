@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs'
 import { db } from '@/lib/db'
-import { branches, profiles, customers, dues, expenseCategories, settings } from '@/lib/db/schema'
+import { branches, profiles, customers, dues, expenseCategories, settings, collections, expenses, reconciliations, attendance } from '@/lib/db/schema'
 
 // WARNING: Change these credentials before production deployment
 if (process.env.NODE_ENV === 'production') {
@@ -73,6 +73,53 @@ async function seed() {
       })
     }
     console.log('Seeded 3 customers + 3 dues')
+
+    // ------------------------------------------------------------------
+    // Workload so the admin queues are actually observable.
+    //
+    // Without this the DB has zero collections, expenses, reconciliations and
+    // attendance, so every admin approve/reject screen renders an empty state
+    // and neither a developer nor a reviewer can see — let alone test — the
+    // flows that move money.
+    //
+    // branch_id MATTERS: every admin PATCH route filters by the admin's branch,
+    // so a row seeded with branch_id NULL returns 404 when actioned and the
+    // screen looks broken for no visible reason.
+    // ------------------------------------------------------------------
+    console.log('Seeding workload (pending queues)...')
+    const istDay = (offset = 0) =>
+      new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' })
+        .format(new Date(Date.now() + offset * 86_400_000))
+
+    const [c1, c2, c3] = insertedCustomers
+
+    await db.insert(collections).values([
+      { customer_id: c1.id, agent_id: agentProfile.id, branch_id: branchId ?? null, amount: '1500.00', payment_mode: 'CASH', status: 'PENDING', idempotency_key: crypto.randomUUID(), collected_at: new Date() },
+      { customer_id: c2.id, agent_id: agentProfile.id, branch_id: branchId ?? null, amount: '2500.00', payment_mode: 'UPI', status: 'PENDING', idempotency_key: crypto.randomUUID(), collected_at: new Date() },
+      { customer_id: c3.id, agent_id: agentProfile.id, branch_id: branchId ?? null, amount: '800.00', payment_mode: 'CASH', status: 'CONFIRMED', idempotency_key: crypto.randomUUID(), collected_at: new Date() },
+    ]).onConflictDoNothing()
+
+    const [travelCat] = await db.select().from(expenseCategories).limit(1)
+    if (travelCat) {
+      await db.insert(expenses).values([
+        { category_id: travelCat.id, employee_id: agentProfile.id, branch_id: branchId ?? null, amount: '250.00', payment_mode: 'CASH', description: 'Bus fare to Adyar', expense_date: istDay(), status: 'PENDING', idempotency_key: crypto.randomUUID() },
+        { category_id: travelCat.id, employee_id: agentProfile.id, branch_id: branchId ?? null, amount: '450.00', payment_mode: 'CASH', description: 'Auto to Velachery', expense_date: istDay(-1), status: 'APPROVED', idempotency_key: crypto.randomUUID() },
+      ]).onConflictDoNothing()
+    }
+
+    // One of each difference case, so the shortfall/matched/excess colouring is
+    // visible without hand-crafting rows. difference is GENERATED — never set it.
+    await db.insert(reconciliations).values([
+      { agent_id: agentProfile.id, branch_id: branchId ?? null, date: istDay(-1), cash_collected: '9000.00', cash_submitted: '7000.00', status: 'PENDING' },
+      { agent_id: agentProfile.id, branch_id: branchId ?? null, date: istDay(-2), cash_collected: '5000.00', cash_submitted: '5000.00', status: 'VERIFIED' },
+    ]).onConflictDoNothing()
+
+    await db.insert(attendance).values([
+      { employee_id: agentProfile.id, branch_id: branchId ?? null, date: istDay(-1), status: 'PRESENT', check_in_at: new Date(Date.now() - 86_400_000) },
+      { employee_id: agentProfile.id, branch_id: branchId ?? null, date: istDay(-2), status: 'LATE', check_in_at: new Date(Date.now() - 2 * 86_400_000) },
+    ]).onConflictDoNothing()
+
+    console.log('Seeded workload: 3 collections (2 pending), 2 expenses, 2 reconciliations, 2 attendance')
   }
 
   console.log('\nSeed complete!')

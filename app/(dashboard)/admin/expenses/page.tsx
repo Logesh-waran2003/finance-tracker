@@ -4,11 +4,10 @@ import { db } from '@/lib/db'
 import { expenses, expenseCategories, profiles } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { AdminExpensesClient } from '@/components/expenses/admin-expenses-client'
-import type { Session } from 'next-auth'
 
 export default async function AdminExpensesPage() {
-  const session = (await auth()) as Session | null
-  if (!session?.user?.id || (session.user as any).role !== 'ADMIN') redirect('/dashboard')
+  const session = await auth()
+  if (!session?.user?.id || session.user.role !== 'ADMIN') redirect('/dashboard')
 
   const [initial, employees] = await Promise.all([
     db

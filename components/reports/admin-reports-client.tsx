@@ -1,146 +1,206 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
-import { Loader2, Download, FileText } from 'lucide-react'
+import {
+  CalendarCheck,
+  FileSpreadsheet,
+  Receipt,
+  Users,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
-interface Agent { id: string; full_name: string }
+import { ActionButton } from '@/components/ui/action-button'
+import { Bi } from '@/components/ui/bi'
+import { Card, CardContent } from '@/components/ui/card'
+import { FormField } from '@/components/ui/form-field'
+import { Input } from '@/components/ui/input'
+import { PageHeader } from '@/components/ui/page-header'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { apiGet } from '@/lib/api-client'
+import { t, type LabelKey } from '@/lib/i18n'
+
+interface Agent {
+  id: string
+  full_name: string
+}
 
 type ReportType = 'collections' | 'attendance' | 'expenses' | 'reconciliation' | 'dues'
 
-const REPORTS: { type: ReportType; label: string; desc: string }[] = [
-  { type: 'collections', label: 'Collections Report', desc: 'All collections with agent, customer, amount, mode, status' },
-  { type: 'attendance', label: 'Attendance Report', desc: 'Daily attendance for all employees with hours and status' },
-  { type: 'expenses', label: 'Expenses Report', desc: 'Employee expenses with category, amount, approval status' },
-  { type: 'reconciliation', label: 'Reconciliation Report', desc: 'Agent cash reconciliation history with differences' },
-  { type: 'dues', label: 'Outstanding Dues', desc: 'All open dues per customer with outstanding amounts' },
+interface ReportCard {
+  type: ReportType
+  icon: LucideIcon
+  labelKey: LabelKey
+  sublabelKey: LabelKey
+}
+
+const REPORTS: ReportCard[] = [
+  {
+    type: 'collections',
+    icon: Wallet,
+    labelKey: 'collectionsReport',
+    sublabelKey: 'collectionsReportDesc',
+  },
+  {
+    type: 'attendance',
+    icon: CalendarCheck,
+    labelKey: 'attendanceReport',
+    sublabelKey: 'attendanceReportDesc',
+  },
+  {
+    type: 'expenses',
+    icon: Receipt,
+    labelKey: 'expensesReport',
+    sublabelKey: 'expensesReportDesc',
+  },
+  {
+    type: 'reconciliation',
+    icon: FileSpreadsheet,
+    labelKey: 'reconciliationReport',
+    sublabelKey: 'reconciliationReportDesc',
+  },
+  { type: 'dues', icon: Users, labelKey: 'duesReport', sublabelKey: 'duesReportDesc' },
 ]
+
+const STATUS_FILTERS: { value: string; key: LabelKey }[] = [
+  { value: 'ALL', key: 'allStatus' },
+  { value: 'PENDING', key: 'statusPending' },
+  { value: 'CONFIRMED', key: 'statusConfirmed' },
+  { value: 'REJECTED', key: 'statusRejected' },
+]
+
+function isoDate(d: Date): string {
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${month}-${day}`
+}
 
 function defaultFrom() {
   const d = new Date()
-  d.setDate(1)
-  return d.toISOString().split('T')[0]
-}
-
-function defaultTo() {
-  return new Date().toISOString().split('T')[0]
+  return isoDate(new Date(d.getFullYear(), d.getMonth(), 1))
 }
 
 export function AdminReportsClient({ agents }: { agents: Agent[] }) {
   const [from, setFrom] = useState(defaultFrom())
-  const [to, setTo] = useState(defaultTo())
+  const [to, setTo] = useState(isoDate(new Date()))
   const [agentId, setAgentId] = useState('ALL')
   const [status, setStatus] = useState('ALL')
   const [loading, setLoading] = useState<ReportType | null>(null)
 
   async function downloadReport(type: ReportType) {
     setLoading(type)
-    try {
-      const params = new URLSearchParams({ from, to })
-      if (agentId !== 'ALL') params.set('agent_id', agentId)
-      if (status !== 'ALL') params.set('status', status)
+    const params = new URLSearchParams({ from, to })
+    if (agentId !== 'ALL') params.set('agent_id', agentId)
+    if (status !== 'ALL') params.set('status', status)
 
-      const res = await fetch(`/api/admin/reports/${type}?${params}`)
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}))
-        toast.error(d.error ?? 'Failed to generate report')
-        setLoading(null)
-        return
-      }
-
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${type}-report-${from}-to-${to}.csv`
-      a.click()
-      URL.revokeObjectURL(url)
-      toast.success(`${type} report downloaded`)
-    } catch {
-      toast.error('Download failed')
-    }
+    // `res.blob()` cannot go through apiFetch, so the CSV is read as text and
+    // the Blob is built here. apiFetch's body reader falls through to text
+    // when the body is not JSON, which is exactly what a text/csv route sends.
+    const res = await apiGet<string>(`/api/admin/reports/${type}?${params}`)
     setLoading(null)
+    if (!res.ok) return
+
+    if (typeof res.data !== 'string' || res.data.length === 0) {
+      toast.error(t('reportFailed').en)
+      return
+    }
+
+    const url = URL.createObjectURL(new Blob([res.data], { type: 'text/csv' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${type}-report-${from}-to-${to}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success(t('reportDownloaded').en)
   }
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div>
-        <h1 className="text-xl font-semibold">Reports</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Export data as CSV for the selected date range</p>
-      </div>
+    <div className="flex flex-col gap-5">
+      <PageHeader titleKey="reports" subtitle={<Bi k="exportDataForRange" />} />
 
-      {/* Filters */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium">Report Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-3 items-end">
-            <div className="space-y-1">
-              <Label className="text-xs">From</Label>
-              <Input type="date" value={from} onChange={e => setFrom(e.target.value)} className="w-36" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">To</Label>
-              <Input type="date" value={to} onChange={e => setTo(e.target.value)} className="w-36" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Agent / Employee</Label>
-              <Select value={agentId} onValueChange={v => setAgentId(v || 'ALL')}>
-                <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+        <CardContent className="flex flex-col gap-3 p-4">
+          <h2 className="text-sm font-medium text-muted-foreground">
+            <Bi k="reportFilters" />
+          </h2>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <FormField labelKey="from" htmlFor="rep-from">
+              <Input
+                id="rep-from"
+                type="date"
+                value={from}
+                onChange={e => setFrom(e.target.value)}
+              />
+            </FormField>
+            <FormField labelKey="to" htmlFor="rep-to">
+              <Input id="rep-to" type="date" value={to} onChange={e => setTo(e.target.value)} />
+            </FormField>
+            <FormField labelKey="agentOrEmployee" htmlFor="rep-agent">
+              <Select value={agentId} onValueChange={v => setAgentId(v ?? 'ALL')}>
+                <SelectTrigger id="rep-agent">
+                  <SelectValue>
+                    {agentId === 'ALL' ? (
+                      <Bi k="allEmployees" />
+                    ) : (
+                      (agents.find(a => a.id === agentId)?.full_name ?? '—')
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">All</SelectItem>
-                  {agents.map(a => <SelectItem key={a.id} value={a.id}>{a.full_name}</SelectItem>)}
+                  <SelectItem value="ALL">
+                    <Bi k="allEmployees" />
+                  </SelectItem>
+                  {agents.map(a => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.full_name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Status</Label>
-              <Select value={status} onValueChange={v => setStatus(v || 'ALL')}>
-                <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+            </FormField>
+            <FormField labelKey="status" htmlFor="rep-status">
+              <Select value={status} onValueChange={v => setStatus(v ?? 'ALL')}>
+                <SelectTrigger id="rep-status">
+                  <SelectValue>
+                    <Bi k={STATUS_FILTERS.find(o => o.value === status)?.key ?? 'allStatus'} />
+                  </SelectValue>
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">All</SelectItem>
-                  <SelectItem value="PENDING">Pending</SelectItem>
-                  <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-                  <SelectItem value="REJECTED">Rejected</SelectItem>
+                  {STATUS_FILTERS.map(o => (
+                    <SelectItem key={o.value} value={o.value}>
+                      <Bi k={o.key} />
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-            </div>
+            </FormField>
           </div>
         </CardContent>
       </Card>
 
-      {/* Report cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* One big tappable card per export, never a row of small links. */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {REPORTS.map(r => (
-          <Card key={r.type} className="hover:border-blue-200 transition-colors">
-            <CardContent className="p-4 flex items-start gap-3">
-              <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                <FileText size={16} className="text-blue-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm">{r.label}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{r.desc}</p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="mt-3 h-7 text-xs"
-                  disabled={loading !== null}
-                  onClick={() => downloadReport(r.type)}
-                >
-                  {loading === r.type
-                    ? <Loader2 size={12} className="animate-spin mr-1" />
-                    : <Download size={12} className="mr-1" />}
-                  {loading === r.type ? 'Generating...' : 'Download CSV'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <ActionButton
+            key={r.type}
+            icon={r.icon}
+            labelKey={r.labelKey}
+            sublabelKey={loading === r.type ? 'generating' : r.sublabelKey}
+            intent="neutral"
+            size="lg"
+            loading={loading === r.type}
+            disabled={loading !== null}
+            className="h-auto min-h-16 items-start border border-border py-3 md:w-full md:min-w-0"
+            onClick={() => downloadReport(r.type)}
+          />
         ))}
       </div>
     </div>

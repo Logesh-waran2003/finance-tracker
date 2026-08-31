@@ -3,8 +3,15 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Bell, AlertCircle, Info, AlertTriangle, CheckSquare, X } from 'lucide-react'
+
+import { cn } from '@/lib/utils'
+import { Bi } from '@/components/ui/bi'
 import { Button } from '@/components/ui/button'
-import { apiGet } from '@/lib/api-client'
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle,
+} from '@/components/ui/sheet'
+import { apiGet, apiPatch } from '@/lib/api-client'
+import { formatCount } from '@/lib/format'
 
 interface Notification {
   id?: string
@@ -16,69 +23,70 @@ interface Notification {
 }
 
 const ICON_MAP: Record<string, React.ElementType> = {
-  error:    AlertCircle,
-  warning:  AlertTriangle,
-  info:     Info,
+  error: AlertCircle,
+  warning: AlertTriangle,
+  info: Info,
   approval: CheckSquare,
 }
 
-const COLOR_MAP: Record<string, string> = {
-  error:    'text-red-700 bg-red-50 border-red-300',
-  warning:  'text-yellow-700 bg-yellow-50 border-yellow-300',
-  info:     'text-blue-700 bg-blue-50 border-blue-300',
-  approval: 'text-orange-700 bg-orange-50 border-orange-300',
+/** Colour carries meaning here: red = failed, amber = waiting, blue = fact. */
+const TONE_MAP: Record<string, string> = {
+  error: 'border-l-danger bg-danger-muted text-danger-muted-foreground',
+  warning: 'border-l-warning bg-warning-muted text-warning-muted-foreground',
+  info: 'border-l-info bg-info-muted text-info-muted-foreground',
+  approval: 'border-l-warning bg-warning-muted text-warning-muted-foreground',
 }
 
-function NotifRow({ n, origIdx, dismissed, setDismissed, endpoint, router, pathname, setOpen }: {
+/**
+ * `md:` and up. Starts false so the server and the first client render agree;
+ * the effect corrects it before paint matters.
+ */
+function useIsDesktop(): boolean {
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)')
+    const sync = () => setIsDesktop(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
+  return isDesktop
+}
+
+interface NotifRowProps {
   n: Notification
   origIdx: number
-  dismissed: Set<number>
-  setDismissed: React.Dispatch<React.SetStateAction<Set<number>>>
-  endpoint: string
-  router: ReturnType<typeof useRouter>
-  pathname: string
-  setOpen: (v: boolean) => void
-}) {
-  const Icon = ICON_MAP[n.type] ?? Info
-  const color = COLOR_MAP[n.type] ?? COLOR_MAP.info
+  onDismiss: (idx: number, n: Notification) => void
+  onView: (n: Notification) => void
+}
 
-  function handleView() {
-    setOpen(false)
-    const hrefPath = n.href.split('#')[0]
-    if (pathname === hrefPath) {
-      router.refresh()
-    } else {
-      router.push(n.href)
-    }
-  }
+function NotifRow({ n, origIdx, onDismiss, onView }: NotifRowProps) {
+  const Icon = ICON_MAP[n.type] ?? Info
+  const tone = TONE_MAP[n.type] ?? TONE_MAP.info
 
   return (
-    <div className={`flex items-start gap-3 px-4 py-3 border-b last:border-0 border-l-4 ${color}`}>
-      <Icon size={15} className="shrink-0 mt-0.5" />
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-semibold">{n.title}</p>
-        <p className="text-xs mt-0.5 opacity-90">{n.message}</p>
+    <div className={cn('flex items-start gap-3 border-b border-l-4 border-border px-4 py-3 last:border-b-0', tone)}>
+      <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold break-words">{n.title}</p>
+        <p className="mt-0.5 text-sm break-words opacity-90">{n.message}</p>
         <button
-          className="text-xs underline mt-1 inline-block opacity-80 hover:opacity-100"
-          onClick={handleView}
+          type="button"
+          className="mt-1 inline-flex min-h-11 items-center text-sm font-medium underline underline-offset-4"
+          onClick={() => onView(n)}
         >
-          View →
+          <Bi k="viewDetails" />
         </button>
       </div>
       <button
-        className="shrink-0 opacity-40 hover:opacity-70 transition-opacity"
-        onClick={async () => {
-          setDismissed(prev => new Set([...prev, origIdx]))
-          if (n.dbNotification && n.id) {
-            await fetch(endpoint, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: n.id }),
-            }).catch(() => {})
-          }
-        }}
+        type="button"
+        aria-label="Dismiss notification"
+        className="-mr-2 flex size-11 shrink-0 items-center justify-center rounded-lg opacity-60 transition-opacity hover:opacity-100"
+        onClick={() => onDismiss(origIdx, n)}
       >
-        <X size={12} />
+        <X aria-hidden="true" className="size-4" />
       </button>
     </div>
   )
@@ -87,10 +95,11 @@ function NotifRow({ n, origIdx, dismissed, setDismissed, endpoint, router, pathn
 export function NotificationBell({ userRole }: { userRole?: 'ADMIN' | 'COLLECTION_AGENT' }) {
   const router = useRouter()
   const pathname = usePathname()
+  const isDesktop = useIsDesktop()
   const endpoint = userRole === 'COLLECTION_AGENT' ? '/api/agent/notifications' : '/api/admin/notifications'
+
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
-  const [count, setCount] = useState(0)
   const [loading, setLoading] = useState(false)
   const [dismissed, setDismissed] = useState<Set<number>>(new Set())
 
@@ -107,7 +116,6 @@ export function NotificationBell({ userRole }: { userRole?: 'ADMIN' | 'COLLECTIO
     )
     if (res.ok) {
       setNotifications(res.data.notifications ?? [])
-      setCount(res.data.count ?? 0)
       setDismissed(new Set())
     }
     setLoading(false)
@@ -125,77 +133,120 @@ export function NotificationBell({ userRole }: { userRole?: 'ADMIN' | 'COLLECTIO
   const actionItems = visible.filter(n => n.type === 'approval')
   const updateItems = visible.filter(n => n.type !== 'approval')
 
+  function handleView(n: Notification) {
+    setOpen(false)
+    const hrefPath = n.href.split('#')[0]
+    if (pathname === hrefPath) router.refresh()
+    else router.push(n.href)
+  }
+
+  async function handleDismiss(idx: number, n: Notification) {
+    setDismissed(prev => new Set([...prev, idx]))
+    if (n.dbNotification && n.id) {
+      await apiPatch(endpoint, { id: n.id }, { toastOnError: false })
+    }
+  }
+
+  function renderGroup(items: Notification[], titleKey: 'pendingApprovals' | 'notifications') {
+    if (items.length === 0) return null
+    return (
+      <>
+        <div className="border-b border-border bg-muted px-4 py-2">
+          <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            <Bi k={titleKey} />
+          </p>
+        </div>
+        {items.map(n => {
+          const origIdx = notifications.indexOf(n)
+          return (
+            <NotifRow
+              key={origIdx}
+              n={n}
+              origIdx={origIdx}
+              onDismiss={handleDismiss}
+              onView={handleView}
+            />
+          )
+        })}
+      </>
+    )
+  }
+
+  const list = (
+    <div className="max-h-[60dvh] overflow-y-auto overscroll-contain md:max-h-96">
+      {visible.length === 0 && (
+        <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+          <Bi k="noNotifications" />
+        </div>
+      )}
+      {renderGroup(actionItems, 'pendingApprovals')}
+      {renderGroup(updateItems, 'notifications')}
+    </div>
+  )
+
+  const footer = (
+    <div className="flex items-center justify-between border-t border-border px-2 py-2">
+      <Button variant="ghost" size="sm" onClick={fetchNotifications} disabled={loading}>
+        <Bi k={loading ? 'refreshing' : 'refresh'} />
+      </Button>
+    </div>
+  )
+
+  const trigger = (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label="Notifications"
+      className="relative shrink-0"
+      onClick={() => { setOpen(v => !v); if (!open) fetchNotifications() }}
+    >
+      <Bell className="size-5" />
+      {visibleCount > 0 && (
+        <span className="absolute top-1 right-1 flex size-4 items-center justify-center rounded-full bg-danger text-[10px] leading-none font-bold text-danger-foreground tabular">
+          {visibleCount > 9 ? '9+' : formatCount(visibleCount)}
+        </span>
+      )}
+    </Button>
+  )
+
+  // Phone: a bottom sheet — a dropdown pinned near a 390px-wide top bar either
+  // clipped or overflowed. Desktop: a normal dropdown under the bell.
+  if (!isDesktop) {
+    return (
+      <>
+        {trigger}
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetContent side="bottom" className="gap-0 p-0">
+            <SheetHeader className="border-b border-border pb-3">
+              <SheetTitle>
+                <Bi k="notifications" />
+              </SheetTitle>
+            </SheetHeader>
+            {list}
+            {footer}
+          </SheetContent>
+        </Sheet>
+      </>
+    )
+  }
+
   return (
     <div className="relative">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="relative"
-        onClick={() => { setOpen(v => !v); if (!open) fetchNotifications() }}
-      >
-        <Bell size={18} className="text-gray-600" />
-        {visibleCount > 0 && (
-          <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
-            {visibleCount > 9 ? '9+' : visibleCount}
-          </span>
-        )}
-      </Button>
-
+      {trigger}
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-
-          <div className="fixed right-2 top-14 z-40 w-[calc(100vw-1rem)] max-w-sm rounded-xl border bg-white shadow-lg overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b">
-              <p className="text-sm font-semibold">Notifications</p>
-              <div className="flex items-center gap-2">
-                {loading && <span className="text-xs text-gray-400">Refreshing…</span>}
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setOpen(false)}>
-                  <X size={14} />
-                </Button>
-              </div>
+          <div className="absolute top-full right-0 z-40 mt-2 w-96 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-lg">
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <p className="text-sm font-semibold">
+                <Bi k="notifications" />
+              </p>
+              <Button variant="ghost" size="icon-sm" aria-label="Close" onClick={() => setOpen(false)}>
+                <X className="size-4" />
+              </Button>
             </div>
-
-            <div className="max-h-96 overflow-y-auto">
-              {visible.length === 0 && (
-                <div className="px-4 py-8 text-center text-gray-400 text-sm">
-                  All clear — no pending alerts
-                </div>
-              )}
-
-              {actionItems.length > 0 && (
-                <>
-                  <div className="px-4 py-1.5 bg-orange-50 border-b">
-                    <p className="text-[10px] font-semibold text-orange-600 uppercase tracking-wide">Needs Action</p>
-                  </div>
-                  {actionItems.map(n => {
-                    const origIdx = notifications.indexOf(n)
-                    return <NotifRow key={origIdx} n={n} origIdx={origIdx} dismissed={dismissed} setDismissed={setDismissed} endpoint={endpoint} router={router} pathname={pathname} setOpen={setOpen} />
-                  })}
-                </>
-              )}
-
-              {updateItems.length > 0 && (
-                <>
-                  <div className={`px-4 py-1.5 border-b ${actionItems.length > 0 ? 'border-t bg-gray-50' : 'bg-gray-50'}`}>
-                    <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Updates</p>
-                  </div>
-                  {updateItems.map(n => {
-                    const origIdx = notifications.indexOf(n)
-                    return <NotifRow key={origIdx} n={n} origIdx={origIdx} dismissed={dismissed} setDismissed={setDismissed} endpoint={endpoint} router={router} pathname={pathname} setOpen={setOpen} />
-                  })}
-                </>
-              )}
-            </div>
-
-            <div className="px-4 py-2 border-t bg-gray-50">
-              <button
-                className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
-                onClick={fetchNotifications}
-              >
-                Refresh
-              </button>
-            </div>
+            {list}
+            {footer}
           </div>
         </>
       )}

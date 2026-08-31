@@ -4,11 +4,10 @@ import { db } from '@/lib/db'
 import { customers, dues, profiles, branches, loans, collections } from '@/lib/db/schema'
 import { eq, and, sql, isNull } from 'drizzle-orm'
 import { AdminCustomerTable } from '@/components/customers/admin-customer-table'
-import type { Session } from 'next-auth'
 
 export default async function AdminCustomersPage() {
-  const session = (await auth()) as Session | null
-  if (!session?.user?.id || (session.user as any).role !== 'ADMIN') redirect('/dashboard')
+  const session = await auth()
+  if (!session?.user?.id || session.user.role !== 'ADMIN') redirect('/dashboard')
 
   const [custList, agents, branchList, outstanding, loanAgg, freeformAgg] = await Promise.all([
     db.select({

@@ -6,11 +6,25 @@ import { eq, and, desc, sql, isNull, ne } from 'drizzle-orm'
 import { CollectionForm } from '@/components/collections/collection-form'
 import type { Session } from 'next-auth'
 
+/** Shape of the raw `loan_payments` rows returned by the db.execute() below. */
+interface LoanPaymentRow {
+  id: string
+  collection_number: string | null
+  customer_id: string
+  customer_name: string | null
+  amount: string
+  payment_mode: string
+  status: string
+  collected_at: string | Date | null
+  notes: string | null
+  rejected_reason: string | null
+}
+
 export default async function CollectionsPage() {
   const session = (await auth()) as Session | null
   if (!session?.user?.id) redirect('/login')
 
-  const role = (session.user as any).role
+  const role = session.user.role
   if (role !== 'COLLECTION_AGENT' && role !== 'ADMIN') redirect('/dashboard')
 
   const userId = session.user.id
@@ -105,8 +119,16 @@ export default async function CollectionsPage() {
       collected_at: r.collected_at?.toISOString() ?? null,
       source: 'freeform' as const,
     })),
-    ...(loanPaymentRows as any[]).map(r => ({
-      ...r,
+    ...(loanPaymentRows as unknown as LoanPaymentRow[]).map(r => ({
+      id: r.id,
+      collection_number: r.collection_number,
+      customer_id: r.customer_id,
+      customer_name: r.customer_name,
+      amount: String(r.amount),
+      payment_mode: r.payment_mode,
+      status: r.status,
+      notes: r.notes,
+      rejected_reason: r.rejected_reason,
       collected_at: r.collected_at ? new Date(r.collected_at).toISOString() : null,
       source: 'loan' as const,
     })),

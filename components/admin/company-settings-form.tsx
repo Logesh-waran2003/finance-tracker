@@ -4,17 +4,22 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+
+import { Bi } from '@/components/ui/bi'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { FormField } from '@/components/ui/form-field'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { apiPatch } from '@/lib/api-client'
+import { t } from '@/lib/i18n'
 
 const schema = z.object({
-  company_name: z.string().min(1, 'Required'),
-  currency: z.string().min(1, 'Required'),
-  currency_symbol: z.string().min(1, 'Required'),
-  timezone: z.string().min(1, 'Required'),
+  company_name: z.string().min(1, t('requiredField').en),
+  currency: z.string().min(1, t('requiredField').en),
+  currency_symbol: z.string().min(1, t('requiredField').en),
+  timezone: z.string().min(1, t('requiredField').en),
   financial_year_start: z.number().int().min(1).max(12),
 })
 
@@ -34,10 +39,14 @@ interface Props {
 export function CompanySettingsForm({ initialData }: Props) {
   const [saving, setSaving] = useState(false)
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      company_name: initialData?.company_name ?? 'My Company',
+      company_name: initialData?.company_name ?? '',
       currency: initialData?.currency ?? 'INR',
       currency_symbol: initialData?.currency_symbol ?? '₹',
       timezone: initialData?.timezone ?? 'Asia/Kolkata',
@@ -47,67 +56,64 @@ export function CompanySettingsForm({ initialData }: Props) {
 
   async function onSubmit(values: FormValues) {
     setSaving(true)
-    try {
-      const res = await fetch('/api/admin/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        toast.error(data.error ?? 'Failed to save')
-        return
-      }
-      toast.success('Settings saved')
-    } catch {
-      toast.error('Network error')
-    } finally {
-      setSaving(false)
-    }
+    const res = await apiPatch<unknown>('/api/admin/settings', values)
+    // Every failure path re-enables the button.
+    setSaving(false)
+    if (!res.ok) return
+    toast.success(t('settingsSaved').en)
   }
 
   return (
-    <Card className="max-w-lg">
-      <CardHeader>
-        <CardTitle className="text-base">Company Settings</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="company_name">Company Name</Label>
+    <Card className="md:max-w-lg">
+      <CardContent className="p-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+          <h2 className="text-base font-semibold">
+            <Bi k="companySettings" />
+          </h2>
+
+          <FormField
+            labelKey="companyName"
+            htmlFor="company_name"
+            required
+            error={errors.company_name?.message ?? null}
+          >
             <Input id="company_name" {...register('company_name')} />
-            {errors.company_name && (
-              <p className="text-xs text-red-500">{errors.company_name.message}</p>
-            )}
-          </div>
+          </FormField>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="currency">Currency Code</Label>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <FormField
+              labelKey="currencyCode"
+              htmlFor="currency"
+              required
+              error={errors.currency?.message ?? null}
+            >
               <Input id="currency" placeholder="INR" {...register('currency')} />
-              {errors.currency && (
-                <p className="text-xs text-red-500">{errors.currency.message}</p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="currency_symbol">Currency Symbol</Label>
-              <Input id="currency_symbol" placeholder="INR" {...register('currency_symbol')} />
-              {errors.currency_symbol && (
-                <p className="text-xs text-red-500">{errors.currency_symbol.message}</p>
-              )}
-            </div>
+            </FormField>
+            <FormField
+              labelKey="currencySymbol"
+              htmlFor="currency_symbol"
+              required
+              error={errors.currency_symbol?.message ?? null}
+            >
+              <Input id="currency_symbol" placeholder="₹" {...register('currency_symbol')} />
+            </FormField>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="timezone">Timezone</Label>
+          <FormField
+            labelKey="timezone"
+            htmlFor="timezone"
+            required
+            error={errors.timezone?.message ?? null}
+          >
             <Input id="timezone" placeholder="Asia/Kolkata" {...register('timezone')} />
-            {errors.timezone && (
-              <p className="text-xs text-red-500">{errors.timezone.message}</p>
-            )}
-          </div>
+          </FormField>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="financial_year_start">Financial Year Start (month 1-12)</Label>
+          <FormField
+            labelKey="financialYearStart"
+            htmlFor="financial_year_start"
+            required
+            error={errors.financial_year_start?.message ?? null}
+          >
             <Input
               id="financial_year_start"
               type="number"
@@ -115,13 +121,11 @@ export function CompanySettingsForm({ initialData }: Props) {
               max={12}
               {...register('financial_year_start', { valueAsNumber: true })}
             />
-            {errors.financial_year_start && (
-              <p className="text-xs text-red-500">{errors.financial_year_start.message}</p>
-            )}
-          </div>
+          </FormField>
 
-          <Button type="submit" disabled={saving}>
-            {saving ? 'Saving...' : 'Save Changes'}
+          <Button type="submit" size="lg" disabled={saving} className="md:self-start">
+            {saving ? <Loader2 className="animate-spin" /> : null}
+            <Bi k={saving ? 'savingChanges' : 'saveChanges'} />
           </Button>
         </form>
       </CardContent>

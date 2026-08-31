@@ -4,7 +4,7 @@
  * CASH collections. Client-supplied totals are never trusted.
  */
 import { reconciliations, collections, profiles, notifications, loanPayments } from '@/lib/db/schema'
-import { eq, and, sum, sql } from 'drizzle-orm'
+import { eq, and, sum, sql, isNull } from 'drizzle-orm'
 import { logAudit } from '@/lib/modules/audit/service'
 import { writeLedgerEntry } from '@/lib/modules/ledger/service'
 import { ServiceError } from '@/lib/modules/errors'
@@ -54,6 +54,55 @@ export function istToday(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())
 }
 
+/**
+ * The agent's confirmed CASH for one IST date, in cents.
+ *
+ * This is the ONLY place this may be computed. It was previously inlined in
+ * three places that disagreed — this service, `GET /api/reconciliation`, and
+ * the reconciliation page — so the same agent could be told two different
+ * figures for "cash you still owe" depending on which screen they opened.
+ *
+ * The loan-payment leg used to filter on `is_reversed` alone. `loan_payments`
+ * has a `status` column defaulting to 'PENDING', and rejection sets
+ * status = 'REJECTED' WITHOUT setting is_reversed — so a payment an admin had
+ * explicitly rejected still counted as cash the agent had to hand over, and a
+ * merely PENDING payment did too. Freeform collections already required
+ * CONFIRMED; both legs now use the same rule.
+ */
+export async function getCashCollectedCents(
+  db: AnyDB,
+  agentId: string,
+  date: string,
+): Promise<number> {
+  const [freeformRow] = await (db as any)
+    .select({ total: sum(collections.amount) })
+    .from(collections)
+    .where(
+      and(
+        eq(collections.agent_id, agentId),
+        eq(collections.payment_mode, 'CASH'),
+        eq(collections.status, 'CONFIRMED'),
+        isNull(collections.deleted_at),
+        sql`DATE(${collections.collected_at} AT TIME ZONE 'Asia/Kolkata') = ${date}::date`,
+      ),
+    )
+
+  const [loanRow] = await (db as any)
+    .select({ total: sum(loanPayments.amount) })
+    .from(loanPayments)
+    .where(
+      and(
+        eq(loanPayments.agent_id, agentId),
+        eq(loanPayments.payment_mode, 'CASH'),
+        eq(loanPayments.status, 'CONFIRMED'),
+        eq(loanPayments.is_reversed, false),
+        sql`DATE(${loanPayments.created_at} AT TIME ZONE 'Asia/Kolkata') = ${date}::date`,
+      ),
+    )
+
+  return toCents((freeformRow as any)?.total ?? '0') + toCents((loanRow as any)?.total ?? '0')
+}
+
 export async function createReconciliation(
   db: AnyDB,
   params: CreateReconciliationParams,
@@ -62,35 +111,7 @@ export async function createReconciliation(
     throw new ServiceError('date cannot be in the future', 400)
   }
 
-  // Server-side cash total from freeform collections
-  const [cashRow] = await (db as any)
-    .select({ total: sum(collections.amount) })
-    .from(collections)
-    .where(
-      and(
-        eq(collections.agent_id, params.agentId),
-        eq(collections.payment_mode, 'CASH'),
-        eq(collections.status, 'CONFIRMED'),
-        sql`DATE(${collections.collected_at} AT TIME ZONE 'Asia/Kolkata') = ${params.date}::date`,
-      ),
-    )
-
-  // Server-side cash total from loan installment payments
-  const [loanCashRow] = await (db as any)
-    .select({ total: sum(loanPayments.amount) })
-    .from(loanPayments)
-    .where(
-      and(
-        eq(loanPayments.agent_id, params.agentId),
-        eq(loanPayments.payment_mode, 'CASH'),
-        eq(loanPayments.is_reversed, false),
-        sql`DATE(${loanPayments.created_at} AT TIME ZONE 'Asia/Kolkata') = ${params.date}::date`,
-      ),
-    )
-
-  const cashCollectedCents =
-    toCents((cashRow as any)?.total ?? '0') +
-    toCents((loanCashRow as any)?.total ?? '0')
+  const cashCollectedCents = await getCashCollectedCents(db, params.agentId, params.date)
   const cashCollected = cashCollectedCents / 100
 
   const cashSubmittedCents = toCents(params.cashSubmitted)

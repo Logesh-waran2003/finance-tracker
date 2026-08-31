@@ -1,12 +1,16 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
+import { eq } from 'drizzle-orm'
+
 import { db } from '@/lib/db'
 import { profiles, branches } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
-import { ProfileInfoCard } from '@/components/profile-info-card'
-import { ProfileEditForm } from '@/components/profile-edit-form'
+import { PageHeader } from '@/components/ui/page-header'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { Bi } from '@/components/ui/bi'
+import { ProfileInfoCard, type ProfileInfoItem } from '@/components/profile-info-card'
+import { ProfileEditForm, AppearanceCard } from '@/components/profile-edit-form'
 import { ChangePasswordForm } from '@/components/change-password-form'
-import { format } from 'date-fns'
+import { formatDate, formatDateTime } from '@/lib/format'
 
 export default async function ProfilePage() {
   const session = await auth()
@@ -34,34 +38,30 @@ export default async function ProfilePage() {
   const profile = rows[0]
   if (!profile) redirect('/login')
 
-  const ROLE_LABEL: Record<string, string> = {
-    ADMIN: 'Admin',
-    COLLECTION_AGENT: 'Collection Agent',
-    STAFF: 'Staff',
-  }
+  const dash = <span className="text-muted-foreground">—</span>
 
-  const infoItems = [
-    { label: 'Email', value: profile.email },
-    { label: 'Role', value: ROLE_LABEL[profile.role] ?? profile.role },
-    { label: 'Employee Code', value: profile.employee_code ?? '—' },
-    { label: 'Department', value: profile.department ?? '—' },
-    { label: 'Branch', value: profile.branch_name ?? 'Unassigned' },
+  const infoItems: ProfileInfoItem[] = [
+    { k: 'email', value: <span className="break-all">{profile.email}</span> },
+    { k: 'phone', value: profile.phone ?? dash },
+    // <StatusBadge> is the single source of truth for role → colour + word.
+    { k: 'role', value: <StatusBadge status={profile.role} /> },
+    { k: 'employeeCode', value: profile.employee_code ?? dash },
+    { k: 'department', value: profile.department ?? dash },
+    { k: 'designation', value: profile.designation ?? dash },
+    { k: 'branch', value: profile.branch_name ?? <Bi k="unassigned" /> },
     {
-      label: 'Joining Date',
-      value: profile.joining_date ? format(new Date(profile.joining_date), 'dd MMM yyyy') : '—',
+      k: 'joiningDate',
+      value: profile.joining_date ? formatDate(profile.joining_date, 'medium') : dash,
     },
     {
-      label: 'Last Login',
-      value: profile.last_login_at ? format(new Date(profile.last_login_at), 'dd MMM yyyy, hh:mm a') : '—',
+      k: 'lastLogin',
+      value: profile.last_login_at ? formatDateTime(profile.last_login_at) : dash,
     },
   ]
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">Profile</h1>
-        <p className="text-gray-500 text-sm mt-1">Manage your account details.</p>
-      </div>
+    <div className="space-y-5 md:max-w-2xl">
+      <PageHeader titleKey="profile" />
 
       <ProfileInfoCard name={profile.full_name} items={infoItems} />
 
@@ -69,6 +69,8 @@ export default async function ProfilePage() {
         initialName={profile.full_name}
         initialPhone={profile.phone ?? ''}
       />
+
+      <AppearanceCard />
 
       <ChangePasswordForm />
     </div>

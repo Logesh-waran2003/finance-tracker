@@ -1,10 +1,10 @@
 import { db } from '@/lib/db'
-import { reconciliations, collections, profiles } from '@/lib/db/schema'
+import { reconciliations, profiles } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq, and, desc, sql, sum } from 'drizzle-orm'
+import { eq, and, desc, sum } from 'drizzle-orm'
 import { requireRole, isResponse } from '@/lib/auth/authorize'
 import { parseBody, createReconciliationSchema } from '@/lib/validation'
-import { createReconciliation, istToday } from '@/lib/modules/reconciliation/service'
+import { createReconciliation, istToday, getCashCollectedCents } from '@/lib/modules/reconciliation/service'
 import { ServiceError } from '@/lib/modules/errors'
 
 export async function GET(_request: Request) {
@@ -17,18 +17,10 @@ export async function GET(_request: Request) {
   // IST, not UTC — see istToday() for why this matters before 05:30.
   const today = istToday()
 
-  // Calculate actual confirmed CASH collections server-side
-  const [cashPosition] = await db
-    .select({ total: sum(collections.amount) })
-    .from(collections)
-    .where(
-      and(
-        eq(collections.agent_id, agentId),
-        eq(collections.payment_mode, 'CASH'),
-        eq(collections.status, 'CONFIRMED'),
-        sql`DATE(${collections.collected_at} AT TIME ZONE 'Asia/Kolkata') = ${today}::date`,
-      ),
-    )
+  // Same shared helper as the service and the page. This route previously
+  // counted freeform collections ONLY, so it under-reported an agent's cash by
+  // every loan installment they had collected.
+  const confirmedCash = (await getCashCollectedCents(db, agentId, today)) / 100
 
   const [submitted] = await db
     .select({ total: sum(reconciliations.cash_submitted) })
@@ -56,8 +48,7 @@ export async function GET(_request: Request) {
     .orderBy(desc(reconciliations.date))
     .limit(30)
 
-  const confirmedCash = parseFloat(cashPosition?.total ?? '0')
-  const submittedToday = parseFloat(submitted?.total ?? '0')
+    const submittedToday = parseFloat(submitted?.total ?? '0')
 
   return NextResponse.json({
     cashPosition: {

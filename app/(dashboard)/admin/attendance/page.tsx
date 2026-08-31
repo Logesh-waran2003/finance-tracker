@@ -4,16 +4,19 @@ import { db } from '@/lib/db'
 import { attendance, profiles } from '@/lib/db/schema'
 import { eq, and, gte, lte, desc } from 'drizzle-orm'
 import { AdminAttendanceClient } from '@/components/attendance/admin-attendance-client'
-import type { Session } from 'next-auth'
 
 export default async function AdminAttendancePage() {
-  const session = (await auth()) as Session | null
-  if (!session?.user?.id || (session.user as any).role !== 'ADMIN') redirect('/dashboard')
+  const session = await auth()
+  if (!session?.user?.id || session.user.role !== 'ADMIN') redirect('/dashboard')
 
-  // Default: current month
+  // Default: current month. Built from local parts — `toISOString()` on a
+  // local midnight rolls the date back a day in IST, which silently dropped
+  // today's rows from the first page load.
+  const isoDate = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   const now = new Date()
-  const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+  const start = isoDate(new Date(now.getFullYear(), now.getMonth(), 1))
+  const end = isoDate(new Date(now.getFullYear(), now.getMonth() + 1, 0))
 
   const [initial, employees] = await Promise.all([
     db.select({
@@ -43,5 +46,12 @@ export default async function AdminAttendancePage() {
       .where(eq(profiles.is_active, true)),
   ])
 
-  return <AdminAttendanceClient initial={initial as any} employees={employees} />
+  const serialized = initial.map(r => ({
+    ...r,
+    check_in_at: r.check_in_at?.toISOString() ?? null,
+    check_out_at: r.check_out_at?.toISOString() ?? null,
+    corrected_at: r.corrected_at?.toISOString() ?? null,
+  }))
+
+  return <AdminAttendanceClient initial={serialized} employees={employees} />
 }

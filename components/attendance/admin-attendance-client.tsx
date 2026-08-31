@@ -1,13 +1,37 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { CalendarDays, Download, Loader2, Pencil, UserCheck, UserX } from 'lucide-react'
+import { toast } from 'sonner'
+
+import { Bi } from '@/components/ui/bi'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { Loader2, Search, Pencil, Download } from 'lucide-react'
+import { DataList, type DataListColumn } from '@/components/ui/data-list'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { EmptyState } from '@/components/ui/empty-state'
+import { FormField } from '@/components/ui/form-field'
+import { GMapsLink } from '@/components/ui/gmaps-link'
+import { Input } from '@/components/ui/input'
+import { PageHeader } from '@/components/ui/page-header'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { StatTile } from '@/components/ui/stat-tile'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { Textarea } from '@/components/ui/textarea'
+import { apiGet, apiPatch } from '@/lib/api-client'
+import { formatDate, formatTime, toNumber } from '@/lib/format'
+import { statusLabel, t } from '@/lib/i18n'
 
 interface AttendanceRow {
   id: string
@@ -15,8 +39,8 @@ interface AttendanceRow {
   full_name: string | null
   employee_code: string | null
   date: string
-  check_in_at: Date | string | null
-  check_out_at: Date | string | null
+  check_in_at: string | null
+  check_out_at: string | null
   total_hours: string | null
   status: string
   notes: string | null
@@ -24,44 +48,73 @@ interface AttendanceRow {
   check_in_gps_lng: string | null
   check_in_gps_accuracy: string | null
   corrected_by: string | null
-  corrected_at: Date | string | null
+  corrected_at: string | null
 }
 
-interface Employee { id: string; full_name: string; employee_code: string | null }
-
-const STATUS_COLOR: Record<string, string> = {
-  PRESENT: 'bg-green-100 text-green-700',
-  ABSENT: 'bg-gray-100 text-gray-500',
-  LATE: 'bg-yellow-100 text-yellow-700',
-  HALF_DAY: 'bg-orange-100 text-orange-700',
-  LEAVE: 'bg-blue-100 text-blue-700',
-  WEEK_OFF: 'bg-purple-100 text-purple-700',
+interface Employee {
+  id: string
+  full_name: string
+  employee_code: string | null
 }
 
-const STATUS_OPTIONS = ['PRESENT', 'ABSENT', 'LATE', 'HALF_DAY', 'LEAVE', 'WEEK_OFF']
+const STATUS_OPTIONS = [
+  'PRESENT',
+  'ABSENT',
+  'LATE',
+  'HALF_DAY',
+  'LEAVE',
+  'WEEK_OFF',
+] as const
 
-function fmtTime(ts: Date | string | null) {
-  if (!ts) return '—'
-  return new Date(ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })
+interface CorrectionForm {
+  status: string
+  check_in_at: string
+  check_out_at: string
+  notes: string
 }
 
-function fmtDate(d: string) {
-  return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+const emptyCorrection: CorrectionForm = {
+  status: '',
+  check_in_at: '',
+  check_out_at: '',
+  notes: '',
 }
 
-function getMonthRange() {
+function isoDate(d: Date): string {
+  // Built from local parts, not toISOString(): in IST, `toISOString()` on a
+  // local midnight rolls the date back one day.
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${month}-${day}`
+}
+
+function monthRange() {
   const now = new Date()
-  const start = new Date(now.getFullYear(), now.getMonth(), 1)
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-  const fmt = (d: Date) => d.toISOString().split('T')[0]
-  return { start: fmt(start), end: fmt(end) }
+  return {
+    start: isoDate(new Date(now.getFullYear(), now.getMonth(), 1)),
+    end: isoDate(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+  }
 }
 
-export function AdminAttendanceClient({ initial, employees }: {
+function toLocalInput(value: string | null): string {
+  if (!value) return ''
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+}
+
+function csvCell(value: string | number | null | undefined): string {
+  return `"${String(value ?? '').replace(/"/g, '""')}"`
+}
+
+export function AdminAttendanceClient({
+  initial,
+  employees,
+}: {
   initial: AttendanceRow[]
   employees: Employee[]
 }) {
-  const defaultRange = getMonthRange()
+  const defaultRange = monthRange()
   const [rows, setRows] = useState<AttendanceRow[]>(initial)
   const [from, setFrom] = useState(defaultRange.start)
   const [to, setTo] = useState(defaultRange.end)
@@ -69,219 +122,441 @@ export function AdminAttendanceClient({ initial, employees }: {
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [loading, setLoading] = useState(false)
 
-  // Correction dialog
   const [correcting, setCorrecting] = useState<AttendanceRow | null>(null)
-  const [corrForm, setCorrForm] = useState({ status: '', check_in_at: '', check_out_at: '', notes: '' })
+  const [corrForm, setCorrForm] = useState<CorrectionForm>(emptyCorrection)
   const [corrSaving, setCorrSaving] = useState(false)
-  const [corrErr, setCorrErr] = useState('')
+  const [corrError, setCorrError] = useState<string | null>(null)
+
+  const filtered = useMemo(
+    () =>
+      rows.filter(r => {
+        const matchEmp = empFilter === 'ALL' || r.employee_id === empFilter
+        const matchStatus = statusFilter === 'ALL' || r.status === statusFilter
+        return matchEmp && matchStatus
+      }),
+    [rows, empFilter, statusFilter],
+  )
+
+  const todayIso = isoDate(new Date())
+  const presentToday = filtered.filter(
+    r => r.date === todayIso && (r.status === 'PRESENT' || r.status === 'LATE' || r.status === 'HALF_DAY'),
+  ).length
+  const absentToday = filtered.filter(r => r.date === todayIso && r.status === 'ABSENT').length
 
   async function fetchData() {
     setLoading(true)
     const params = new URLSearchParams({ start: from, end: to })
     if (empFilter !== 'ALL') params.set('employee_id', empFilter)
     if (statusFilter !== 'ALL') params.set('status', statusFilter)
-    const res = await fetch(`/api/admin/attendance?${params}`)
-    if (res.ok) setRows(await res.json())
+    const res = await apiGet<AttendanceRow[]>(`/api/admin/attendance?${params}`)
     setLoading(false)
+    if (!res.ok) return
+    setRows(res.data)
   }
 
   function openCorrect(row: AttendanceRow) {
     setCorrecting(row)
+    setCorrError(null)
     setCorrForm({
       status: row.status,
-      check_in_at: row.check_in_at ? new Date(row.check_in_at).toISOString().slice(0, 16) : '',
-      check_out_at: row.check_out_at ? new Date(row.check_out_at).toISOString().slice(0, 16) : '',
+      check_in_at: toLocalInput(row.check_in_at),
+      check_out_at: toLocalInput(row.check_out_at),
       notes: row.notes ?? '',
     })
-    setCorrErr('')
+  }
+
+  function closeCorrect() {
+    if (corrSaving) return
+    setCorrecting(null)
+    setCorrForm(emptyCorrection)
+    setCorrError(null)
   }
 
   async function saveCorrection() {
-    if (!correcting) return
-    setCorrSaving(true); setCorrErr('')
-    const res = await fetch(`/api/admin/attendance/${correcting.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        status: corrForm.status || undefined,
-        check_in_at: corrForm.check_in_at || null,
-        check_out_at: corrForm.check_out_at || null,
-        notes: corrForm.notes || null,
-      }),
+    const target = correcting
+    if (!target) return
+    setCorrSaving(true)
+    setCorrError(null)
+    const res = await apiPatch<AttendanceRow>(`/api/admin/attendance/${target.id}`, {
+      status: corrForm.status || undefined,
+      check_in_at: corrForm.check_in_at ? new Date(corrForm.check_in_at).toISOString() : null,
+      check_out_at: corrForm.check_out_at ? new Date(corrForm.check_out_at).toISOString() : null,
+      // The route's schema accepts `notes` as an optional STRING, not null.
+      // Sending null made every correction fail with a 400, so an empty box
+      // sends an empty string, which is what clears the note.
+      notes: corrForm.notes,
     })
-    const data = await res.json()
-    if (!res.ok) { setCorrErr(data.error ?? 'Failed'); setCorrSaving(false); return }
-    setRows(prev => prev.map(r => r.id === data.id ? { ...r, ...data } : r))
-    setCorrecting(null); setCorrSaving(false)
+    setCorrSaving(false)
+    // Failure: the row keeps its previous values and the dialog stays open
+    // with everything the admin typed.
+    if (!res.ok) {
+      setCorrError(res.error)
+      return
+    }
+    setRows(prev => prev.map(r => (r.id === target.id ? { ...r, ...res.data } : r)))
+    setCorrecting(null)
+    setCorrForm(emptyCorrection)
+    toast.success(t('attendanceCorrected').en)
   }
 
   function exportCSV() {
     const header = ['Employee', 'Code', 'Date', 'Check-in', 'Check-out', 'Hours', 'Status', 'GPS']
-    const rowData = filtered.map(r => [
-      r.full_name ?? '', r.employee_code ?? '', r.date,
-      fmtTime(r.check_in_at), fmtTime(r.check_out_at),
-      r.total_hours ?? '', r.status,
-      r.check_in_gps_lat ? 'Yes' : 'No',
+    const body = filtered.map(r => [
+      r.full_name,
+      r.employee_code,
+      r.date,
+      r.check_in_at ? formatTime(r.check_in_at) : '',
+      r.check_out_at ? formatTime(r.check_out_at) : '',
+      r.total_hours,
+      r.status,
+      r.check_in_gps_lat ? `${r.check_in_gps_lat},${r.check_in_gps_lng}` : '',
     ])
-    const csv = [header, ...rowData].map(r => r.map(v => `"${v}"`).join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = `attendance-${from}-to-${to}.csv`
-    a.click(); URL.revokeObjectURL(url)
+    const csv = [header, ...body].map(row => row.map(csvCell).join(',')).join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `attendance-${from}-to-${to}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
-  const filtered = rows.filter(r => {
-    const matchEmp = empFilter === 'ALL' || r.employee_id === empFilter
-    const matchStatus = statusFilter === 'ALL' || r.status === statusFilter
-    return matchEmp && matchStatus
-  })
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-xl font-semibold">Attendance (Admin)</h1>
-        <Button variant="outline" size="sm" onClick={exportCSV}>
-          <Download size={14} className="mr-1" />Export CSV
+  const columns: DataListColumn<AttendanceRow>[] = [
+    {
+      key: 'employee',
+      header: <Bi k="employee" />,
+      primary: true,
+      cell: r => (
+        <div className="min-w-0">
+          <p className="truncate font-medium">{r.full_name ?? '—'}</p>
+          {r.employee_code ? (
+            <p className="truncate text-xs text-muted-foreground">{r.employee_code}</p>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: 'date',
+      header: <Bi k="date" />,
+      cell: r => (
+        <span className="whitespace-nowrap text-muted-foreground">{formatDate(r.date)}</span>
+      ),
+    },
+    {
+      key: 'checkIn',
+      header: <Bi k="checkInTime" />,
+      cell: r => <span className="tabular">{r.check_in_at ? formatTime(r.check_in_at) : '—'}</span>,
+    },
+    {
+      key: 'checkOut',
+      header: <Bi k="checkOutTime" />,
+      cell: r => (
+        <span className="tabular">{r.check_out_at ? formatTime(r.check_out_at) : '—'}</span>
+      ),
+    },
+    {
+      key: 'hours',
+      header: <Bi k="hours" />,
+      align: 'right',
+      cell: r => <span className="tabular">{r.total_hours ? `${r.total_hours}h` : '—'}</span>,
+    },
+    {
+      key: 'status',
+      header: <Bi k="status" />,
+      cell: r => (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <StatusBadge status={r.status} />
+          {r.corrected_by ? (
+            <span className="inline-flex items-center gap-1 text-xs text-warning-muted-foreground">
+              <Pencil aria-hidden="true" className="size-3" />
+              <Bi k="corrected" />
+            </span>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: 'gps',
+      header: <Bi k="gpsLocation" />,
+      hideOnMobile: true,
+      cell: r =>
+        r.check_in_gps_lat && r.check_in_gps_lng ? (
+          <div className="flex flex-col items-start gap-1">
+            <GMapsLink query={`${r.check_in_gps_lat},${r.check_in_gps_lng}`} />
+            {r.check_in_gps_accuracy ? (
+              <span
+                className={
+                  toNumber(r.check_in_gps_accuracy) > 100
+                    ? 'text-xs text-warning-muted-foreground'
+                    : 'text-xs text-muted-foreground'
+                }
+              >
+                <Bi k="gpsAccuracy" /> ±{Math.round(toNumber(r.check_in_gps_accuracy))}m
+              </span>
+            ) : null}
+          </div>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      key: 'actions',
+      header: <Bi k="actions" />,
+      align: 'right',
+      hideOnMobile: true,
+      cell: r => (
+        <Button variant="outline" size="sm" onClick={() => openCorrect(r)}>
+          <Pencil />
+          <Bi k="edit" />
         </Button>
+      ),
+    },
+  ]
+
+  const renderCard = (r: AttendanceRow) => (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate font-medium">{r.full_name ?? '—'}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {r.employee_code ? `${r.employee_code} · ` : ''}
+            {formatDate(r.date)}
+          </p>
+        </div>
+        <StatusBadge status={r.status} />
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2 items-end">
-        <div className="space-y-1">
-          <Label className="text-xs">From</Label>
-          <Input type="date" value={from} onChange={e => setFrom(e.target.value)} className="w-36" />
+      <dl className="grid grid-cols-3 gap-2 text-sm">
+        <div>
+          <dt className="text-xs text-muted-foreground">
+            <Bi k="checkInTime" />
+          </dt>
+          <dd className="tabular">{r.check_in_at ? formatTime(r.check_in_at) : '—'}</dd>
         </div>
-        <div className="space-y-1">
-          <Label className="text-xs">To</Label>
-          <Input type="date" value={to} onChange={e => setTo(e.target.value)} className="w-36" />
+        <div>
+          <dt className="text-xs text-muted-foreground">
+            <Bi k="checkOutTime" />
+          </dt>
+          <dd className="tabular">{r.check_out_at ? formatTime(r.check_out_at) : '—'}</dd>
         </div>
-        <Select value={empFilter} onValueChange={v => setEmpFilter(v || 'ALL')}>
-          <SelectTrigger className="w-44"><SelectValue placeholder="All Employees" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All Employees</SelectItem>
-            {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={v => setStatusFilter(v || 'ALL')}>
-          <SelectTrigger className="w-36"><SelectValue placeholder="All Status" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All Status</SelectItem>
-            {STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s.replace('_', ' ')}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Button size="sm" onClick={fetchData} disabled={loading}>
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
-        </Button>
+        <div>
+          <dt className="text-xs text-muted-foreground">
+            <Bi k="hours" />
+          </dt>
+          <dd className="tabular">{r.total_hours ? `${r.total_hours}h` : '—'}</dd>
+        </div>
+      </dl>
+
+      {r.corrected_by ? (
+        <span className="inline-flex w-fit items-center gap-1 text-xs text-warning-muted-foreground">
+          <Pencil aria-hidden="true" className="size-3" />
+          <Bi k="corrected" />
+        </span>
+      ) : null}
+
+      {r.check_in_gps_lat && r.check_in_gps_lng ? (
+        <GMapsLink query={`${r.check_in_gps_lat},${r.check_in_gps_lng}`} />
+      ) : null}
+
+      <Button variant="outline" onClick={() => openCorrect(r)}>
+        <Pencil />
+        <Bi k="correctAttendance" />
+      </Button>
+    </div>
+  )
+
+  return (
+    <div className="flex flex-col gap-5">
+      <PageHeader
+        titleKey="attendance"
+        action={
+          <Button variant="outline" onClick={exportCSV}>
+            <Download />
+            <Bi k="exportCsv" />
+          </Button>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+        <StatTile
+          icon={UserCheck}
+          labelKey="presentToday"
+          value={presentToday}
+          kind="count"
+          intent="success"
+        />
+        <StatTile
+          icon={UserX}
+          labelKey="absentToday"
+          value={absentToday}
+          kind="count"
+          intent={absentToday > 0 ? 'danger' : 'neutral'}
+        />
+        <StatTile
+          icon={CalendarDays}
+          labelKey="allRecords"
+          value={filtered.length}
+          kind="count"
+          intent="info"
+          className="col-span-2 md:col-span-1"
+        />
       </div>
 
       <Card>
-        <CardContent className="p-0">
-          <div className="sm:hidden space-y-3 p-3">
-            {filtered.length === 0 && <p className="text-center text-gray-400 py-6 text-sm">No records found</p>}
-            {filtered.map(r => (
-              <Card key={r.id} className={r.corrected_by ? 'border-yellow-200' : ''}>
-                <CardContent className="p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-sm">{r.full_name ?? '—'}</p>
-                      {r.employee_code && <p className="text-xs text-gray-400">{r.employee_code}</p>}
-                    </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {r.status.replace('_', ' ')}{r.corrected_by ? ' ✎' : ''}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-sm">
-                    <div><p className="text-xs text-gray-500">Date</p><p className="font-medium text-xs">{fmtDate(r.date)}</p></div>
-                    <div><p className="text-xs text-gray-500">Check-in</p><p className="font-medium text-xs">{fmtTime(r.check_in_at)}</p></div>
-                    <div><p className="text-xs text-gray-500">Check-out</p><p className="font-medium text-xs">{fmtTime(r.check_out_at)}</p></div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500">{r.total_hours ? `${r.total_hours}h` : '—'} {r.check_in_gps_lat ? (
-                      <a href={`https://maps.google.com/?q=${r.check_in_gps_lat},${r.check_in_gps_lng}`} target="_blank" rel="noopener noreferrer" className="text-blue-600">📍</a>
-                    ) : ''}</span>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openCorrect(r)}><Pencil size={14} /></Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <div className="hidden sm:block overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  {['Employee', 'Date', 'Check-in', 'Check-out', 'Hours', 'Status', 'GPS', 'Actions'].map(h => (
-                    <th key={h} className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+        <CardContent className="flex flex-col gap-3 p-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <FormField labelKey="from" htmlFor="att-from">
+              <Input
+                id="att-from"
+                type="date"
+                value={from}
+                onChange={e => setFrom(e.target.value)}
+              />
+            </FormField>
+            <FormField labelKey="to" htmlFor="att-to">
+              <Input id="att-to" type="date" value={to} onChange={e => setTo(e.target.value)} />
+            </FormField>
+            <FormField labelKey="employee" htmlFor="att-emp">
+              <Select value={empFilter} onValueChange={v => setEmpFilter(v ?? 'ALL')}>
+                <SelectTrigger id="att-emp">
+                  <SelectValue>
+                    {empFilter === 'ALL' ? (
+                      <Bi k="allEmployees" />
+                    ) : (
+                      (employees.find(e => e.id === empFilter)?.full_name ?? '—')
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">
+                    <Bi k="allEmployees" />
+                  </SelectItem>
+                  {employees.map(e => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.full_name}
+                    </SelectItem>
                   ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {filtered.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400 text-sm">No records found</td></tr>}
-                {filtered.map(r => (
-                  <tr key={r.id} className={`hover:bg-gray-50 ${r.corrected_by ? 'bg-yellow-50/40' : ''}`}>
-                    <td className="px-4 py-2">
-                      <p className="font-medium">{r.full_name ?? '—'}</p>
-                      {r.employee_code && <p className="text-xs text-gray-400">{r.employee_code}</p>}
-                    </td>
-                    <td className="px-4 py-2 text-gray-600">{fmtDate(r.date)}</td>
-                    <td className="px-4 py-2">{fmtTime(r.check_in_at)}</td>
-                    <td className="px-4 py-2">{fmtTime(r.check_out_at)}</td>
-                    <td className="px-4 py-2">{r.total_hours ? `${r.total_hours}h` : '—'}</td>
-                    <td className="px-4 py-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                        {r.status.replace('_', ' ')}
-                      </span>
-                      {r.corrected_by && <span className="ml-1 text-xs text-yellow-600">✎</span>}
-                    </td>
-                    <td className="px-4 py-2 text-xs text-gray-500">
-                      {r.check_in_gps_lat && r.check_in_gps_lng ? (
-                        <div className="space-y-0.5">
-                          <a
-                            href={`https://maps.google.com/?q=${r.check_in_gps_lat},${r.check_in_gps_lng}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline flex items-center gap-1"
-                          >
-                            📍 View Map
-                          </a>
-                          {r.check_in_gps_accuracy && (
-                            <span className={parseFloat(r.check_in_gps_accuracy) > 100 ? 'text-orange-500' : 'text-gray-400'}>
-                              ±{Math.round(parseFloat(r.check_in_gps_accuracy))}m
-                            </span>
-                          )}
-                        </div>
-                      ) : '—'}
-                    </td>
-                    <td className="px-4 py-2">
-                      <Button variant="ghost" size="sm" onClick={() => openCorrect(r)}><Pencil size={14} /></Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                </SelectContent>
+              </Select>
+            </FormField>
+            <FormField labelKey="status" htmlFor="att-status">
+              <Select value={statusFilter} onValueChange={v => setStatusFilter(v ?? 'ALL')}>
+                <SelectTrigger id="att-status">
+                  <SelectValue>
+                    {statusFilter === 'ALL' ? (
+                      <Bi k="allStatus" />
+                    ) : (
+                      <Bi label={statusLabel(statusFilter)} />
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">
+                    <Bi k="allStatus" />
+                  </SelectItem>
+                  {STATUS_OPTIONS.map(s => (
+                    <SelectItem key={s} value={s}>
+                      <Bi label={statusLabel(s)} />
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
           </div>
+          <Button onClick={fetchData} disabled={loading} className="md:self-start">
+            {loading ? <Loader2 className="animate-spin" /> : null}
+            <Bi k="applyFilters" />
+          </Button>
         </CardContent>
       </Card>
 
-      {/* Correction dialog */}
-      <Dialog open={!!correcting} onOpenChange={() => setCorrecting(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogTitle className="font-semibold">Correct Attendance</DialogTitle>
-          {correcting && <p className="text-sm text-gray-500">{correcting.full_name} — {fmtDate(correcting.date)}</p>}
-          {corrErr && <p className="text-sm text-red-600 bg-red-50 rounded p-2">{corrErr}</p>}
-          <div className="space-y-3">
-            <div className="space-y-1"><Label>Status</Label>
-              <Select value={corrForm.status} onValueChange={v => setCorrForm(f => ({ ...f, status: v || f.status }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s.replace('_', ' ')}</SelectItem>)}</SelectContent>
+      <DataList
+        items={filtered}
+        getKey={r => r.id}
+        columns={columns}
+        renderCard={renderCard}
+        empty={<EmptyState icon={CalendarDays} titleKey="noAttendanceRecords" />}
+      />
+
+      {/* Manual correction — a real form, never a native prompt. */}
+      <Dialog open={!!correcting} onOpenChange={open => { if (!open) closeCorrect() }}>
+        <DialogContent>
+          <DialogTitle>
+            <Bi k="correctAttendance" />
+          </DialogTitle>
+          {correcting ? (
+            <DialogDescription>
+              {correcting.full_name ?? '—'} · {formatDate(correcting.date)}
+            </DialogDescription>
+          ) : null}
+
+          <div className="flex flex-col gap-4">
+            <FormField labelKey="status" htmlFor="corr-status" error={corrError}>
+              <Select
+                value={corrForm.status}
+                onValueChange={v => setCorrForm(f => ({ ...f, status: v ?? f.status }))}
+              >
+                <SelectTrigger id="corr-status">
+                  <SelectValue>
+                    {corrForm.status ? <Bi label={statusLabel(corrForm.status)} /> : null}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map(s => (
+                    <SelectItem key={s} value={s}>
+                      <Bi label={statusLabel(s)} />
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1"><Label>Check-in time</Label><Input type="datetime-local" value={corrForm.check_in_at} onChange={e => setCorrForm(f => ({ ...f, check_in_at: e.target.value }))} /></div>
-            <div className="space-y-1"><Label>Check-out time</Label><Input type="datetime-local" value={corrForm.check_out_at} onChange={e => setCorrForm(f => ({ ...f, check_out_at: e.target.value }))} /></div>
-            <div className="space-y-1"><Label>Notes</Label><Input value={corrForm.notes} onChange={e => setCorrForm(f => ({ ...f, notes: e.target.value }))} /></div>
+            </FormField>
+
+            <FormField labelKey="checkInTime" htmlFor="corr-in">
+              <Input
+                id="corr-in"
+                type="datetime-local"
+                value={corrForm.check_in_at}
+                onChange={e => setCorrForm(f => ({ ...f, check_in_at: e.target.value }))}
+              />
+            </FormField>
+
+            <FormField labelKey="checkOutTime" htmlFor="corr-out">
+              <Input
+                id="corr-out"
+                type="datetime-local"
+                value={corrForm.check_out_at}
+                onChange={e => setCorrForm(f => ({ ...f, check_out_at: e.target.value }))}
+              />
+            </FormField>
+
+            <FormField labelKey="notesOptional" htmlFor="corr-notes">
+              <Textarea
+                id="corr-notes"
+                rows={2}
+                value={corrForm.notes}
+                onChange={e => setCorrForm(f => ({ ...f, notes: e.target.value }))}
+              />
+            </FormField>
           </div>
-          <div className="flex gap-2 pt-2">
-            <Button onClick={saveCorrection} disabled={corrSaving}>{corrSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Correction'}</Button>
-            <Button variant="outline" onClick={() => setCorrecting(null)}>Cancel</Button>
+
+          <div className="flex flex-col gap-2 md:flex-row-reverse">
+            <Button
+              size="lg"
+              className="md:flex-1"
+              disabled={corrSaving}
+              onClick={saveCorrection}
+            >
+              {corrSaving ? <Loader2 className="animate-spin" /> : null}
+              <Bi k="saveCorrection" />
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="md:flex-1"
+              disabled={corrSaving}
+              onClick={closeCorrect}
+            >
+              <Bi k="cancel" />
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

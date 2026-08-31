@@ -10,7 +10,7 @@ export default async function AgentCustomersPage() {
   const session = (await auth()) as Session | null
   if (!session?.user?.id) redirect('/login')
 
-  const role = (session.user as any).role
+  const role = session.user.role
   if (role !== 'COLLECTION_AGENT') redirect('/dashboard')
 
   const agentId = session.user.id
@@ -42,7 +42,7 @@ export default async function AgentCustomersPage() {
     .map(r => r.customer_id)
     .filter((id): id is string => id !== null)
 
-  let outstandingMap = new Map<string, string>()
+  const outstandingMap = new Map<string, string>()
 
   if (existingIds.length > 0) {
     const [duesAgg, loanAgg, freeformAgg, custBal] = await Promise.all([
@@ -108,5 +108,5 @@ export default async function AgentCustomersPage() {
     outstanding_total: r.customer_id ? (outstandingMap.get(r.customer_id) ?? null) : null,
   }))
 
-  return <AgentCustomersClient initial={data as any} />
+  return <AgentCustomersClient initial={data} />
 }

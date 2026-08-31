@@ -1,25 +1,24 @@
-'use client'
-
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
+import { Bi } from '@/components/ui/bi'
+
 export default function ForgotPasswordPage() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Forgot password?</CardTitle>
-        <CardDescription>Contact your administrator to reset your password</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-sm text-gray-600">
-          Password resets are handled by your system administrator.
-          Please reach out to them directly with your email address and they will reset it for you.
-        </p>
-        <Link href="/login" className="text-sm text-blue-600 hover:underline inline-flex items-center gap-1">
-          <ArrowLeft size={14} /> Back to login
-        </Link>
-      </CardContent>
-    </Card>
+    <div className="rounded-2xl border border-border bg-card p-5 text-card-foreground">
+      <h2 className="text-xl font-bold">
+        <Bi k="forgotPassword" />
+      </h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        <Bi k="forgotPasswordHelp" />
+      </p>
+      <Link
+        href="/login"
+        className="mt-4 inline-flex min-h-12 items-center gap-2 text-base font-medium text-primary hover:underline"
+      >
+        <ArrowLeft aria-hidden="true" className="size-4" />
+        <Bi k="backToLogin" />
+      </Link>
+    </div>
   )
 }

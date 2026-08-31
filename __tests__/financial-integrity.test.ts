@@ -180,3 +180,87 @@ describe('Amount validation: cannot be zero or negative', () => {
   it('accepts 0.01', () => expect(isValidAmount(0.01)).toBe(true))
   it('accepts 1000', () => expect(isValidAmount(1000)).toBe(true))
 })
+
+// ---------------------------------------------------------------------------
+// Loan cash counts toward an agent's handover ONLY once an admin confirms it
+// ---------------------------------------------------------------------------
+describe('reconciliation — loan payment cash rule', () => {
+  it('getCashCollectedCents filters loan payments on CONFIRMED, not just is_reversed', async () => {
+    const src = await Bun.file(
+      new URL('../lib/modules/reconciliation/service.ts', import.meta.url).pathname,
+    ).text()
+
+    const fn = src.slice(src.indexOf('export async function getCashCollectedCents'))
+    const body = fn.slice(0, fn.indexOf('export async function createReconciliation'))
+
+    // `loan_payments.status` defaults to 'PENDING', and rejecting a payment sets
+    // status = 'REJECTED' WITHOUT setting is_reversed. Filtering on is_reversed
+    // alone therefore charged the agent for cash from payments an admin had
+    // explicitly rejected, and from payments nobody had approved yet.
+    expect(body).toContain("eq(loanPayments.status, 'CONFIRMED')")
+    expect(body).toContain('eq(loanPayments.is_reversed, false)')
+
+    // Freeform collections must use the same rule.
+    expect(body).toContain("eq(collections.status, 'CONFIRMED')")
+  })
+
+  it('is the single source of truth — no other file recomputes loan cash inline', async () => {
+    const paths = [
+      '../app/api/reconciliation/route.ts',
+      '../app/(dashboard)/reconciliation/page.tsx',
+    ]
+    for (const rel of paths) {
+      const src = await Bun.file(new URL(rel, import.meta.url).pathname).text()
+      // These three places previously disagreed, so the same agent could be shown
+      // two different figures for "cash you still owe".
+      expect(src).toContain('getCashCollectedCents')
+      expect(src).not.toContain('sum(${loanPayments.amount})')
+    }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// IST date boundaries — these decide which money lands in which report
+// ---------------------------------------------------------------------------
+describe('IST date helpers', () => {
+  it('never derives a calendar date from local accessors on a shifted Date', async () => {
+    const files = [
+      '../app/api/admin/dashboard/route.ts',
+      '../lib/modules/reconciliation/service.ts',
+    ]
+    for (const rel of files) {
+      const raw = await Bun.file(new URL(rel, import.meta.url).pathname).text()
+      // Strip comments first: these files deliberately DOCUMENT the wrong
+      // patterns so nobody reintroduces them, and a naive scan matches the
+      // warning rather than real code.
+      const src = raw
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/(^|[^:])\/\/.*$/gm, '$1')
+
+      // `new Date(Date.now() + 330*60_000)` shifts the instant, but that shift is
+      // only readable with getUTC*. Reading it with getFullYear()/getMonth() —
+      // which are LOCAL — double-shifts on an IST machine, and for the last ~11
+      // hours of a month monthStartIST() returned the 1st of the NEXT month. The
+      // admin KPI filter then became `collected_at >= <future date>` and reported
+      // ₹0 collected while the trend chart showed real money.
+      expect(src).not.toMatch(/330\s*\*\s*60_?000[\s\S]{0,200}?\.getFullYear\(\)/)
+      expect(src).not.toMatch(/330\s*\*\s*60_?000[\s\S]{0,200}?\.getMonth\(\)/)
+
+      // The UTC date is not the IST date between 00:00 and 05:30 IST.
+      expect(src).not.toContain("new Date().toISOString().split('T')[0]")
+    }
+  })
+
+  it('month and year starts align with the IST calendar date', () => {
+    const istDate = (at: Date) =>
+      new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(at)
+
+    // 31 Aug 2026, 21:16 IST — the exact instant that reproduced the bug.
+    const at = new Date('2026-08-31T15:46:46.856Z')
+    const today = istDate(at)
+
+    expect(today).toBe('2026-08-31')
+    expect(`${today.slice(0, 7)}-01`).toBe('2026-08-01')   // was '2026-09-01'
+    expect(`${today.slice(0, 4)}-01-01`).toBe('2026-01-01')
+  })
+})
