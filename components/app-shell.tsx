@@ -18,7 +18,7 @@ import { NotificationBell } from '@/components/notification-bell'
 import {
   BottomNav, PROFILE_ITEM, activeHref, getNavItems, type NavItem, type Role,
 } from '@/components/bottom-nav'
-import { useOnlineStatus } from '@/lib/api-client'
+import { apiPost, useOnlineStatus } from '@/lib/api-client'
 import { useQueueCount } from '@/lib/offline-queue'
 import { formatCount } from '@/lib/format'
 import type { LabelKey } from '@/lib/i18n'
@@ -159,6 +159,15 @@ export function AppShell({ children, userName, userRole }: AppShellProps) {
 
   async function confirmLogout() {
     setSigningOut(true)
+    // Write the LOGOUT audit record BEFORE next-auth clears the session — the
+    // route reads auth() to know who is leaving.
+    //
+    // This used to be fired by a `beforeunload` sendBeacon in IdleLogout, which
+    // was wrong twice over: it logged a "logout" on every page refresh, and it
+    // never fired for a real logout through this button, because signOut() does
+    // not touch that route. So the audit trail recorded refreshes and missed
+    // the actual sign-outs.
+    await apiPost('/api/auth/logout', undefined, { toastOnError: false })
     await signOut({ callbackUrl: '/login' })
   }
 
