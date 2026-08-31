@@ -12,7 +12,7 @@ import { describe, it, expect } from 'bun:test'
 // ── Test helpers ──────────────────────────────────────────────────────────────
 
 const VALID_UUID = '550e8400-e29b-41d4-a716-446655440000'
-const VALID_UUID_2 = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
+const _VALID_UUID_2 = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
 
 // ── Test 1: Schema rejects requests with no auth data ─────────────────────────
 

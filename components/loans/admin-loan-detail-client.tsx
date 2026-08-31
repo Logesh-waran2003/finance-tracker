@@ -629,8 +629,9 @@ export function AdminLoanDetailClient({
           <p className="text-sm text-gray-500">Remaining principal: <span className="font-semibold text-gray-800">{fmt(currentLoan.principal_outstanding)}</span></p>
           <div className="space-y-3 mt-2">
             <div className="space-y-1">
-              <label className="text-sm font-medium">Amount (₹)</label>
+              <label htmlFor="bulk-amount" className="text-sm font-medium">Amount (₹)</label>
               <input
+                id="bulk-amount"
                 type="number" min="1" step="0.01"
                 className="w-full border rounded px-3 py-2 text-sm"
                 placeholder={`Max ${fmt(currentLoan.principal_outstanding)}`}
@@ -639,14 +640,14 @@ export function AdminLoanDetailClient({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Payment Mode</label>
-              <select className="w-full border rounded px-3 py-2 text-sm" value={bulkMode} onChange={e => setBulkMode(e.target.value)}>
+              <label htmlFor="bulk-mode" className="text-sm font-medium">Payment Mode</label>
+              <select id="bulk-mode" className="w-full border rounded px-3 py-2 text-sm" value={bulkMode} onChange={e => setBulkMode(e.target.value)}>
                 {['CASH','UPI','BANK_TRANSFER','CHEQUE','OTHER'].map(m => <option key={m} value={m}>{m}</option>)}
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Notes (optional)</label>
-              <input type="text" className="w-full border rounded px-3 py-2 text-sm" placeholder="e.g. Cash handed at office" value={bulkNotes} onChange={e => setBulkNotes(e.target.value)} />
+              <label htmlFor="bulk-notes" className="text-sm font-medium">Notes (optional)</label>
+              <input id="bulk-notes" type="text" className="w-full border rounded px-3 py-2 text-sm" placeholder="e.g. Cash handed at office" value={bulkNotes} onChange={e => setBulkNotes(e.target.value)} />
             </div>
           </div>
           <div className="flex gap-2 mt-4">

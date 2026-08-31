@@ -14,7 +14,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const agentId = session.user.id
+  const _agentId = session.user.id
 
   const rows = await db.select({
     id: customers.id,

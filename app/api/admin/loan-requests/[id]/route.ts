@@ -1,7 +1,7 @@
 import { db } from '@/lib/db'
 import { loanRequests, customers, profiles, notifications, auditLogs } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq, and, sql } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { requireAdmin, isResponse } from '@/lib/auth/authorize'
 import { createLoan } from '@/lib/modules/loans/service'
 import { ServiceError } from '@/lib/modules/errors'
@@ -23,7 +23,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  const { action, agent_id, rejection_reason } = body
+  const { action, _agent_id, rejection_reason } = body
 
   if (action !== 'approve' && action !== 'reject') {
     return NextResponse.json({ error: 'action must be "approve" or "reject"' }, { status: 400 })

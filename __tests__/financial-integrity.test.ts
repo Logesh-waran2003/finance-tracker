@@ -13,7 +13,7 @@ type DueStatus = 'OPEN' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE' | 'CANCELLED'
 type ExpenseStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 
 const TERMINAL_DUE_STATUSES: DueStatus[] = ['PAID', 'CANCELLED']
-const TERMINAL_COLLECTION_STATUSES: CollectionStatus[] = ['CONFIRMED', 'REJECTED', 'CANCELLED']
+const _TERMINAL_COLLECTION_STATUSES: CollectionStatus[] = ['CONFIRMED', 'REJECTED', 'CANCELLED']
 
 function canCollectOnDue(status: DueStatus): boolean {
   return !TERMINAL_DUE_STATUSES.includes(status)

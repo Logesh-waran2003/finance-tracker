@@ -1,13 +1,12 @@
 import { db } from '@/lib/db'
-import { loans, customers, loanSchedules } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq, and, isNull, sql } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
 import { requireAgent, isResponse } from '@/lib/auth/authorize'
 
 export async function GET() {
   const userOrRes = await requireAgent()
   if (isResponse(userOrRes)) return userOrRes
-  const actor = userOrRes
+  const _actor = userOrRes
 
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())
 

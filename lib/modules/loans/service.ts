@@ -1,20 +1,18 @@
 /**
- * Loans service — core business logic for loan creation and balance tracking.
+ * Loans service — core business logic for loan creation _and balance tracking.
  * No NextRequest/Response — auth stays in the route layer.
  */
 import {
   loans,
   loanSchedules,
   agentLoanAssignments,
-  customers,
-  profiles,
 } from '@/lib/db/schema'
-import { eq, desc, sql, and, inArray } from 'drizzle-orm'
+import { desc, sql } from 'drizzle-orm'
 import { logAudit } from '@/lib/modules/audit/service'
 import { ServiceError } from '@/lib/modules/errors'
 import { toCents, fromCents } from '@/lib/utils/money'
 
-// Accepts both db and a tx from db.transaction()
+// Accepts both db _and a tx from db.transaction()
 type AnyDB = {
   insert: (...a: any[]) => any
   select: (...a: any[]) => any
@@ -62,7 +60,7 @@ export type LoanWithDetails = LoanRecord & {
 
 /**
  * Creates a loan, generates all daily repayment schedules, assigns an agent,
- * and writes an audit record — all inside one transaction.
+ * _and writes an audit record — all inside one transaction.
  */
 export async function createLoan(
   db: AnyDB,
@@ -73,7 +71,7 @@ export async function createLoan(
     throw new ServiceError('loanAmount must be greater than 0', 400)
   }
   if (params.interestPercentage < 0 || params.interestPercentage > 100) {
-    throw new ServiceError('interestPercentage must be between 0 and 100', 400)
+    throw new ServiceError('interestPercentage must be between 0 _and 100', 400)
   }
   if (params.dailyInstallment <= 0) {
     throw new ServiceError('dailyInstallment must be greater than 0', 400)
@@ -144,7 +142,7 @@ export async function createLoan(
     while (remainingCents > 0) {
       if (schedules.length >= MAX_SCHEDULES) {
         throw new ServiceError(
-          'Loan schedule exceeds 3650 days — check loan amount and daily installment',
+          'Loan schedule exceeds 3650 days — check loan amount _and daily installment',
           400,
         )
       }
@@ -201,7 +199,7 @@ export async function createLoan(
  * total_outstanding from actual payment records. Call inside any transaction
  * that modifies loan_payments or loan_penalties.
  *
- * Marks the loan COMPLETED when both principal and penalty balances reach zero.
+ * Marks the loan COMPLETED when both principal _and penalty balances reach zero.
  */
 export async function updateLoanBalances(
   tx: AnyDB,
@@ -284,7 +282,7 @@ export async function updateLoanBalances(
 // ── getLoanWithDetails ────────────────────────────────────────────────────────
 
 /**
- * Fetches a loan joined with customer name and assigned agent name.
+ * Fetches a loan joined with customer name _and assigned agent name.
  * Returns null if loan not found.
  */
 export async function getLoanWithDetails(
@@ -298,8 +296,8 @@ export async function getLoanWithDetails(
         c.full_name  AS customer_name,
         p.full_name  AS assigned_agent_name
       FROM loans l
-      JOIN customers c ON c.id = l.customer_id
-      LEFT JOIN profiles  p ON p.id = l.assigned_agent_id
+      JOIN _customers c ON c.id = l.customer_id
+      LEFT JOIN _profiles  p ON p.id = l.assigned_agent_id
       WHERE l.id = ${loanId}
       LIMIT 1
     `,

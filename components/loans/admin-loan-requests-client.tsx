@@ -116,7 +116,7 @@ function fmtDateTime(s: string | null | undefined) {
   })
 }
 
-export default function AdminLoanRequestsClient({ initial, agents }: Props) {
+export default function AdminLoanRequestsClient({ initial, agents: _agents }: Props) {
   const [requests, setRequests] = useState<LoanRequestRow[]>(initial)
   const [filter, setFilter] = useState<FilterTab>('ALL')
 

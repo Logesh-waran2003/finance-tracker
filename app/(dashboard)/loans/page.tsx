@@ -12,7 +12,7 @@ export default async function AgentLoansPage() {
   const user = session.user as any
   if (!['COLLECTION_AGENT', 'ADMIN'].includes(user.role)) redirect('/dashboard')
 
-  const agentId = session.user.id as string
+  const _agentId = session.user.id as string
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())
 
   const loanRows = await db.execute(sql`

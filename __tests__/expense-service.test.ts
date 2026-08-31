@@ -54,11 +54,11 @@ describe('createExpense — category not found', () => {
 
 describe('createExpense — category exists', () => {
   it('creates expense with PENDING status', async () => {
-    let insertCallCount = 0
+    let _insertCallCount = 0
     const db = {
       select: () => selectChain([{ id: UUID2 }]), // category found
       insert: () => {
-        insertCallCount++
+        _insertCallCount++
         const chain: any = { returning: () => Promise.resolve([STUB_EXPENSE]) }; chain.onConflictDoNothing = () => chain; return { values: () => chain }
       },
     } as any
@@ -157,7 +157,7 @@ describe('approveExpense — branch isolation', () => {
 
 describe('approveExpense — approval writes DEBIT ledger entry', () => {
   it('sets status APPROVED and writes ledger insert', async () => {
-    let insertCallCount = 0
+    let _insertCallCount = 0
     const approved = { ...STUB_EXPENSE, status: 'APPROVED' }
 
     const txMock = {
@@ -165,7 +165,7 @@ describe('approveExpense — approval writes DEBIT ledger entry', () => {
         set: () => ({ where: () => ({ returning: () => Promise.resolve([approved]) }) }),
       }),
       insert: () => {
-        insertCallCount++
+        _insertCallCount++
         return { values: () => ({ returning: () => Promise.resolve([{ id: 'x' }]) }) }
       },
     }
@@ -182,13 +182,13 @@ describe('approveExpense — approval writes DEBIT ledger entry', () => {
 
     expect((result as any).status).toBe('APPROVED')
     // audit insert (1) + ledger insert (2)
-    expect(insertCallCount).toBeGreaterThanOrEqual(2)
+    expect(_insertCallCount).toBeGreaterThanOrEqual(2)
   })
 })
 
 describe('approveExpense — rejection does NOT write ledger entry', () => {
   it('sets status REJECTED with reason, only 1 insert (audit log)', async () => {
-    let insertCallCount = 0
+    let _insertCallCount = 0
     const rejected = { ...STUB_EXPENSE, status: 'REJECTED', rejection_reason: 'No receipt' }
 
     const txMock = {
@@ -196,7 +196,7 @@ describe('approveExpense — rejection does NOT write ledger entry', () => {
         set: () => ({ where: () => ({ returning: () => Promise.resolve([rejected]) }) }),
       }),
       insert: () => {
-        insertCallCount++
+        _insertCallCount++
         return { values: () => ({ returning: () => Promise.resolve([{}]) }) }
       },
     }
@@ -212,6 +212,6 @@ describe('approveExpense — rejection does NOT write ledger entry', () => {
     })
 
     expect((result as any).status).toBe('REJECTED')
-    expect(insertCallCount).toBe(1) // audit only, no ledger
+    expect(_insertCallCount).toBe(1) // audit only, no ledger
   })
 })

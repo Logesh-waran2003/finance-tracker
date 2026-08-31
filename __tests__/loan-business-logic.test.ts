@@ -96,7 +96,7 @@ function selectChain(rows: unknown[]) {
 }
 
 /** Minimal insert chain that always returns rows */
-function insertReturningOnce(rows: unknown[]) {
+function _insertReturningOnce(rows: unknown[]) {
   return {
     insert: () => ({
       values: () => ({ returning: () => Promise.resolve(rows) }),
@@ -533,7 +533,7 @@ describe('Missed payment idempotency', () => {
       loan_status: 'ACTIVE',
     }
 
-    let scheduleUpdateCalled = false
+    let _scheduleUpdateCalled = false
 
     const tx = {
       execute: executeQueue([
@@ -543,7 +543,7 @@ describe('Missed payment idempotency', () => {
       insert: () => ({ values: () => ({ returning: () => Promise.resolve([{}]) }) }),
       select: () => selectChain([]),
       update: () => {
-        scheduleUpdateCalled = true
+        _scheduleUpdateCalled = true
         return { set: () => ({ where: () => Promise.resolve() }) }
       },
     } as any
@@ -569,7 +569,7 @@ describe('Missed payment idempotency', () => {
       loan_status: 'ACTIVE',
     }
 
-    const scheduleUpdates: string[] = []
+    const _scheduleUpdates: string[] = []
     const tx = {
       execute: (() => {
         let call = 0
@@ -614,7 +614,7 @@ describe('Payment reversal', () => {
       amount: '50.00', is_reversed: false,
     }
 
-    const executeUpdates: string[] = []
+    const _executeUpdates: string[] = []
     const tx = {
       execute: (() => {
         let call = 0
@@ -653,7 +653,7 @@ describe('Payment reversal', () => {
 
   it('after reversal: principal_collected decreases, principal_outstanding increases', () => {
     // Pure math: after reversal removes a ₹50 payment from ₹10,000 with ₹500 collected
-    const beforeCollected  = 500
+    const _beforeCollected  = 500
     const afterCollected   = 500 - 50 // reversal removes one payment
     const outstandingAfter = calcPrincipalOutstanding(10000, afterCollected)
     expect(afterCollected).toBe(450)

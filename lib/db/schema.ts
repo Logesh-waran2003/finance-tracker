@@ -254,7 +254,7 @@ export const expenses = pgTable('expenses', {
   deleted_at: timestamp('deleted_at', { withTimezone: true }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-}, (t) => [
+}, (_t) => [
   check('chk_expenses_amount_positive', sql`amount > 0`),
 ])
 

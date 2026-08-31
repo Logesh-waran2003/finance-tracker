@@ -1,9 +1,21 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import type { Metadata, Viewport } from 'next'
+import { Inter, Noto_Sans_Tamil } from 'next/font/google'
 import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
+import { ThemeProvider } from '@/components/theme-provider'
+import { ServiceWorkerRegistrar } from '@/components/sw-register'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+})
+
+const notoSansTamil = Noto_Sans_Tamil({
+  subsets: ['tamil', 'latin'],
+  variable: '--font-tamil',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'Finance Tracker',
@@ -11,16 +23,28 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
 }
 
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#fbfcfd' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b0d12' },
+  ],
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover',
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <meta name="theme-color" content="#1d4ed8" />
-      </head>
-      <body className={inter.className}>
-        {children}
-        <Toaster richColors position="top-right" />
+      <body
+        className={`${inter.variable} ${notoSansTamil.variable} font-sans antialiased`}
+      >
+        <ThemeProvider>
+          {children}
+          <ServiceWorkerRegistrar />
+          <Toaster richColors closeButton position="top-center" />
+        </ThemeProvider>
       </body>
     </html>
   )

@@ -2,10 +2,9 @@
  * Loan schedule service — daily schedule queries and missed-payment cron logic.
  * No NextRequest/Response — auth stays in the route layer.
  */
-import { loanSchedules, loanPenalties, loans } from '@/lib/db/schema'
-import { eq, sql } from 'drizzle-orm'
+import { loanSchedules, loanPenalties } from '@/lib/db/schema'
+import { sql } from 'drizzle-orm'
 import { logAudit } from '@/lib/modules/audit/service'
-import { ServiceError } from '@/lib/modules/errors'
 import { updateLoanBalances } from '@/lib/modules/loans/service'
 
 // Accepts both db and a tx from db.transaction()

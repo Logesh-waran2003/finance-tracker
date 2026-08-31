@@ -6,7 +6,7 @@ import { ServiceError } from '@/lib/modules/errors'
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params: _params }: { params: Promise<{ id: string }> },
 ) {
   const userOrRes = await requireAdmin()
   if (isResponse(userOrRes)) return userOrRes

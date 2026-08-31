@@ -43,7 +43,7 @@ function fmt(n: number | string | null | undefined) {
   return `₹${(isNaN(v) ? 0 : v).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
 }
 
-function fmtDate(s: string | null | undefined) {
+function _fmtDate(s: string | null | undefined) {
   if (!s) return '—'
   return new Date(s).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
 }

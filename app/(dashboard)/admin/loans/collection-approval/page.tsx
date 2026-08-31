@@ -2,7 +2,7 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { loanPayments, loans, customers, profiles } from '@/lib/db/schema'
-import { eq, and, isNull } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import type { Session } from 'next-auth'
 import AdminCollectionApprovalClient from '@/components/loans/admin-collection-approval-client'
 

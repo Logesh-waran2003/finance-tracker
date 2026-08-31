@@ -1,7 +1,7 @@
 import { db } from '@/lib/db'
 import { collections, dues, customers } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq, and, isNull, sql } from 'drizzle-orm'
+import { eq, and, isNull } from 'drizzle-orm'
 import { requireAdmin, isResponse } from '@/lib/auth/authorize'
 import { parseBody, adminCollectionActionSchema } from '@/lib/validation'
 import { writeLedgerEntry } from '@/lib/modules/ledger/service'

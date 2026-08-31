@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Bell, AlertCircle, Info, AlertTriangle, CheckSquare, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { apiGet } from '@/lib/api-client'
 
 interface Notification {
   id?: string
@@ -93,25 +94,30 @@ export function NotificationBell({ userRole }: { userRole?: 'ADMIN' | 'COLLECTIO
   const [loading, setLoading] = useState(false)
   const [dismissed, setDismissed] = useState<Set<number>>(new Set())
 
-  async function fetchNotifications() {
+  // useCallback + a real dependency array: the effect below polls on an
+  // interval, and an unlisted dependency here is how a poller silently keeps
+  // calling a stale endpoint after the prop changes.
+  const fetchNotifications = useCallback(async () => {
     setLoading(true)
-    try {
-      const res = await fetch(endpoint)
-      if (res.ok) {
-        const data = await res.json()
-        setNotifications(data.notifications ?? [])
-        setCount(data.count ?? 0)
-        setDismissed(new Set())
-      }
-    } catch {}
+    // apiGet never throws — the empty catch this replaces swallowed every
+    // failure, so a broken notifications endpoint looked like "no notifications".
+    const res = await apiGet<{ notifications?: Notification[]; count?: number }>(
+      endpoint,
+      { toastOnError: false },
+    )
+    if (res.ok) {
+      setNotifications(res.data.notifications ?? [])
+      setCount(res.data.count ?? 0)
+      setDismissed(new Set())
+    }
     setLoading(false)
-  }
+  }, [endpoint])
 
   useEffect(() => {
     fetchNotifications()
     const interval = setInterval(fetchNotifications, 2 * 60 * 1000)
     return () => clearInterval(interval)
-  }, [])
+  }, [fetchNotifications])
 
   const visible = notifications.filter((_, i) => !dismissed.has(i))
   const visibleCount = visible.length

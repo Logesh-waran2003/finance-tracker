@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { loans, loanSchedules, loanPayments } from '@/lib/db/schema'
+import { loanSchedules, loanPayments } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq, and, sql } from 'drizzle-orm'
 import { requireAdmin, isResponse } from '@/lib/auth/authorize'

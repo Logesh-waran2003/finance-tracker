@@ -4,7 +4,7 @@
  *
  * Run: bun test
  */
-import { describe, it, expect, beforeEach } from 'bun:test'
+import { describe, it, expect } from 'bun:test'
 
 // ---------------------------------------------------------------------------
 // Helpers — mock next-auth session
@@ -19,7 +19,7 @@ type MockUser = {
   employee_code: string | null
 }
 
-const ADMIN: MockUser = {
+const _ADMIN: MockUser = {
   id: 'admin-uuid-0001',
   email: 'admin@demo.com',
   name: 'Admin User',
@@ -28,7 +28,7 @@ const ADMIN: MockUser = {
   employee_code: 'EMP-001',
 }
 
-const AGENT_A: MockUser = {
+const _AGENT_A: MockUser = {
   id: 'agent-uuid-0001',
   email: 'agent-a@demo.com',
   name: 'Agent A',
@@ -37,7 +37,7 @@ const AGENT_A: MockUser = {
   employee_code: 'EMP-002',
 }
 
-const AGENT_B: MockUser = {
+const _AGENT_B: MockUser = {
   id: 'agent-uuid-0002',
   email: 'agent-b@demo.com',
   name: 'Agent B',

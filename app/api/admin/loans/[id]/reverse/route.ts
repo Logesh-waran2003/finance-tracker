@@ -12,7 +12,7 @@ export async function POST(
   if (isResponse(userOrRes)) return userOrRes
   const actor = userOrRes
 
-  const { id: loanId } = await params
+  const { id: _loanId } = await params
 
   try {
     const { payment_id, reason } = await request.json()

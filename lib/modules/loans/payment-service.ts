@@ -2,7 +2,7 @@
  * Loan payment service — collect installments, reverse payments, waive penalties.
  * No NextRequest/Response — auth stays in the route layer.
  */
-import { loanPayments, loanSchedules, paymentReversals, loanPenalties } from '@/lib/db/schema'
+import { loanPayments, paymentReversals } from '@/lib/db/schema'
 import { sql } from 'drizzle-orm'
 import { logAudit } from '@/lib/modules/audit/service'
 import { writeLedgerEntry } from '@/lib/modules/ledger/service'

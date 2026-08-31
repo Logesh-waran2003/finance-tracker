@@ -1,8 +1,8 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
-import { collections, customers, dues, loans, loanPayments } from '@/lib/db/schema'
-import { eq, and, desc, sql, isNull, inArray, ne } from 'drizzle-orm'
+import { collections, customers, dues, loans } from '@/lib/db/schema'
+import { eq, and, desc, sql, isNull, ne } from 'drizzle-orm'
 import { CollectionForm } from '@/components/collections/collection-form'
 import type { Session } from 'next-auth'
 

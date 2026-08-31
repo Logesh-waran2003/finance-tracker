@@ -8,7 +8,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
 
 interface PendingPayment {
   id: string

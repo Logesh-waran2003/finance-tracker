@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, CreditCard, Users, Clock, Settings, Banknote, ClipboardList } from 'lucide-react'
+import { LayoutDashboard, CreditCard, Users, Clock, Banknote, ClipboardList } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type Role = 'ADMIN' | 'COLLECTION_AGENT' | 'STAFF'

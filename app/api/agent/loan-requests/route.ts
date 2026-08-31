@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { loanRequests, customers, profiles, notifications } from '@/lib/db/schema'
+import { loanRequests, profiles, notifications } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq, and, desc, sql } from 'drizzle-orm'
 import { requireAgent, isResponse } from '@/lib/auth/authorize'
