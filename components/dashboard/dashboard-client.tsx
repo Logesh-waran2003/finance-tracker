@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { GMapsLink } from '@/components/ui/gmaps-link'
 import { Bi } from '@/components/ui/bi'
 import { Money } from '@/components/ui/money'
 import { StatTile } from '@/components/ui/stat-tile'
@@ -224,17 +225,7 @@ export default function DashboardClient() {
       header: <Bi k="location" />,
       cell: row =>
         row.check_in_gps_lat && row.check_in_gps_lng ? (
-          // Not <GMapsLink>: that component hardcodes `text-blue-600` and an
-          // English string, both of which the contract forbids here.
-          <a
-            href={`https://maps.google.com/?q=${encodeURIComponent(`${row.check_in_gps_lat},${row.check_in_gps_lng}`)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary hover:underline"
-          >
-            <MapPin aria-hidden="true" className="size-4" />
-            <Bi k="viewOnMap" />
-          </a>
+          <GMapsLink query={`${row.check_in_gps_lat},${row.check_in_gps_lng}`} />
         ) : (
           <span className="text-sm text-muted-foreground">—</span>
         ),

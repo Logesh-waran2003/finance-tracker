@@ -597,6 +597,8 @@ export const labels = {
   dashboardLoadFailed: { en: 'Could not load the dashboard' },
   location: { en: 'Location' },
   viewOnMap: { en: 'View on map' },
+  locationBlockedHelp: { en: 'Location access is blocked. Follow these steps to turn it on:' },
+  gotIt: { en: 'Got it' },
 
   // --- profile / appearance ---
   useDarkScreenHint: { en: 'Easier on the eyes indoors and at night.' },

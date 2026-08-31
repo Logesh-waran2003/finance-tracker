@@ -1,6 +1,7 @@
 'use client'
 
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { Bi } from '@/components/ui/bi'
 import { Button } from '@/components/ui/button'
 import { MapPin } from 'lucide-react'
 
@@ -93,19 +94,23 @@ export function LocationDeniedDialog({ open, onClose }: Props) {
     <Dialog open={open} onOpenChange={open => { if (!open) onClose() }}>
       <DialogContent className="w-[calc(100vw-2rem)] max-w-sm rounded-xl">
         <DialogTitle className="flex items-center gap-2 font-semibold">
-          <MapPin size={16} className="text-red-500" />
+          <MapPin aria-hidden="true" className="size-5 shrink-0 text-danger" />
           {info.title}
         </DialogTitle>
-        <p className="text-sm text-gray-500">Location access is blocked. Follow these steps to enable it:</p>
+        <p className="text-sm text-muted-foreground">
+          <Bi k="locationBlockedHelp" />
+        </p>
         <ol className="space-y-2 mt-1">
           {info.steps.map((step, i) => (
             <li key={i} className="flex gap-2 text-sm">
-              <span className="font-bold text-blue-600 shrink-0">{i + 1}.</span>
-              <span className="text-gray-700">{step}</span>
+              <span className="shrink-0 font-bold text-primary">{i + 1}.</span>
+              <span className="text-foreground">{step}</span>
             </li>
           ))}
         </ol>
-        <Button className="w-full mt-2" onClick={onClose}>Got it</Button>
+        <Button className="mt-2 w-full" onClick={onClose}>
+          <Bi k="gotIt" />
+        </Button>
       </DialogContent>
     </Dialog>
   )
