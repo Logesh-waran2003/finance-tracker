@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { branches } from '@/lib/db/schema'
+import { branches, auditLogs } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { asc, eq } from 'drizzle-orm'
 import { requireAdmin, isResponse } from '@/lib/auth/authorize'
@@ -10,7 +10,6 @@ export async function GET() {
   if (isResponse(userOrRes)) return userOrRes
   const actor = userOrRes
 
-  // Branch isolation — scoped admins only see their own branch; super-admins see all
   const data = await db
     .select()
     .from(branches)
@@ -22,6 +21,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const userOrRes = await requireAdmin()
   if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const parsed = await parseBody(request, createBranchSchema)
   if (!parsed.ok) return parsed.response
@@ -37,6 +37,17 @@ export async function POST(request: Request) {
     email: data.email ?? null,
     is_active: true,
   }).returning()
+
+  db.insert(auditLogs).values({
+    actor_id: actor.id,
+    actor_name: actor.name,
+    actor_email: actor.email,
+    action: 'CREATE',
+    entity_type: 'branch',
+    entity_id: branch.id,
+    after_data: { name: branch.name, code: branch.code },
+    branch_id: actor.branch_id,
+  }).catch(() => {})
 
   return NextResponse.json(branch, { status: 201 })
 }

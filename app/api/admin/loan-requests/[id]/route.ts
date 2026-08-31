@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { loanRequests, customers, profiles, notifications } from '@/lib/db/schema'
+import { loanRequests, customers, profiles, notifications, auditLogs } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq, and, sql } from 'drizzle-orm'
 import { requireAdmin, isResponse } from '@/lib/auth/authorize'
@@ -64,6 +64,17 @@ export async function PATCH(
         })
         .where(eq(loanRequests.id, id))
         .returning()
+
+      db.insert(auditLogs).values({
+        actor_id: actor.id,
+        actor_name: actor.name,
+        actor_email: actor.email,
+        action: 'REJECT',
+        entity_type: 'loan_request',
+        entity_id: id,
+        after_data: { request_number: loanReq.request_number, reason: rejection_reason ?? null },
+        branch_id: actor.branch_id,
+      }).catch(() => {})
 
       return NextResponse.json(updated)
     }
@@ -171,6 +182,17 @@ export async function PATCH(
           : null
       )
       .catch(() => {})
+
+    db.insert(auditLogs).values({
+        actor_id: actor.id,
+        actor_name: actor.name,
+        actor_email: actor.email,
+        action: 'APPROVE',
+        entity_type: 'loan_request',
+        entity_id: id,
+        after_data: { request_number: loanReq.request_number, loan_number: loan.loan_number },
+        branch_id: actor.branch_id,
+      }).catch(() => {})
 
     return NextResponse.json({ ...updated, loan })
   } catch (err) {

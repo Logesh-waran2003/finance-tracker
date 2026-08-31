@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { settings } from '@/lib/db/schema'
+import { settings, auditLogs } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq } from 'drizzle-orm'
 import { requireAdmin, isResponse } from '@/lib/auth/authorize'
@@ -16,6 +16,7 @@ export async function GET() {
 export async function PATCH(request: Request) {
   const userOrRes = await requireAdmin()
   if (isResponse(userOrRes)) return userOrRes
+  const actor = userOrRes
 
   const parsed = await parseBody(request, updateSettingsSchema)
   if (!parsed.ok) return parsed.response
@@ -36,6 +37,16 @@ export async function PATCH(request: Request) {
     const [inserted] = await db.insert(settings).values(updates as any).returning()
     result = inserted
   }
+
+  db.insert(auditLogs).values({
+    actor_id: actor.id,
+    actor_name: actor.name,
+    actor_email: actor.email,
+    action: 'UPDATE',
+    entity_type: 'settings',
+    after_data: Object.fromEntries(Object.entries(updates).filter(([k]) => k !== 'updated_at')),
+    branch_id: actor.branch_id,
+  }).catch(() => {})
 
   return NextResponse.json(result)
 }

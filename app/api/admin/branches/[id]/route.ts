@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { branches } from '@/lib/db/schema'
+import { branches, auditLogs } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq } from 'drizzle-orm'
 import { requireAdmin, isResponse } from '@/lib/auth/authorize'
@@ -12,7 +12,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const { id } = await params
 
-  // IDOR: branch-scoped admin can only modify their own branch
   if (actor.branch_id && actor.branch_id !== id) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
@@ -30,5 +29,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const [updated] = await db.update(branches).set(updates).where(eq(branches.id, id)).returning()
   if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  db.insert(auditLogs).values({
+    actor_id: actor.id,
+    actor_name: actor.name,
+    actor_email: actor.email,
+    action: 'UPDATE',
+    entity_type: 'branch',
+    entity_id: id,
+    after_data: Object.fromEntries(Object.entries(updates).filter(([k]) => k !== 'updated_at')),
+    branch_id: actor.branch_id,
+  }).catch(() => {})
+
   return NextResponse.json(updated)
 }

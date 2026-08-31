@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { db } from '@/lib/db'
-import { profiles } from '@/lib/db/schema'
+import { profiles, auditLogs } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 
@@ -33,6 +33,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           .update(profiles)
           .set({ last_login_at: new Date() })
           .where(eq(profiles.id, user.id))
+
+        await db.insert(auditLogs).values({
+          actor_id: user.id,
+          actor_name: user.full_name,
+          actor_email: user.email,
+          action: 'LOGIN',
+          entity_type: 'session',
+          entity_id: user.id,
+          after_data: { role: user.role, branch_id: user.branch_id ?? null },
+        })
 
         return {
           id: user.id,

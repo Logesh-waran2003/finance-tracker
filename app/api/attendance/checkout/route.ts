@@ -1,4 +1,5 @@
 import { db } from '@/lib/db'
+import { auditLogs } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { requireRole, isResponse } from '@/lib/auth/authorize'
 import { parseBody, attendanceGpsSchema } from '@/lib/validation'
@@ -21,6 +22,16 @@ export async function POST(request: Request) {
       gpsLng: gps_lng,
       gpsAccuracy: gps_accuracy,
     })
+    db.insert(auditLogs).values({
+      actor_id: actor.id,
+      actor_name: actor.name,
+      actor_email: actor.email,
+      action: 'CHECK_OUT',
+      entity_type: 'attendance',
+      entity_id: record.id,
+      after_data: { date: record.date, total_hours: record.total_hours ?? null },
+      branch_id: actor.branch_id,
+    }).catch(() => {})
     return NextResponse.json(record)
   } catch (err) {
     if (err instanceof ServiceError) {
