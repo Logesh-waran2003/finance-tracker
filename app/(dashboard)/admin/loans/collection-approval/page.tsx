@@ -4,13 +4,15 @@ import { db } from '@/lib/db'
 import { loanPayments, loans, customers, profiles } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import type { Session } from 'next-auth'
-import AdminCollectionApprovalClient from '@/components/loans/admin-collection-approval-client'
+import AdminCollectionApprovalClient, {
+  type PendingLoanPayment,
+} from '@/components/loans/admin-collection-approval-client'
 
 export default async function CollectionApprovalPage() {
   const session = (await auth()) as Session | null
-  if (!session?.user?.id || (session.user as any).role !== 'ADMIN') redirect('/dashboard')
+  if (!session?.user?.id || session.user.role !== 'ADMIN') redirect('/dashboard')
 
-  const branchId = (session.user as any).branch_id as string | null
+  const branchId = session.user.branch_id
 
   const baseWhere = [
     eq(loanPayments.status, 'PENDING'),
@@ -41,6 +43,8 @@ export default async function CollectionApprovalPage() {
     .orderBy(loanPayments.updated_at)
     .limit(200)
 
-  return <AdminCollectionApprovalClient initial={rows as any} />
+  return (
+    <AdminCollectionApprovalClient initial={rows as unknown as PendingLoanPayment[]} />
+  )
 }
 

@@ -1,40 +1,37 @@
 'use client'
 
-import React, { useState } from 'react'
-import { Loader2 } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
+/**
+ * One day of loan installments across every agent.
+ *
+ * Expected is amber (money still to come in), collected is green (money that
+ * has arrived), missed is red. Getting those three the wrong way round would
+ * tell an admin a bad day was a good one.
+ */
+
+import { useState } from 'react'
+import { CalendarX2, Coins, Loader2, TrendingUp, TriangleAlert } from 'lucide-react'
+
+import { Bi } from '@/components/ui/bi'
+import { Button } from '@/components/ui/button'
+import { DataList, type DataListColumn } from '@/components/ui/data-list'
+import { EmptyState } from '@/components/ui/empty-state'
+import { FormField } from '@/components/ui/form-field'
+import { Input } from '@/components/ui/input'
+import { Money } from '@/components/ui/money'
+import { PageHeader } from '@/components/ui/page-header'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { cn } from '@/lib/utils'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { StatTile } from '@/components/ui/stat-tile'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { apiGet } from '@/lib/api-client'
+import { labels, type LabelKey } from '@/lib/i18n'
 
-const STATUS_COLOR: Record<string, string> = {
-  ACTIVE: 'bg-green-100 text-green-700',
-  OVERDUE: 'bg-red-100 text-red-700',
-  COMPLETED: 'bg-blue-100 text-blue-700',
-  CANCELLED: 'bg-gray-100 text-gray-500',
-  DRAFT: 'bg-yellow-100 text-yellow-700',
-  PENDING: 'bg-yellow-100 text-yellow-700',
-  PAID: 'bg-green-100 text-green-700',
-  MISSED: 'bg-red-100 text-red-700',
-}
-
-function fmt(n: number | string) {
-  const v = typeof n === 'string' ? parseFloat(n) : n
-  return `₹${(isNaN(v) ? 0 : v).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
-}
-
-function _fmtDate(s: string | null | undefined) {
-  if (!s) return '—'
-  return new Date(s).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-}
-
-interface MonitoringRow {
+export interface MonitoringRow {
   customer_name: string
   agent_name: string
   loan_number: string
@@ -45,14 +42,19 @@ interface MonitoringRow {
   principal_outstanding: string
 }
 
-interface Agent {
+export interface MonitoringAgent {
   id: string
   full_name: string
 }
 
-interface Summary {
-  expected: number
-  collected: number
+export interface MonitoringSummary {
+  /**
+   * Money as a string from the server page (summed in integer paise) or as a
+   * number from the JSON API. <Money> takes either and formats from the value
+   * it is given — nothing here parses it for display.
+   */
+  expected: string | number
+  collected: string | number
   pending: number
   missed: number
 }
@@ -60,12 +62,24 @@ interface Summary {
 interface Props {
   initialRows: MonitoringRow[]
   initialDate: string
-  agents: Agent[]
-  summary: Summary
+  agents: MonitoringAgent[]
+  summary: MonitoringSummary
 }
 
-const STATUS_FILTERS = ['All', 'Pending', 'Paid', 'Missed'] as const
-type StatusFilter = (typeof STATUS_FILTERS)[number]
+const STATUS_FILTERS: { value: string; labelKey: LabelKey }[] = [
+  { value: '', labelKey: 'filterAll' },
+  { value: 'PENDING', labelKey: 'statusPending' },
+  { value: 'PAID', labelKey: 'statusPaid' },
+  { value: 'MISSED', labelKey: 'missed' },
+]
+
+/**
+ * MISSED is not in the canonical status map, so it would render as a grey
+ * "unknown". OVERDUE says the same thing to an admin and is red.
+ */
+function badgeStatus(scheduleStatus: string): string {
+  return scheduleStatus?.toUpperCase() === 'MISSED' ? 'OVERDUE' : scheduleStatus
+}
 
 export default function AdminLoanMonitoringClient({
   initialRows,
@@ -74,185 +88,197 @@ export default function AdminLoanMonitoringClient({
   summary: initialSummary,
 }: Props) {
   const [rows, setRows] = useState<MonitoringRow[]>(initialRows)
-  const [summary, setSummary] = useState<Summary>(initialSummary)
+  const [summary, setSummary] = useState<MonitoringSummary>(initialSummary)
   const [date, setDate] = useState(initialDate)
   const [agentId, setAgentId] = useState('')
   const [loading, setLoading] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('All')
+  const [statusFilter, setStatusFilter] = useState('')
 
-  async function fetchData(d: string, aId: string) {
+  async function load(nextDate: string, nextAgentId: string) {
     setLoading(true)
-    try {
-      const params = new URLSearchParams({ date: d })
-      if (aId) params.set('agent_id', aId)
-      const res = await fetch(`/api/admin/loans/monitoring?${params}`)
-      if (!res.ok) throw new Error('fetch failed')
-      const data = await res.json()
-      setRows(data.rows ?? [])
-      setSummary(data.summary ?? { expected: 0, collected: 0, pending: 0, missed: 0 })
-    } catch {
-      // keep existing data on error
-    } finally {
-      setLoading(false)
-    }
+    const params = new URLSearchParams({ date: nextDate })
+    if (nextAgentId) params.set('agent_id', nextAgentId)
+    const res = await apiGet<{ rows: MonitoringRow[]; summary: MonitoringSummary }>(
+      `/api/admin/loans/monitoring?${params.toString()}`
+    )
+    setLoading(false)
+    // On failure the previous day's rows and totals stay on screen unchanged,
+    // rather than blanking to zero and looking like a day with no collections.
+    if (!res.ok) return
+    setRows(res.data.rows ?? [])
+    setSummary(res.data.summary ?? { expected: 0, collected: 0, pending: 0, missed: 0 })
   }
 
-  function handleDateChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const d = e.target.value
-    setDate(d)
-    fetchData(d, agentId)
-  }
+  const filtered = statusFilter
+    ? rows.filter((r) => r.schedule_status?.toUpperCase() === statusFilter)
+    : rows
 
-  function handleAgentChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const a = e.target.value
-    setAgentId(a)
-    fetchData(date, a)
-  }
-
-  const filteredRows = rows.filter((r) => {
-    if (statusFilter === 'All') return true
-    return r.schedule_status.toUpperCase() === statusFilter.toUpperCase()
-  })
+  const columns: DataListColumn<MonitoringRow>[] = [
+    {
+      key: 'customer',
+      header: <Bi k="customer" />,
+      primary: true,
+      cell: (r) => (
+        <div className="min-w-0">
+          <p className="truncate font-medium">{r.customer_name}</p>
+          <p className="truncate text-xs text-muted-foreground">{r.loan_number}</p>
+        </div>
+      ),
+    },
+    {
+      key: 'agent',
+      header: <Bi k="agent" />,
+      cell: (r) => <span className="text-muted-foreground">{r.agent_name}</span>,
+    },
+    {
+      key: 'paid',
+      /**
+       * The `paid` figure comes from a join that includes payments an admin has
+       * NOT approved yet, so it is only green — money in — once the installment
+       * itself is PAID. An unapproved amount is amber and says so; green there
+       * would report cash as banked while the agent is still holding it.
+       */
+      header: <Bi k="paidAmount" />,
+      cell: (r) => {
+        if (!r.paid) return <span className="text-muted-foreground">—</span>
+        const cleared = r.schedule_status?.toUpperCase() === 'PAID'
+        return (
+          <span className="flex flex-col items-end gap-0.5 md:items-start">
+            <Money value={r.paid} size="caption" intent={cleared ? 'in' : 'owed'} />
+            {cleared ? null : (
+              <span className="text-xs text-warning-muted-foreground">
+                <Bi k="awaitingApproval" />
+              </span>
+            )}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'penalty',
+      header: <Bi k="penaltyAmount" />,
+      cell: (r) =>
+        r.penalty ? (
+          <Money value={r.penalty} size="caption" intent="owed" />
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      key: 'principal',
+      header: <Bi k="principalOutstanding" />,
+      hideOnMobile: true,
+      cell: (r) => <Money value={r.principal_outstanding} size="caption" intent="owed" />,
+    },
+    {
+      key: 'status',
+      header: <Bi k="status" />,
+      cell: (r) => <StatusBadge status={badgeStatus(r.schedule_status)} />,
+    },
+    {
+      key: 'due',
+      header: <Bi k="dueAmount" />,
+      align: 'right',
+      cell: (r) => <Money value={r.daily_due} size="row" intent="owed" />,
+    },
+  ]
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Loan Monitoring</h1>
-        <p className="text-gray-500">Today&apos;s collection status</p>
-      </div>
+    <div className="flex flex-col gap-5">
+      <PageHeader titleKey="loanMonitoring" subtitle={labels.collectionStatusForDay.en} />
 
-      <div className="flex gap-3 flex-wrap items-center">
-        <input
-          type="date"
-          value={date}
-          onChange={handleDateChange}
-          className="border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
-        />
-        <select
-          value={agentId}
-          onChange={handleAgentChange}
-          className="border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white"
-        >
-          <option value="">All Agents</option>
-          {agents.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.full_name}
-            </option>
-          ))}
-        </select>
-        {loading && <Loader2 className="h-5 w-5 animate-spin text-gray-400" />}
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-gray-500">Expected Today</p>
-            <p className="text-2xl font-bold">{fmt(summary.expected)}</p>
-            <p className="text-xs text-gray-400 mt-1">Total scheduled</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-gray-500">Collected</p>
-            <p className="text-2xl font-bold">{fmt(summary.collected)}</p>
-            <p className="text-xs text-gray-400 mt-1">Payments received</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-gray-500">Pending</p>
-            <p className="text-2xl font-bold">{summary.pending}</p>
-            <p className="text-xs text-gray-400 mt-1">Due today</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-gray-500">Missed</p>
-            <p
-              className={cn(
-                'text-2xl font-bold',
-                summary.missed > 0 ? 'text-red-600' : ''
-              )}
-            >
-              {summary.missed}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">Not collected</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="flex gap-2 flex-wrap">
-        {STATUS_FILTERS.map((f) => (
-          <button
-            key={f}
-            onClick={() => setStatusFilter(f)}
-            className={cn(
-              'px-4 py-1.5 rounded-md text-sm font-medium transition-colors',
-              statusFilter === f
-                ? 'bg-gray-900 text-white'
-                : 'border border-gray-200 hover:bg-gray-50'
-            )}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <FormField labelKey="date" htmlFor="monitoring-date">
+          <Input
+            id="monitoring-date"
+            type="date"
+            value={date}
+            onChange={(e) => {
+              setDate(e.target.value)
+              load(e.target.value, agentId)
+            }}
+          />
+        </FormField>
+        <FormField labelKey="agent" htmlFor="monitoring-agent">
+          <Select
+            value={agentId}
+            onValueChange={(v) => {
+              const next = v ?? ''
+              setAgentId(next)
+              load(date, next)
+            }}
           >
-            {f}
-          </button>
-        ))}
+            <SelectTrigger id="monitoring-agent">
+              <SelectValue placeholder={labels.allAgents.en} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">{labels.allAgents.en}</SelectItem>
+              {agents.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.full_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
       </div>
 
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Customer</TableHead>
-              <TableHead>Agent</TableHead>
-              <TableHead>Loan #</TableHead>
-              <TableHead>Daily Due</TableHead>
-              <TableHead>Paid</TableHead>
-              <TableHead>Penalty</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Principal O/S</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredRows.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={8}
-                  className="text-center text-gray-400 py-10"
-                >
-                  No schedules for this date
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredRows.map((row, i) => (
-                <TableRow key={i}>
-                  <TableCell className="font-medium">
-                    {row.customer_name}
-                  </TableCell>
-                  <TableCell>{row.agent_name}</TableCell>
-                  <TableCell>{row.loan_number}</TableCell>
-                  <TableCell>{fmt(row.daily_due)}</TableCell>
-                  <TableCell>{row.paid ? fmt(row.paid) : '—'}</TableCell>
-                  <TableCell>
-                    {row.penalty ? fmt(row.penalty) : '—'}
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className={cn(
-                        'px-2 py-1 rounded-full text-xs font-medium',
-                        STATUS_COLOR[row.schedule_status] ??
-                          'bg-gray-100 text-gray-500'
-                      )}
-                    >
-                      {row.schedule_status}
-                    </span>
-                  </TableCell>
-                  <TableCell>{fmt(row.principal_outstanding)}</TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Card>
+      <div className="grid grid-cols-2 gap-3">
+        <StatTile
+          icon={Coins}
+          labelKey="expectedToday"
+          value={summary.expected}
+          intent="warning"
+          captionKey="totalScheduled"
+        />
+        <StatTile
+          icon={TrendingUp}
+          labelKey="collected"
+          value={summary.collected}
+          intent="success"
+          captionKey="paymentsReceived"
+        />
+        <StatTile
+          icon={TriangleAlert}
+          labelKey="pending"
+          value={summary.pending}
+          kind="count"
+          intent="info"
+          captionKey="stillToCollect"
+        />
+        <StatTile
+          icon={CalendarX2}
+          labelKey="missed"
+          value={summary.missed}
+          kind="count"
+          intent={summary.missed > 0 ? 'danger' : 'neutral'}
+          captionKey="notCollected"
+        />
+      </div>
+
+      <div className="flex items-center gap-2 overflow-x-auto">
+        {STATUS_FILTERS.map((f) => (
+          <Button
+            key={f.value || 'all'}
+            variant={statusFilter === f.value ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setStatusFilter(f.value)}
+          >
+            <Bi k={f.labelKey} />
+          </Button>
+        ))}
+        {loading ? (
+          <Loader2 className="size-5 shrink-0 animate-spin text-muted-foreground" />
+        ) : null}
+      </div>
+
+      <DataList
+        items={filtered}
+        getKey={(r, i) => `${r.loan_number}-${i}`}
+        columns={columns}
+        loading={loading && rows.length === 0}
+        empty={<EmptyState icon={CalendarX2} titleKey="noSchedulesForDate" />}
+      />
     </div>
   )
 }

@@ -5,11 +5,16 @@ import { profiles } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { sql } from 'drizzle-orm'
 import type { Session } from 'next-auth'
-import { AdminLoanMonitoringClient } from '@/components/loans/admin-loan-monitoring-client'
+import {
+  AdminLoanMonitoringClient,
+  type MonitoringAgent,
+  type MonitoringRow,
+} from '@/components/loans/admin-loan-monitoring-client'
+import { fromCents, toCents } from '@/lib/utils/money'
 
 export default async function AdminLoanMonitoringPage() {
   const session = (await auth()) as Session | null
-  if (!session?.user?.id || (session.user as any).role !== 'ADMIN') redirect('/dashboard')
+  if (!session?.user?.id || session.user.role !== 'ADMIN') redirect('/dashboard')
 
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())
 
@@ -45,20 +50,24 @@ export default async function AdminLoanMonitoringPage() {
       .orderBy(profiles.full_name),
   ])
 
-  const rows = (scheduleRows) as any[]
+  const rows = scheduleRows as unknown as MonitoringRow[]
 
-  const expected = rows.reduce((s: number, r: any) => s + parseFloat(r.daily_due ?? 0), 0)
-  const collected = rows
-    .filter((r: any) => r.schedule_status === 'PAID')
-    .reduce((s: number, r: any) => s + parseFloat(r.paid ?? r.daily_due ?? 0), 0)
-  const pending = rows.filter((r: any) => r.schedule_status === 'PENDING').length
-  const missed = rows.filter((r: any) => r.schedule_status === 'MISSED').length
+  // Summed in integer paise. Adding `numeric` strings as floats drifts, and
+  // this figure is the one an admin compares against the cash handed over.
+  const expected = fromCents(rows.reduce((sum, r) => sum + toCents(r.daily_due ?? '0'), 0))
+  const collected = fromCents(
+    rows
+      .filter((r) => r.schedule_status === 'PAID')
+      .reduce((sum, r) => sum + toCents(r.paid ?? r.daily_due ?? '0'), 0)
+  )
+  const pending = rows.filter((r) => r.schedule_status === 'PENDING').length
+  const missed = rows.filter((r) => r.schedule_status === 'MISSED').length
 
   return (
     <AdminLoanMonitoringClient
       initialRows={rows}
       initialDate={today}
-      agents={agents as any}
+      agents={agents as MonitoringAgent[]}
       summary={{ expected, collected, pending, missed }}
     />
   )

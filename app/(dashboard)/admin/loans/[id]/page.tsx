@@ -6,7 +6,14 @@ import { eq, desc, and } from 'drizzle-orm'
 import { sql } from 'drizzle-orm'
 import type { Session } from 'next-auth'
 import { getLoanWithDetails } from '@/lib/modules/loans/service'
-import { AdminLoanDetailClient } from '@/components/loans/admin-loan-detail-client'
+import {
+  AdminLoanDetailClient,
+  type LoanDetail,
+  type LoanDetailAgent,
+  type LoanPayment,
+  type LoanPenalty,
+  type LoanSchedule,
+} from '@/components/loans/admin-loan-detail-client'
 import { notFound } from 'next/navigation'
 
 export default async function AdminLoanDetailPage({
@@ -15,7 +22,7 @@ export default async function AdminLoanDetailPage({
   params: Promise<{ id: string }>
 }) {
   const session = (await auth()) as Session | null
-  if (!session?.user?.id || (session.user as any).role !== 'ADMIN') redirect('/dashboard')
+  if (!session?.user?.id || session.user.role !== 'ADMIN') redirect('/dashboard')
 
   const { id } = await params
 
@@ -75,18 +82,20 @@ export default async function AdminLoanDetailPage({
       .orderBy(profiles.full_name),
   ])
 
-  const schedules = (schedulesRaw) as any[]
+  const schedules = schedulesRaw as unknown as LoanSchedule[]
 
   return (
     <AdminLoanDetailClient
-      loan={loan as any}
+      loan={loan as unknown as LoanDetail}
       schedules={schedules}
-      payments={payments.map(p => ({
-        ...p,
-        reversed_at: (p.reversed_at as Date | null)?.toISOString() ?? null,
-      })) as any}
-      penalties={penalties as any}
-      agents={agents as any}
+      payments={
+        payments.map(p => ({
+          ...p,
+          reversed_at: (p.reversed_at as Date | null)?.toISOString() ?? null,
+        })) as unknown as LoanPayment[]
+      }
+      penalties={penalties as unknown as LoanPenalty[]}
+      agents={agents as LoanDetailAgent[]}
     />
   )
 }

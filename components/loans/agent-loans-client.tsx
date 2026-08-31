@@ -1,56 +1,64 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { Loader2 } from 'lucide-react'
+/**
+ * The agent's loan screen.
+ *
+ * The agent is standing in front of the customer, phone in one hand, outdoors.
+ * The whole screen answers three questions in this order: how much is due
+ * today, how much have I collected, who is overdue. Then one tap per customer.
+ *
+ * The one thing this screen must never do is let an agent believe money has
+ * cleared when it has not. A loan payment is PENDING until an admin approves
+ * it, so a collected row shows "Sent for approval — balance not updated yet"
+ * and the outstanding figure does not move.
+ */
+
+import { useEffect, useMemo, useState } from 'react'
+import { HandCoins, Loader2, TrendingUp, TriangleAlert, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
-import { Card, CardContent } from '@/components/ui/card'
-import { GMapsLink } from '@/components/ui/gmaps-link'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+
+import { ActionButton } from '@/components/ui/action-button'
+import { Bi } from '@/components/ui/bi'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
+import { DataList, type DataListColumn } from '@/components/ui/data-list'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { EmptyState } from '@/components/ui/empty-state'
+import { FormField } from '@/components/ui/form-field'
+import { GMapsLink } from '@/components/ui/gmaps-link'
 import { Input } from '@/components/ui/input'
+import { Money } from '@/components/ui/money'
+import { PageHeader } from '@/components/ui/page-header'
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select'
-import { cn } from '@/lib/utils'
+import { StatTile } from '@/components/ui/stat-tile'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { Textarea } from '@/components/ui/textarea'
+import { apiGet, apiPost } from '@/lib/api-client'
+import { toNumber } from '@/lib/format'
+import { labels, statusLabel } from '@/lib/i18n'
+import { fromCents, toCents } from '@/lib/utils/money'
 
-const STATUS_COLOR: Record<string, string> = {
-  ACTIVE: 'bg-green-100 text-green-700',
-  OVERDUE: 'bg-red-100 text-red-700',
-  COMPLETED: 'bg-blue-100 text-blue-700',
-  CANCELLED: 'bg-gray-100 text-gray-500',
-  DRAFT: 'bg-yellow-100 text-yellow-700',
-  PENDING: 'bg-yellow-100 text-yellow-700',
-  PAID: 'bg-green-100 text-green-700',
-  MISSED: 'bg-red-100 text-red-700',
-}
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
-function fmt(n: number | string | null | undefined) {
-  if (n === null || n === undefined) return '₹0'
-  const v = typeof n === 'string' ? parseFloat(n) : n
-  return `₹${(isNaN(v) ? 0 : v).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
-}
+type PaymentMode = 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CHEQUE' | 'OTHER'
 
-function _fmtDate(s: string | null | undefined) {
-  if (!s) return '—'
-  return new Date(s).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-}
+const PAYMENT_MODES: PaymentMode[] = ['CASH', 'UPI', 'BANK_TRANSFER', 'CHEQUE', 'OTHER']
 
-type PaymentMode = 'CASH' | 'UPI' | 'OTHER'
-
-interface AgentLoan {
+export interface AgentLoan {
   id: string
   loan_number: string
   customer_name: string
@@ -68,16 +76,14 @@ interface AgentLoan {
 interface LoanRequest {
   id: string
   request_number: string
-  status: 'PENDING' | 'APPROVED' | 'REJECTED'
-  customer_id: string | null
+  status: string
   customer_name: string | null
   new_customer_name: string | null
   loan_amount: string
-  interest_percentage: string
   daily_installment: string
   disbursement_date: string
   rejection_reason: string | null
-  created_at: string
+  created_at: string | null
 }
 
 interface AgentCustomer {
@@ -99,10 +105,17 @@ interface RequestForm {
   notes: string
 }
 
-const emptyRequestForm: RequestForm = {
-  customer_id: '', new_customer_name: '', new_customer_phone: '',
-  new_customer_area: '', loan_amount: '', interest_pct: '',
-  tenure: '', penalty_amount: '0', disbursement_date: '', notes: '',
+const EMPTY_REQUEST_FORM: RequestForm = {
+  customer_id: '',
+  new_customer_name: '',
+  new_customer_phone: '',
+  new_customer_area: '',
+  loan_amount: '',
+  interest_pct: '',
+  tenure: '',
+  penalty_amount: '0',
+  disbursement_date: '',
+  notes: '',
 }
 
 interface Props {
@@ -110,499 +123,710 @@ interface Props {
   agentName: string
 }
 
-function TodayBadge({ status, paymentStatus }: { status: string | null, paymentStatus: string | null }) {
-  if (!status) return <span className="text-gray-400 text-sm">—</span>
-  const s = status.toUpperCase()
-  if (s === 'PAID') {
-    if (paymentStatus === 'PENDING') {
-      return (
-        <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
-          Awaiting Approval
-        </span>
-      )
-    }
-    return (
-      <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-        Collected
-      </span>
-    )
-  }
-  if (s === 'PENDING') {
-    // A payment may have been submitted (PENDING approval) even if schedule is still PENDING
-    if (paymentStatus === 'PENDING') {
-      return (
-        <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
-          Awaiting Approval
-        </span>
-      )
-    }
-    return (
-      <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
-        Pending
-      </span>
-    )
-  }
-  if (s === 'MISSED')
-    return (
-      <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
-        Missed
-      </span>
-    )
-  return (
-    <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
-      {status}
-    </span>
-  )
+// ---------------------------------------------------------------------------
+// Row state — one place that decides what today looks like for a loan
+// ---------------------------------------------------------------------------
+
+type RowState =
+  | 'MISSED' // today's installment was not collected and the day is marked missed
+  | 'DUE' // collectable right now
+  | 'AWAITING' // collected, waiting for an admin to approve
+  | 'COLLECTED' // approved, money has cleared
+  | 'NONE' // nothing due today
+
+function rowState(loan: AgentLoan): RowState {
+  if (loan.today_payment_status === 'PENDING') return 'AWAITING'
+  if (loan.today_payment_status === 'CONFIRMED') return 'COLLECTED'
+  if (!loan.today_schedule_id) return 'NONE'
+  const status = loan.today_schedule_status?.toUpperCase()
+  if (status === 'MISSED') return 'MISSED'
+  if (status === 'PAID') return 'COLLECTED'
+  return 'DUE'
 }
 
-function CollectCard({
-  loan,
-  onCollected,
-}: {
-  loan: AgentLoan
-  onCollected: (id: string) => void
-}) {
-  const [expanded, setExpanded] = useState(false)
-  const [mode, setMode] = useState<PaymentMode>('CASH')
-  const [loading, setLoading] = useState(false)
-
-  async function handleConfirm() {
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/agent/loans/${loan.id}/collect`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payment_mode: mode }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        toast.error(data.error ?? 'Collection failed')
-        return
-      }
-      toast.success(
-        `${fmt(loan.today_installment_amount)} collected from ${loan.customer_name}`
-      )
-      onCollected(loan.id)
-    } catch {
-      toast.error('Network error. Please try again.')
-    } finally {
-      setLoading(false)
-    }
+/**
+ * The badge status string for a row.
+ *
+ * `MISSED` is not in the canonical status map, and an unknown status renders
+ * grey — a missed installment shown grey reads like "nothing to do here".
+ * OVERDUE carries the same meaning to the agent and is red, so a missed day
+ * borrows it.
+ */
+function badgeStatus(state: RowState): string {
+  switch (state) {
+    case 'MISSED':
+      return 'OVERDUE'
+    case 'AWAITING':
+      return 'PENDING'
+    case 'COLLECTED':
+      return 'PAID'
+    default:
+      return 'OPEN'
   }
-
-  const modes: { label: string; value: PaymentMode }[] = [
-    { label: 'Cash', value: 'CASH' },
-    { label: 'UPI', value: 'UPI' },
-    { label: 'Other', value: 'OTHER' },
-  ]
-
-  return (
-    <Card>
-      <CardContent className="pt-4 pb-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold truncate">{loan.customer_name}</p>
-            <p className="text-sm text-gray-500">{loan.loan_number}</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Principal O/S: {fmt(loan.principal_outstanding)}
-            </p>
-          </div>
-          {!expanded && (
-            <Button
-              variant="default"
-              size="lg"
-              onClick={() => setExpanded(true)}
-              className="shrink-0"
-            >
-              Collect {fmt(loan.today_installment_amount)}
-            </Button>
-          )}
-        </div>
-
-        {expanded && (
-          <div className="mt-4 border-t pt-4 space-y-3">
-            <p className="text-sm font-medium text-gray-700">Payment mode</p>
-            <div className="flex gap-2">
-              {modes.map((m) => (
-                <button
-                  key={m.value}
-                  onClick={() => setMode(m.value)}
-                  className={cn(
-                    'px-4 py-2 rounded-md text-sm font-medium border transition-colors',
-                    mode === m.value
-                      ? 'bg-gray-900 text-white border-gray-900'
-                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                  )}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="default"
-                onClick={handleConfirm}
-                disabled={loading}
-                className="min-w-[160px]"
-              >
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : null}
-                Confirm Collection
-              </Button>
-              <button
-                onClick={() => {
-                  setExpanded(false)
-                  setMode('CASH')
-                }}
-                className="text-sm text-gray-500 hover:text-gray-700 underline"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
 }
+
+const URGENCY: Record<RowState, number> = {
+  MISSED: 0,
+  DUE: 1,
+  AWAITING: 2,
+  COLLECTED: 3,
+  NONE: 4,
+}
+
+// ---------------------------------------------------------------------------
 
 export default function AgentLoansClient({ loans: initialLoans, agentName }: Props) {
   const [loans, setLoans] = useState<AgentLoan[]>(initialLoans)
-  const [requestDialogOpen, setRequestDialogOpen] = useState(false)
-  const [loanRequests, setLoanRequests] = useState<LoanRequest[]>([])
-  const [loadingRequests, setLoadingRequests] = useState(false)
-  const [requestMode, setRequestMode] = useState<'existing' | 'new'>('existing')
-  const [requestForm, setRequestForm] = useState<RequestForm>(emptyRequestForm)
-  const [submittingRequest, setSubmittingRequest] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+
+  // Collect flow
+  const [collectLoan, setCollectLoan] = useState<AgentLoan | null>(null)
+  const [collectMode, setCollectMode] = useState<PaymentMode>('CASH')
+  const [collecting, setCollecting] = useState(false)
+
+  // Loan requests
+  const [requests, setRequests] = useState<LoanRequest[]>([])
+  const [loadingRequests, setLoadingRequests] = useState(true)
   const [customers, setCustomers] = useState<AgentCustomer[]>([])
+  const [requestOpen, setRequestOpen] = useState(false)
+  const [requestMode, setRequestMode] = useState<'existing' | 'new'>('existing')
+  const [form, setForm] = useState<RequestForm>(EMPTY_REQUEST_FORM)
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    async function loadData() {
-      setLoadingRequests(true)
+    let cancelled = false
+    async function load() {
       const [reqRes, custRes] = await Promise.all([
-        fetch('/api/agent/loan-requests'),
-        fetch('/api/customers'),
+        apiGet<LoanRequest[]>('/api/agent/loan-requests'),
+        apiGet<AgentCustomer[]>('/api/customers'),
       ])
-      if (reqRes.ok) setLoanRequests(await reqRes.json())
-      if (custRes.ok) setCustomers(await custRes.json())
+      if (cancelled) return
+      if (reqRes.ok) setRequests(reqRes.data)
+      if (custRes.ok) setCustomers(custRes.data)
       setLoadingRequests(false)
     }
-    loadData()
+    load()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
-  async function handleRequestSubmit() {
-    if (!requestForm.loan_amount || !requestForm.tenure || !requestForm.disbursement_date) {
-      toast.error('Loan amount, tenure, and disbursement date are required')
-      return
-    }
-    if (!requestForm.tenure || parseInt(requestForm.tenure) <= 0) {
-      toast.error('Tenure must be greater than 0')
-      return
-    }
-    if (requestMode === 'existing' && !requestForm.customer_id) {
-      toast.error('Select a customer')
-      return
-    }
-    if (requestMode === 'new' && !requestForm.new_customer_name) {
-      toast.error('New customer name is required')
-      return
-    }
-    setSubmittingRequest(true)
-    try {
-      const body: Record<string, unknown> = {
-        loan_amount: parseFloat(requestForm.loan_amount),
-        interest_percentage: parseFloat(requestForm.interest_pct) || 0,
-        tenure: parseInt(requestForm.tenure),
-        penalty_amount: parseFloat(requestForm.penalty_amount) || 0,
-        disbursement_date: requestForm.disbursement_date,
-        notes: requestForm.notes || undefined,
-      }
-      if (requestMode === 'existing') {
-        body.customer_id = requestForm.customer_id
-      } else {
-        body.new_customer_name = requestForm.new_customer_name
-        body.new_customer_phone = requestForm.new_customer_phone || undefined
-        body.new_customer_area = requestForm.new_customer_area || undefined
-      }
-      const res = await fetch('/api/agent/loan-requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      const data = await res.json()
-      if (!res.ok) { toast.error(data.error ?? 'Failed to submit request'); return }
-      toast.success(`Loan request ${data.request_number} submitted — pending admin approval`)
-      setLoanRequests(prev => [data, ...prev])
-      setRequestDialogOpen(false)
-      setRequestForm(emptyRequestForm)
-      setRequestMode('existing')
-    } catch { toast.error('Network error') }
-    finally { setSubmittingRequest(false) }
+  // -------------------------------------------------------------------------
+  // Totals. toNumber is used for summing only — every displayed figure is the
+  // original string handed straight to <Money>.
+  // -------------------------------------------------------------------------
+
+  const rows = useMemo(
+    () =>
+      [...loans].sort((a, b) => {
+        const rank = URGENCY[rowState(a)] - URGENCY[rowState(b)]
+        if (rank !== 0) return rank
+        return a.customer_name.localeCompare(b.customer_name)
+      }),
+    [loans]
+  )
+
+  // Still to collect today: what is open, plus what was missed today. Both are
+  // money the customer owes now, which is what "due today" has to mean.
+  const dueTodayCents = loans
+    .filter((l) => {
+      const state = rowState(l)
+      return state === 'DUE' || state === 'MISSED'
+    })
+    .reduce((sum, l) => sum + toCents(l.today_installment_amount ?? '0'), 0)
+
+  const collectedTodayCents = loans
+    .filter((l) => rowState(l) === 'COLLECTED')
+    .reduce((sum, l) => sum + toCents(l.today_installment_amount ?? '0'), 0)
+
+  const awaitingCount = loans.filter((l) => rowState(l) === 'AWAITING').length
+  const overdueCount = loans.filter(
+    (l) => rowState(l) === 'MISSED' || l.status === 'OVERDUE'
+  ).length
+
+  // -------------------------------------------------------------------------
+  // Actions
+  // -------------------------------------------------------------------------
+
+  async function handleRefresh() {
+    setRefreshing(true)
+    const res = await apiGet<AgentLoan[]>('/api/agent/loans')
+    setRefreshing(false)
+    if (!res.ok) return // the row keeps its previous state; a toast already showed
+    setLoans(res.data)
   }
 
-  function markCollected(id: string) {
+  async function handleCollect() {
+    if (!collectLoan) return
+    const target = collectLoan
+    setCollecting(true)
+    const res = await apiPost<unknown>(`/api/agent/loans/${target.id}/collect`, {
+      payment_mode: collectMode,
+    })
+    setCollecting(false)
+    if (!res.ok) {
+      // Nothing changed on the row: the installment is still collectable.
+      toast.error(labels.collectionFailed.en)
+      return
+    }
     setLoans((prev) =>
       prev.map((l) =>
-        l.id === id ? { ...l, today_schedule_status: 'PAID', today_payment_status: 'PENDING' } : l
+        l.id === target.id ? { ...l, today_payment_status: 'PENDING' } : l
       )
+    )
+    setCollectLoan(null)
+    setCollectMode('CASH')
+    toast.success(labels.collectionSentForApproval.en)
+  }
+
+  function setField(key: keyof RequestForm, value: string) {
+    setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  function closeRequest() {
+    setRequestOpen(false)
+    setForm(EMPTY_REQUEST_FORM)
+    setRequestMode('existing')
+  }
+
+  async function handleRequestSubmit() {
+    if (!form.loan_amount || !form.tenure || !form.disbursement_date) {
+      toast.error(labels.loanAmountTenureDateRequired.en)
+      return
+    }
+    if (toNumber(form.tenure) <= 0) {
+      toast.error(labels.tenureMustBePositive.en)
+      return
+    }
+    if (requestMode === 'existing' && !form.customer_id) {
+      toast.error(labels.customerRequired.en)
+      return
+    }
+    if (requestMode === 'new' && !form.new_customer_name.trim()) {
+      toast.error(labels.newCustomerNameRequired.en)
+      return
+    }
+
+    const body: Record<string, unknown> = {
+      loan_amount: toNumber(form.loan_amount),
+      interest_percentage: toNumber(form.interest_pct),
+      tenure: Math.trunc(toNumber(form.tenure)),
+      penalty_amount: toNumber(form.penalty_amount),
+      disbursement_date: form.disbursement_date,
+      notes: form.notes || undefined,
+    }
+    if (requestMode === 'existing') {
+      body.customer_id = form.customer_id
+    } else {
+      body.new_customer_name = form.new_customer_name
+      body.new_customer_phone = form.new_customer_phone || undefined
+      body.new_customer_area = form.new_customer_area || undefined
+    }
+
+    setSubmitting(true)
+    const res = await apiPost<LoanRequest>('/api/agent/loan-requests', body)
+    setSubmitting(false)
+    if (!res.ok) {
+      toast.error(labels.loanRequestFailed.en)
+      return
+    }
+    setRequests((prev) => [res.data, ...prev])
+    closeRequest()
+    toast.success(labels.loanRequestSubmitted.en)
+  }
+
+  // -------------------------------------------------------------------------
+  // Loan list
+  // -------------------------------------------------------------------------
+
+  const loanColumns: DataListColumn<AgentLoan>[] = [
+    {
+      key: 'customer',
+      header: <Bi k="customer" />,
+      primary: true,
+      cell: (l) => (
+        <div className="min-w-0">
+          <p className="truncate font-medium">{l.customer_name}</p>
+          <p className="truncate text-xs text-muted-foreground">{l.loan_number}</p>
+        </div>
+      ),
+    },
+    {
+      key: 'outstanding',
+      header: <Bi k="principalOutstanding" />,
+      cell: (l) => <Money value={l.principal_outstanding} size="caption" intent="owed" />,
+    },
+    {
+      key: 'status',
+      header: <Bi k="status" />,
+      cell: (l) => <StatusBadge status={badgeStatus(rowState(l))} />,
+    },
+    {
+      key: 'today',
+      header: <Bi k="todaysInstallment" />,
+      align: 'right',
+      cell: (l) =>
+        l.today_installment_amount ? (
+          <Money value={l.today_installment_amount} size="row" intent="owed" />
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      key: 'action',
+      header: <Bi k="actions" />,
+      align: 'right',
+      hideOnMobile: true,
+      cell: (l) =>
+        rowState(l) === 'DUE' ? (
+          <Button size="sm" onClick={() => setCollectLoan(l)}>
+            <HandCoins />
+            <Bi k="collect" />
+          </Button>
+        ) : null,
+    },
+  ]
+
+  function renderLoanCard(loan: AgentLoan) {
+    const state = rowState(loan)
+    /**
+     * Only an installment that is still PENDING for today can be collected:
+     * `collectInstallment` rejects anything else with a 400. A MISSED day still
+     * sorts to the top so the agent sees it, but showing a Collect button there
+     * would be a button that always fails — an admin settles it with Collect
+     * cash on the loan instead.
+     */
+    const collectable = state === 'DUE'
+
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-base font-semibold">{loan.customer_name}</p>
+            <p className="truncate text-xs text-muted-foreground">{loan.loan_number}</p>
+          </div>
+          {loan.today_installment_amount ? (
+            <Money
+              value={loan.today_installment_amount}
+              size="row"
+              intent="owed"
+              className="shrink-0"
+            />
+          ) : null}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusBadge status={badgeStatus(state)} />
+          <span className="text-xs text-muted-foreground">
+            <Bi k="principalOutstanding" />
+          </span>
+          <Money value={loan.principal_outstanding} size="caption" intent="owed" />
+        </div>
+
+        {state === 'AWAITING' ? (
+          <p className="rounded-lg bg-warning-muted px-3 py-2 text-xs font-medium text-warning-muted-foreground">
+            <Bi k="awaitingApprovalRow" />
+          </p>
+        ) : null}
+
+        {collectable && loan.today_installment_amount ? (
+          <ActionButton
+            icon={HandCoins}
+            labelKey="collectInstallment"
+            amount={loan.today_installment_amount}
+            onClick={() => setCollectLoan(loan)}
+            className="md:w-full md:min-w-0"
+          />
+        ) : null}
+      </div>
     )
   }
 
-  const activeCount = loans.filter(
-    (l) => l.status === 'ACTIVE' || l.status === 'OVERDUE'
-  ).length
+  // -------------------------------------------------------------------------
+  // Loan requests list
+  // -------------------------------------------------------------------------
 
-  const todayExpected = loans
-    .filter((l) => l.today_schedule_status !== null && l.today_installment_amount !== null)
-    .reduce((sum, l) => sum + parseFloat(l.today_installment_amount ?? '0'), 0)
+  const requestColumns: DataListColumn<LoanRequest>[] = [
+    {
+      key: 'customer',
+      header: <Bi k="customer" />,
+      primary: true,
+      cell: (r) => (
+        <div className="min-w-0">
+          <p className="truncate font-medium">
+            {r.customer_name ?? r.new_customer_name ?? '—'}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">{r.request_number}</p>
+        </div>
+      ),
+    },
+    {
+      key: 'daily',
+      header: <Bi k="dailyInstallment" />,
+      cell: (r) => (
+        <span className="flex items-center gap-1">
+          <Money value={r.daily_installment} size="caption" intent="neutral" />
+          <span className="text-xs text-muted-foreground">
+            <Bi k="perDay" />
+          </span>
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: <Bi k="status" />,
+      cell: (r) => (
+        <div className="flex flex-col items-end gap-1 md:items-start">
+          <StatusBadge status={r.status} />
+          {r.rejection_reason ? (
+            <span className="text-xs text-danger">{r.rejection_reason}</span>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: 'amount',
+      header: <Bi k="loanAmount" />,
+      align: 'right',
+      cell: (r) => <Money value={r.loan_amount} size="row" intent="neutral" />,
+    },
+  ]
 
-  const todayCollected = loans
-    .filter((l) => l.today_payment_status === 'CONFIRMED')
-    .reduce((sum, l) => sum + parseFloat(l.today_installment_amount ?? '0'), 0)
-
-  const todayPendingCount = loans.filter(
-    (l) => l.today_schedule_status === 'PENDING' && !l.today_payment_status
-  ).length
-
-  const pendingLoans = loans.filter(
-    (l) => l.today_schedule_status === 'PENDING' && !l.today_payment_status
-  )
+  const dailyPreview =
+    form.loan_amount && toNumber(form.tenure) > 0
+      ? String(toNumber(form.loan_amount) / toNumber(form.tenure))
+      : null
 
   return (
-    <>
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">My Loans</h1>
-            <p className="text-gray-500">Welcome, {agentName}</p>
-          </div>
-          <Button onClick={() => setRequestDialogOpen(true)}>Request Loan</Button>
-        </div>
+    <div className="flex flex-col gap-5">
+      <PageHeader
+        titleKey="myLoans"
+        subtitle={agentName}
+        action={
+          <Button onClick={() => setRequestOpen(true)}>
+            <Bi k="requestLoan" />
+          </Button>
+        }
+      />
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-sm text-gray-500">My Active Loans</p>
-              <p className="text-2xl font-bold">{activeCount}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-sm text-gray-500">Today&apos;s Expected</p>
-              <p className="text-2xl font-bold">{fmt(todayExpected)}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-sm text-gray-500">Today&apos;s Collected</p>
-              <p className="text-2xl font-bold">{fmt(todayCollected)}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-sm text-gray-500">Today&apos;s Pending</p>
-              <p className="text-2xl font-bold">{todayPendingCount}</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div>
-          <h2 className="text-lg font-semibold mb-3">Today&apos;s Collections</h2>
-          {pendingLoans.length === 0 ? (
-            <Card>
-              <CardContent className="py-10 text-center text-gray-400">
-                No pending collections today 🎉
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {pendingLoans.map((loan) => (
-                <CollectCard key={loan.id} loan={loan} onCollected={markCollected} />
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="mt-8">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold">All My Loans</h2>
-            <button
-              onClick={async () => {
-                const res = await fetch('/api/agent/loans')
-                if (res.ok) setLoans(await res.json())
-              }}
-              className="text-xs text-blue-600 hover:underline"
-            >
-              Refresh
-            </button>
-          </div>
-          <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Loan #</TableHead>
-                  <TableHead>Principal O/S</TableHead>
-                  <TableHead>Total O/S</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Today</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loans.map((loan) => (
-                  <TableRow key={loan.id}>
-                    <TableCell className="font-medium">
-                      {loan.customer_name}
-                    </TableCell>
-                    <TableCell>{loan.loan_number}</TableCell>
-                    <TableCell>{fmt(loan.principal_outstanding)}</TableCell>
-                    <TableCell>{fmt(loan.total_outstanding)}</TableCell>
-                    <TableCell>
-                      <span
-                        className={cn(
-                          'px-2 py-1 rounded-full text-xs font-medium',
-                          STATUS_COLOR[loan.status] ?? 'bg-gray-100 text-gray-500'
-                        )}
-                      >
-                        {loan.status}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <TodayBadge status={loan.today_schedule_status} paymentStatus={loan.today_payment_status} />
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {loans.length === 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className="text-center text-gray-400 py-10"
-                    >
-                      No loans assigned
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </Card>
-        </div>
-
-        <div className="mt-8">
-          <h2 id="loan-requests" className="text-lg font-semibold mb-3">My Loan Requests</h2>
-          {loadingRequests ? (
-            <Card><CardContent className="py-6 text-center text-gray-400 text-sm">Loading...</CardContent></Card>
-          ) : loanRequests.length === 0 ? (
-            <Card><CardContent className="py-6 text-center text-gray-400 text-sm">No loan requests yet</CardContent></Card>
-          ) : (
-            <div className="space-y-3">
-              {loanRequests.map(req => (
-                <Card key={req.id}>
-                  <CardContent className="p-3 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs text-gray-400">{req.request_number}</span>
-                      <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', {
-                        'bg-yellow-100 text-yellow-700': req.status === 'PENDING',
-                        'bg-green-100 text-green-700': req.status === 'APPROVED',
-                        'bg-red-100 text-red-700': req.status === 'REJECTED',
-                      })}>{req.status}</span>
-                    </div>
-                    <p className="text-sm font-medium">{req.customer_name ?? req.new_customer_name ?? '—'}</p>
-                    <p className="text-xs text-gray-500">₹{parseFloat(req.loan_amount).toLocaleString('en-IN')} loan · ₹{parseFloat(req.daily_installment).toLocaleString('en-IN')}/day</p>
-                    {req.rejection_reason && <p className="text-xs text-red-500">{req.rejection_reason}</p>}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+      {/* KPI — how much is due, how much is in, who is behind */}
+      <div className="grid grid-cols-2 gap-3">
+        <StatTile
+          icon={Wallet}
+          labelKey="dueToday"
+          value={fromCents(dueTodayCents)}
+          intent="warning"
+          className="col-span-2"
+        />
+        <StatTile
+          icon={TrendingUp}
+          labelKey="collectedToday"
+          value={fromCents(collectedTodayCents)}
+          intent="success"
+          caption={
+            awaitingCount > 0 ? (
+              <span className="text-warning-muted-foreground">
+                {awaitingCount} · {labels.awaitingApproval.en}
+              </span>
+            ) : undefined
+          }
+        />
+        <StatTile
+          icon={TriangleAlert}
+          labelKey="overdueLoans"
+          value={overdueCount}
+          kind="count"
+          intent={overdueCount > 0 ? 'danger' : 'neutral'}
+        />
       </div>
 
-      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogTitle>Request Loan</DialogTitle>
-          {/* Mode toggle */}
-          <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
-            {(['existing', 'new'] as const).map(m => (
-              <button key={m} onClick={() => setRequestMode(m)}
-                className={cn('px-3 py-1 text-sm rounded-md font-medium capitalize transition-colors',
-                  requestMode === m ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                )}>
-                {m === 'existing' ? 'Existing Customer' : 'New Customer'}
-              </button>
-            ))}
-          </div>
-          <div className="space-y-3">
-            {requestMode === 'existing' ? (
-              <div className="space-y-1">
-                <Label>Customer *</Label>
-                <Select value={requestForm.customer_id} onValueChange={v => setRequestForm(f => ({ ...f, customer_id: v || '' }))}>
-                  <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+      {/* Loans, most urgent first */}
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-semibold">
+            <Bi k="allMyLoans" />
+          </h2>
+          <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={refreshing}>
+            {refreshing ? <Loader2 className="animate-spin" /> : null}
+            <Bi k="refresh" />
+          </Button>
+        </div>
+        <DataList
+          items={rows}
+          getKey={(l) => l.id}
+          columns={loanColumns}
+          renderCard={renderLoanCard}
+          empty={
+            <EmptyState
+              icon={HandCoins}
+              titleKey="noPendingCollectionsToday"
+              descriptionKey="noLoansAssigned"
+            />
+          }
+        />
+      </section>
+
+      {/* Requests the agent has raised */}
+      <section className="flex flex-col gap-3">
+        <h2 className="text-base font-semibold">
+          <Bi k="myLoanRequests" />
+        </h2>
+        <DataList
+          items={requests}
+          getKey={(r) => r.id}
+          columns={requestColumns}
+          loading={loadingRequests}
+          skeletonRows={2}
+          empty={<EmptyState titleKey="noLoanRequestsYet" />}
+        />
+      </section>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Collect — the amount is shown big BEFORE anything is submitted.     */}
+      {/* ------------------------------------------------------------------ */}
+      <Dialog
+        open={collectLoan !== null}
+        onOpenChange={(open) => {
+          if (!open && !collecting) {
+            setCollectLoan(null)
+            setCollectMode('CASH')
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              <Bi k="confirmCollectionAmount" />
+            </DialogTitle>
+            <DialogDescription>
+              <Bi k="balanceUpdatesAfterApproval" />
+            </DialogDescription>
+          </DialogHeader>
+
+          {collectLoan ? (
+            <>
+              <div className="flex flex-col gap-1 rounded-xl border border-border bg-muted/40 p-4">
+                <Money
+                  value={collectLoan.today_installment_amount ?? '0'}
+                  size="stat"
+                  intent="neutral"
+                />
+                <p className="text-sm font-medium">{collectLoan.customer_name}</p>
+                <p className="text-xs text-muted-foreground">{collectLoan.loan_number}</p>
+              </div>
+
+              <FormField labelKey="paymentMode" htmlFor="collect-mode">
+                <Select
+                  value={collectMode}
+                  onValueChange={(v) => v !== null && setCollectMode(v as PaymentMode)}
+                >
+                  <SelectTrigger id="collect-mode">
+                    {/* Base UI renders the raw enum value unless the label is
+                        resolved here, which showed "BANK_TRANSFER" to the user. */}
+                    <SelectValue>{(v) => statusLabel(String(v)).en}</SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
-                    {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.full_name} ({c.customer_code})</SelectItem>)}
+                    {PAYMENT_MODES.map((m) => (
+                      <SelectItem key={m} value={m}>
+                        {statusLabel(m).en}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-              </div>
-            ) : (
-              <>
-                <div className="space-y-1">
-                  <Label>Customer Name *</Label>
-                  <Input value={requestForm.new_customer_name} onChange={e => setRequestForm(f => ({ ...f, new_customer_name: e.target.value }))} placeholder="Full name" />
-                </div>
-                <div className="space-y-1">
-                  <Label>Phone</Label>
-                  <Input value={requestForm.new_customer_phone} onChange={e => setRequestForm(f => ({ ...f, new_customer_phone: e.target.value }))} placeholder="Phone number" />
-                </div>
-                <div className="space-y-1">
-                  <Label>Area</Label>
-                  <Input value={requestForm.new_customer_area} onChange={e => setRequestForm(f => ({ ...f, new_customer_area: e.target.value }))} placeholder="Area / locality" />
-                  <GMapsLink query={requestForm.new_customer_area} />
-                </div>
-              </>
-            )}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Loan Amount *</Label>
-                <Input type="number" step="0.01" min="0" value={requestForm.loan_amount} onChange={e => setRequestForm(f => ({ ...f, loan_amount: e.target.value }))} />
-              </div>
-              <div className="space-y-1">
-                <Label>Interest %</Label>
-                <Input type="number" step="0.01" min="0" max="100" value={requestForm.interest_pct} onChange={e => setRequestForm(f => ({ ...f, interest_pct: e.target.value }))} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Tenure (days) *</Label>
-                <Input type="number" min="1" step="1" value={requestForm.tenure} onChange={e => setRequestForm(f => ({ ...f, tenure: e.target.value }))} />
-                {requestForm.loan_amount && requestForm.tenure && parseInt(requestForm.tenure) > 0 && (
-                  <p className="text-xs text-gray-500">
-                    Daily: ₹{(parseFloat(requestForm.loan_amount) / parseInt(requestForm.tenure)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-1">
-                <Label>Penalty Amount</Label>
-                <Input type="number" step="0.01" min="0" value={requestForm.penalty_amount} onChange={e => setRequestForm(f => ({ ...f, penalty_amount: e.target.value }))} />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label>Disbursement Date *</Label>
-              <Input type="date" value={requestForm.disbursement_date} onChange={e => setRequestForm(f => ({ ...f, disbursement_date: e.target.value }))} />
-            </div>
-            <div className="space-y-1">
-              <Label>Notes</Label>
-              <Input value={requestForm.notes} onChange={e => setRequestForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional notes" />
-            </div>
-          </div>
-          <div className="flex gap-2 pt-2">
-            <Button onClick={handleRequestSubmit} disabled={submittingRequest} className="flex-1">
-              {submittingRequest ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Submitting...</> : 'Submit Request'}
+              </FormField>
+            </>
+          ) : null}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              size="lg"
+              disabled={collecting}
+              onClick={() => setCollectLoan(null)}
+            >
+              <Bi k="cancel" />
             </Button>
-            <Button variant="outline" onClick={() => setRequestDialogOpen(false)}>Cancel</Button>
-          </div>
+            <Button variant="success" size="lg" disabled={collecting} onClick={handleCollect}>
+              {collecting ? <Loader2 className="animate-spin" /> : <HandCoins />}
+              <Bi k={collecting ? 'saving' : 'confirm'} />
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Request a new loan                                                  */}
+      {/* ------------------------------------------------------------------ */}
+      <Dialog
+        open={requestOpen}
+        onOpenChange={(open) => {
+          if (!open && !submitting) closeRequest()
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              <Bi k="requestLoan" />
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant={requestMode === 'existing' ? 'default' : 'outline'}
+                onClick={() => setRequestMode('existing')}
+              >
+                <Bi k="existingCustomer" />
+              </Button>
+              <Button
+                variant={requestMode === 'new' ? 'default' : 'outline'}
+                onClick={() => setRequestMode('new')}
+              >
+                <Bi k="newCustomerOption" />
+              </Button>
+            </div>
+
+            {requestMode === 'existing' ? (
+              <FormField labelKey="customer" htmlFor="request-customer" required>
+                <Select
+                  value={form.customer_id}
+                  onValueChange={(v) => setField('customer_id', v ?? '')}
+                >
+                  <SelectTrigger id="request-customer">
+                    <SelectValue placeholder={labels.selectCustomer.en} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customers.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.full_name} ({c.customer_code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+            ) : (
+              <>
+                <FormField labelKey="newCustomerName" htmlFor="request-name" required>
+                  <Input
+                    id="request-name"
+                    value={form.new_customer_name}
+                    onChange={(e) => setField('new_customer_name', e.target.value)}
+                  />
+                </FormField>
+                <FormField labelKey="phone" htmlFor="request-phone">
+                  <Input
+                    id="request-phone"
+                    type="tel"
+                    value={form.new_customer_phone}
+                    onChange={(e) => setField('new_customer_phone', e.target.value)}
+                  />
+                </FormField>
+                <FormField
+                  labelKey="area"
+                  htmlFor="request-area"
+                  hint={<GMapsLink query={form.new_customer_area} />}
+                >
+                  <Input
+                    id="request-area"
+                    value={form.new_customer_area}
+                    onChange={(e) => setField('new_customer_area', e.target.value)}
+                  />
+                </FormField>
+              </>
+            )}
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormField labelKey="loanAmount" htmlFor="request-amount" required>
+                <Input
+                  id="request-amount"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0"
+                  value={form.loan_amount}
+                  onChange={(e) => setField('loan_amount', e.target.value)}
+                />
+              </FormField>
+              <FormField labelKey="interestPercent" htmlFor="request-interest">
+                <Input
+                  id="request-interest"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={form.interest_pct}
+                  onChange={(e) => setField('interest_pct', e.target.value)}
+                />
+              </FormField>
+              <FormField
+                labelKey="tenureDays"
+                htmlFor="request-tenure"
+                required
+                hint={
+                  dailyPreview ? (
+                    <span className="flex items-center gap-1">
+                      <Bi k="dailyInstallment" />
+                      <Money value={dailyPreview} size="caption" decimals />
+                    </span>
+                  ) : undefined
+                }
+              >
+                <Input
+                  id="request-tenure"
+                  type="number"
+                  inputMode="numeric"
+                  step="1"
+                  min="1"
+                  value={form.tenure}
+                  onChange={(e) => setField('tenure', e.target.value)}
+                />
+              </FormField>
+              <FormField labelKey="penaltyAmount" htmlFor="request-penalty">
+                <Input
+                  id="request-penalty"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0"
+                  value={form.penalty_amount}
+                  onChange={(e) => setField('penalty_amount', e.target.value)}
+                />
+              </FormField>
+            </div>
+
+            <FormField labelKey="disbursementDate" htmlFor="request-date" required>
+              <Input
+                id="request-date"
+                type="date"
+                value={form.disbursement_date}
+                onChange={(e) => setField('disbursement_date', e.target.value)}
+              />
+            </FormField>
+
+            <FormField labelKey="notesOptional" htmlFor="request-notes">
+              <Textarea
+                id="request-notes"
+                rows={2}
+                className="resize-none"
+                value={form.notes}
+                onChange={(e) => setField('notes', e.target.value)}
+              />
+            </FormField>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" size="lg" disabled={submitting} onClick={closeRequest}>
+              <Bi k="cancel" />
+            </Button>
+            <Button size="lg" disabled={submitting} onClick={handleRequestSubmit}>
+              {submitting ? <Loader2 className="animate-spin" /> : null}
+              <Bi k={submitting ? 'submitting' : 'submit'} />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }
 

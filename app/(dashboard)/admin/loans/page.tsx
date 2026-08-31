@@ -4,11 +4,16 @@ import { db } from '@/lib/db'
 import { loans, customers, profiles } from '@/lib/db/schema'
 import { eq, desc, and, isNull } from 'drizzle-orm'
 import type { Session } from 'next-auth'
-import { AdminLoansClient } from '@/components/loans/admin-loans-client'
+import {
+  AdminLoansClient,
+  type AdminLoanAgent,
+  type AdminLoanCustomer,
+  type AdminLoanRow,
+} from '@/components/loans/admin-loans-client'
 
 export default async function AdminLoansPage() {
   const session = (await auth()) as Session | null
-  if (!session?.user?.id || (session.user as any).role !== 'ADMIN') redirect('/dashboard')
+  if (!session?.user?.id || session.user.role !== 'ADMIN') redirect('/dashboard')
 
   const [loanRows, customerList, agentList] = await Promise.all([
     db
@@ -48,9 +53,9 @@ export default async function AdminLoansPage() {
 
   return (
     <AdminLoansClient
-      loans={loanRows as any}
-      customers={customerList as any}
-      agents={agentList as any}
+      loans={loanRows as AdminLoanRow[]}
+      customers={customerList as AdminLoanCustomer[]}
+      agents={agentList as AdminLoanAgent[]}
     />
   )
 }

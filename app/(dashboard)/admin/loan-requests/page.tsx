@@ -4,13 +4,16 @@ import { db } from '@/lib/db'
 import { loanRequests, profiles, customers } from '@/lib/db/schema'
 import { eq, desc, and } from 'drizzle-orm'
 import type { Session } from 'next-auth'
-import AdminLoanRequestsClient from '@/components/loans/admin-loan-requests-client'
+import AdminLoanRequestsClient, {
+  type LoanRequestAgent,
+  type LoanRequestRow,
+} from '@/components/loans/admin-loan-requests-client'
 
 export default async function AdminLoanRequestsPage() {
   const session = (await auth()) as Session | null
-  if (!session?.user?.id || (session.user as any).role !== 'ADMIN') redirect('/dashboard')
+  if (!session?.user?.id || session.user.role !== 'ADMIN') redirect('/dashboard')
 
-  const branchId = (session.user as any).branch_id as string | null
+  const branchId = session.user.branch_id
 
   const rows = await db
     .select({
@@ -26,6 +29,7 @@ export default async function AdminLoanRequestsPage() {
       loan_amount: loanRequests.loan_amount,
       interest_percentage: loanRequests.interest_percentage,
       daily_installment: loanRequests.daily_installment,
+      tenure: loanRequests.tenure,
       penalty_amount: loanRequests.penalty_amount,
       disbursement_date: loanRequests.disbursement_date,
       notes: loanRequests.notes,
@@ -49,5 +53,10 @@ export default async function AdminLoanRequestsPage() {
     .where(and(eq(profiles.role, 'COLLECTION_AGENT'), eq(profiles.is_active, true)))
     .orderBy(profiles.full_name)
 
-  return <AdminLoanRequestsClient initial={rows as any} agents={agents as any} />
+  return (
+    <AdminLoanRequestsClient
+      initial={rows as unknown as LoanRequestRow[]}
+      agents={agents as LoanRequestAgent[]}
+    />
+  )
 }
