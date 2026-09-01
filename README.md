@@ -7,7 +7,7 @@ A full-stack loan and collections management platform for field collection busin
 - **Frontend**: Next.js 16 (App Router), React 19, Tailwind CSS, shadcn/ui
 - **Backend**: Next.js API routes (TypeScript)
 - **Database**: PostgreSQL via Drizzle ORM
-- **Auth**: NextAuth v5 (credentials), 8-hour session auto-logout
+- **Auth**: NextAuth v5 (credentials), 2-min idle auto-logout, session cleared on tab close
 - **Runtime**: Bun
 - **Testing**: Vitest + bun:test, Robot Framework (E2E)
 
@@ -15,8 +15,8 @@ A full-stack loan and collections management platform for field collection busin
 
 | Role | Access |
 |------|--------|
-| ADMIN | Full access — loans, customers, employees, reports, collections, loan request approvals, settlement verify |
-| COLLECTION_AGENT | All active loans (any branch), customers, collections; submit loan requests; cash settlement |
+| ADMIN | Full access — loans, customers, employees, reports, collections, loan request approvals, settlement verify. No branch restriction — sees all branches. |
+| COLLECTION_AGENT | All active loans (any branch), any customer (no assignment required), collections; submit loan requests; cash settlement; expenses |
 | STAFF | Attendance and expenses only |
 
 ## Default Logins
