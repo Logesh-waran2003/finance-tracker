@@ -217,7 +217,7 @@ export const reconciliations = pgTable('reconciliations', {
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (t) => [
   // Enforce one reconciliation per agent per date at the DB level
-  unique('uq_reconciliations_agent_date').on(t.agent_id, t.date),
+  unique('uq_reconciliations_agent_date_status').on(t.agent_id, t.date, t.status),
   index('idx_reconciliations_agent_date').on(t.agent_id, t.date),
   check('chk_reconciliations_cash_collected_non_negative', sql`cash_collected >= 0`),
   check('chk_reconciliations_cash_submitted_non_negative', sql`cash_submitted >= 0`),
