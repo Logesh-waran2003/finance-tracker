@@ -136,8 +136,12 @@ export function NotificationBell({ userRole }: { userRole?: 'ADMIN' | 'COLLECTIO
   function handleView(n: Notification) {
     setOpen(false)
     const hrefPath = n.href.split('#')[0]
-    if (pathname === hrefPath) router.refresh()
-    else router.push(n.href)
+    if (pathname === hrefPath) {
+      // Full reload ensures server components re-fetch fresh data
+      window.location.reload()
+    } else {
+      router.push(n.href)
+    }
   }
 
   async function handleDismiss(idx: number, n: Notification) {
