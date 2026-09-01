@@ -1,7 +1,7 @@
 import { db } from '@/lib/db'
 import { loanRequests, profiles, notifications } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq, and, desc, sql } from 'drizzle-orm'
+import { eq, and, desc, sql, or, isNull } from 'drizzle-orm'
 import { requireAgent, isResponse } from '@/lib/auth/authorize'
 import { ServiceError } from '@/lib/modules/errors'
 
@@ -103,9 +103,10 @@ export async function POST(request: Request) {
       })
       .returning()
 
-    // Fire-and-forget: notify admins in branch
+    // Notify all admins: branch-matched admins + super-admins (branch_id IS NULL)
     const adminConditions = actor.branch_id
-      ? and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true), eq(profiles.branch_id, actor.branch_id))
+      ? and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true),
+          or(eq(profiles.branch_id, actor.branch_id), isNull(profiles.branch_id)))
       : and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true))
 
     db.select({ id: profiles.id })

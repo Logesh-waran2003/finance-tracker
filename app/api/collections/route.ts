@@ -1,7 +1,7 @@
 import { db } from '@/lib/db'
 import { collections, customers, notifications, profiles, dues, loans } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq, and, desc, gte, lte, sql, isNull } from 'drizzle-orm'
+import { eq, and, desc, gte, lte, sql, isNull, or } from 'drizzle-orm'
 import { requireRole, requireCustomerAccess, isResponse } from '@/lib/auth/authorize'
 import { parseBody, createCollectionSchema } from '@/lib/validation'
 import { createCollection } from '@/lib/modules/collections/service'
@@ -128,7 +128,8 @@ export async function POST(request: Request) {
         .then(r => r[0]?.full_name ?? 'Unknown customer')
 
       const adminConditions = actor.branch_id
-        ? and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true), eq(profiles.branch_id, actor.branch_id))
+        ? and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true),
+            or(eq(profiles.branch_id, actor.branch_id), isNull(profiles.branch_id)))
         : and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true))
 
       db.select({ id: profiles.id })
