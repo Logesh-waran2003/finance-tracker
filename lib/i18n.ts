@@ -30,7 +30,7 @@ export const labels = {
   myAttendance: { en: 'My Attendance' },
   expenses: { en: 'Expenses' },
   myExpenses: { en: 'My Expenses' },
-  reconciliation: { en: 'Reconciliation' },
+  reconciliation: { en: 'Settlement' },
   cashReconciliation: { en: 'Cash Reconciliation' },
   employees: { en: 'Employees' },
   reports: { en: 'Reports' },
