@@ -345,6 +345,7 @@ describe('approveExpense', () => {
     const db = {
       select: () => selectChain([expense]),
       transaction: async (fn: Function) => fn(txMock),
+      insert: () => ({ values: () => ({ catch: () => {} }) }),
     } as any
 
     const result = await approveExpense(db, {
@@ -380,6 +381,7 @@ describe('approveExpense', () => {
     const db = {
       select: () => selectChain([expense]),
       transaction: async (fn: Function) => fn(txMock),
+      insert: () => ({ values: () => ({ catch: () => {} }) }),
     } as any
 
     const result = await approveExpense(db, {
