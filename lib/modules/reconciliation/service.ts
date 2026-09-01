@@ -133,22 +133,23 @@ export async function createReconciliation(
         .then((r: any[]) => r[0])
 
       if (existing) {
-        if (existing.status !== 'PENDING') {
-          throw new ServiceError('Reconciliation already submitted and cannot be changed', 409)
+        if (existing.status === 'PENDING') {
+          // Update the existing PENDING record
+          const [rec] = await (tx as any)
+            .update(reconciliations)
+            .set({
+              cash_collected: fromCents(cashCollectedCents),
+              cash_submitted: String(params.cashSubmitted),
+              notes: params.notes ?? null,
+              updated_at: new Date(),
+            })
+            .where(eq(reconciliations.id, existing.id))
+            .returning()
+          return rec
         }
-        // Update the existing PENDING record
-        const [rec] = await (tx as any)
-          .update(reconciliations)
-          .set({
-            cash_collected: fromCents(cashCollectedCents),
-            cash_submitted: String(params.cashSubmitted),
-            notes: params.notes ?? null,
-            updated_at: new Date(),
-          })
-          .where(eq(reconciliations.id, existing.id))
-          .returning()
-        return rec
+        // VERIFIED or REJECTED — allow a fresh submission (multiple handovers per day)
       }
+
       const [rec] = await (tx as any)
         .insert(reconciliations)
         .values({
