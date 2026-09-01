@@ -101,26 +101,23 @@ export function isResponse(v: unknown): v is NextResponse {
 
 /**
  * Verifies the requesting agent is assigned to the given customer.
- * ADMINs bypass this check.
- * Returns null on success, or a 403/404 NextResponse on failure.
+ * ADMINs bypass this check. All agents can access any customer.
+ * Returns null on success, or a 404 NextResponse on failure.
  */
 export async function requireCustomerAccess(
   user: AuthorizedUser,
   customerId: string
 ): Promise<NextResponse | null> {
-  if (user.role === 'ADMIN') return null
+  if (user.role === 'ADMIN' || user.role === 'COLLECTION_AGENT') return null
 
   const customer = await db
-    .select({ assigned_agent_id: customers.assigned_agent_id })
+    .select({ id: customers.id })
     .from(customers)
     .where(eq(customers.id, customerId))
     .limit(1)
     .then(r => r[0])
 
   if (!customer) return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
-  if (customer.assigned_agent_id !== user.id) {
-    return NextResponse.json({ error: 'Customer not assigned to you' }, { status: 403 })
-  }
   return null
 }
 

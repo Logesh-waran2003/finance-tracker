@@ -1,7 +1,7 @@
 import { db } from '@/lib/db'
-import { expenses, expenseCategories } from '@/lib/db/schema'
+import { expenses, expenseCategories, notifications, profiles } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
-import { eq, and, desc } from 'drizzle-orm'
+import { eq, and, desc, or, isNull } from 'drizzle-orm'
 import { requireRole, isResponse } from '@/lib/auth/authorize'
 import { parseBody, createExpenseSchema } from '@/lib/validation'
 import { createExpense } from '@/lib/modules/expenses/service'
@@ -63,6 +63,31 @@ export async function POST(request: Request) {
       expenseDate: expense_date,
       idempotencyKey: idempotency_key,
     })
+
+    // Fire-and-forget: notify admins (branch-matched + super-admins)
+    const adminConditions = actor.branch_id
+      ? and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true),
+          or(eq(profiles.branch_id, actor.branch_id), isNull(profiles.branch_id)))
+      : and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true))
+
+    db.select({ id: profiles.id })
+      .from(profiles)
+      .where(adminConditions)
+      .then(admins => {
+        if (admins.length === 0) return
+        return db.insert(notifications).values(
+          admins.map(a => ({
+            recipient_id: a.id,
+            type: 'GENERAL' as const,
+            title: 'New Expense Claim',
+            body: `${actor.name} submitted an expense claim of ₹${amount.toLocaleString('en-IN')} — ${description}`,
+            reference_id: expense.id,
+            reference_type: 'expense',
+          }))
+        )
+      })
+      .catch(() => {})
+
     return NextResponse.json(expense, { status: 201 })
   } catch (err) {
     if (err instanceof ServiceError) {
