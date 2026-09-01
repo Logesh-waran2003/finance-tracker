@@ -176,7 +176,7 @@ export function AppShell({ children, userName, userRole }: AppShellProps) {
       {/* Desktop sidebar. Hidden on a phone — the tab bar replaces it. */}
       <aside className="hidden shrink-0 border-r border-border bg-card md:flex md:w-56 md:flex-col">
         <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-4">
-          <Building2 className="size-5 shrink-0 text-primary" />
+          <img src="/logo.jpeg" alt="Logo" className="size-8 shrink-0 rounded-full object-cover" />
           <span className="truncate text-sm font-semibold">
             <Bi k="appName" />
           </span>
