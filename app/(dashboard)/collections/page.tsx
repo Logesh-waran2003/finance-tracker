@@ -49,7 +49,7 @@ export default async function CollectionsPage() {
       full_name: customers.full_name,
       opening_balance: customers.opening_balance,
     }).from(customers)
-      .where(and(eq(customers.assigned_agent_id, userId), eq(customers.is_active, true))),
+      .where(eq(customers.is_active, true)),
 
     db.select({
       id: collections.id,
