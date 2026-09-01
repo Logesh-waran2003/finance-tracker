@@ -88,6 +88,15 @@ export function AttendanceClient({ today, todayRecord: initial, history: initial
         resolve(null)
         return
       }
+
+      // HTTP over a local IP blocks geolocation — browser requires HTTPS or localhost
+      if (typeof window !== 'undefined' && !window.isSecureContext) {
+        setGpsState('denied')
+        toast.error('GPS blocked: open the app via localhost:3001 instead of the IP address, or use HTTPS', { duration: 6000 })
+        resolve(null)
+        return
+      }
+
       setGpsState('acquiring')
       navigator.geolocation.getCurrentPosition(
         pos => {
