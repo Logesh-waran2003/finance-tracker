@@ -2,6 +2,8 @@
  * Expenses service — business logic for expense creation and admin approval.
  * No NextRequest, no session — auth stays in the route layer.
  */
+import { notifications } from '@/lib/db/schema'
+import { db } from '@/lib/db'
 import { expenses, expenseCategories } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { logAudit } from '@/lib/modules/audit/service'
@@ -148,8 +150,8 @@ export async function approveExpense(
     updates.rejection_reason = params.reason
   }
 
-  return (db as any).transaction(async (tx: AnyDB) => {
-    const [updated] = await (tx as any)
+  const updated = await (db as any).transaction(async (tx: AnyDB) => {
+    const [upd] = await (tx as any)
       .update(expenses)
       .set(updates)
       .where(eq(expenses.id, params.expenseId))
@@ -163,7 +165,7 @@ export async function approveExpense(
       entity_type: 'expense',
       entity_id: params.expenseId,
       before_data: { status: expense.status },
-      after_data: { status: updated.status },
+      after_data: { status: upd.status },
       branch_id: params.adminBranchId,
     })
 
@@ -179,6 +181,20 @@ export async function approveExpense(
       })
     }
 
-    return updated
+    return upd
   })
+
+  // Fire-and-forget: notify the agent their expense was approved/rejected
+  ;(db as any).insert(notifications).values({
+    recipient_id: expense.employee_id,
+    type: 'GENERAL',
+    title: isApproval ? 'Expense Approved' : 'Expense Rejected',
+    body: isApproval
+      ? `Your expense claim of ₹${parseFloat(expense.amount).toLocaleString('en-IN')} (${expense.description}) has been approved`
+      : `Your expense claim of ₹${parseFloat(expense.amount).toLocaleString('en-IN')} (${expense.description}) was rejected${params.reason ? `: ${params.reason}` : ''}`,
+    reference_id: params.expenseId,
+    reference_type: 'expense',
+  }).catch(() => {})
+
+  return updated
 }

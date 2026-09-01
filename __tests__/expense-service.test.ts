@@ -173,6 +173,7 @@ describe('approveExpense — approval writes DEBIT ledger entry', () => {
     const db = {
       select: () => selectChain([STUB_EXPENSE]),
       transaction: async (fn: Function) => fn(txMock),
+      insert: () => ({ values: () => ({ catch: () => {} }) }),
     } as any
 
     const result = await approveExpense(db, {
@@ -204,6 +205,7 @@ describe('approveExpense — rejection does NOT write ledger entry', () => {
     const db = {
       select: () => selectChain([STUB_EXPENSE]),
       transaction: async (fn: Function) => fn(txMock),
+      insert: () => ({ values: () => ({ catch: () => {} }) }),
     } as any
 
     const result = await approveExpense(db, {
