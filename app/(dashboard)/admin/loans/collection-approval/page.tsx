@@ -2,7 +2,7 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { loanPayments, loans, customers, profiles } from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, desc } from 'drizzle-orm'
 import type { Session } from 'next-auth'
 import AdminCollectionApprovalClient, {
   type PendingLoanPayment,
@@ -40,7 +40,7 @@ export default async function CollectionApprovalPage() {
     .innerJoin(customers, eq(customers.id, loanPayments.customer_id))
     .innerJoin(profiles, eq(profiles.id, loanPayments.agent_id))
     .where(and(...baseWhere))
-    .orderBy(loanPayments.updated_at)
+    .orderBy(desc(loanPayments.created_at))
     .limit(200)
 
   return (
