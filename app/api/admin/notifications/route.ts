@@ -87,7 +87,7 @@ export async function GET() {
   // Map individual DB notifications
   const individual = dbNotifications.map(row => ({
     id: row.id,
-    type: (row.reference_type === 'loan_request' || row.reference_type === 'loan_payment' || row.reference_type === 'expense' || row.reference_type === 'reconciliation') ? 'approval' as const : 'info' as const,
+    type: (row.reference_type === 'loan_request' || row.reference_type === 'loan_payment' || row.reference_type === 'expense' || row.reference_type === 'reconciliation' || row.reference_type === 'collection') ? 'approval' as const : 'info' as const,
     title: row.title,
     message: row.body,
     href: row.reference_type === 'loan_request'
