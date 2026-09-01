@@ -19,6 +19,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { generateId } from '@/lib/utils/id'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -122,7 +123,7 @@ export function ExpensesClient({ initial, categories }: { initial: ExpenseRow[];
   const [dialogOpen, setDialogOpen] = useState(false)
   // One key per dialog open, not per tap — a retry after a timeout must reuse
   // it or the server records the expense twice. Same contract as collections.
-  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID())
+  const [idempotencyKey, setIdempotencyKey] = useState(() => generateId())
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<ExpenseRow | null>(null)
@@ -150,7 +151,7 @@ export function ExpensesClient({ initial, categories }: { initial: ExpenseRow[];
       expense_date: istToday(),
     })
     setFormError(null)
-    setIdempotencyKey(crypto.randomUUID()) // new expense => new key
+    setIdempotencyKey(generateId()) // new expense => new key
     setDialogOpen(true)
   }
 

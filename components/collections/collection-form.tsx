@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { generateId } from '@/lib/utils/id'
 import {
   Banknote,
   CheckCircle2,
@@ -111,7 +112,7 @@ export function CollectionForm({
    * SECOND collection for the same cash. Reusing it lets the DB unique
    * constraint collapse the retry via ON CONFLICT DO NOTHING.
    */
-  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID())
+  const [idempotencyKey, setIdempotencyKey] = useState(() => generateId())
   const [saving, setSaving] = useState(false)
   const [dues, setDues] = useState<Due[]>([])
   const [loadingDues, setLoadingDues] = useState(false)
@@ -176,7 +177,7 @@ export function CollectionForm({
     setDues([])
     setGps(null)
     setGpsState('idle')
-    setIdempotencyKey(crypto.randomUUID()) // new collection => new key
+    setIdempotencyKey(generateId()) // new collection => new key
     setDialogOpen(true)
   }
 
@@ -266,7 +267,7 @@ export function CollectionForm({
         // when the network returns. The key is what stops the replay from
         // inserting a second collection.
         await enqueue({
-          id: crypto.randomUUID(),
+          id: generateId(),
           url: '/api/collections',
           method: 'POST',
           body: payload,
