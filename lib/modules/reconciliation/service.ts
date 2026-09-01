@@ -186,10 +186,8 @@ export async function createReconciliation(
     }
   })
 
-  // Fire-and-forget: notify all admins in branch
-  const adminWhere = params.branchId
-    ? and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true), eq(profiles.branch_id, params.branchId))
-    : and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true));
+  // Fire-and-forget: notify all admins
+  const adminWhere = and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true));
 
   (db as any).select({ id: profiles.id })
     .from(profiles)

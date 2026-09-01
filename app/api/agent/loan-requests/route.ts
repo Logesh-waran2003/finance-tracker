@@ -103,11 +103,8 @@ export async function POST(request: Request) {
       })
       .returning()
 
-    // Notify all admins: branch-matched admins + super-admins (branch_id IS NULL)
-    const adminConditions = actor.branch_id
-      ? and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true),
-          or(eq(profiles.branch_id, actor.branch_id), isNull(profiles.branch_id)))
-      : and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true))
+    // Notify all admins
+    const adminConditions = and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true))
 
     db.select({ id: profiles.id })
       .from(profiles)

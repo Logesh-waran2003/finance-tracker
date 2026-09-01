@@ -127,10 +127,8 @@ export async function POST(request: Request) {
         .limit(1)
         .then(r => r[0]?.full_name ?? 'Unknown customer')
 
-      const adminConditions = actor.branch_id
-        ? and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true),
-            or(eq(profiles.branch_id, actor.branch_id), isNull(profiles.branch_id)))
-        : and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true))
+      // Fire-and-forget: notify all active admins
+      const adminConditions = and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true))
 
       db.select({ id: profiles.id })
         .from(profiles)

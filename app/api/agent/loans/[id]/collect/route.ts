@@ -35,10 +35,8 @@ export async function POST(
       transactionReference: transaction_reference ?? undefined,
     })
 
-    // Fire-and-forget: notify all active admins in the same branch
-    const adminConditions = actor.branch_id
-      ? and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true), eq(profiles.branch_id, actor.branch_id))
-      : and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true))
+    // Fire-and-forget: notify all active admins
+    const adminConditions = and(eq(profiles.role, 'ADMIN'), eq(profiles.is_active, true))
 
     Promise.all([
       db.select({ loan_number: loans.loan_number }).from(loans).where(eq(loans.id, loanId)).limit(1),
